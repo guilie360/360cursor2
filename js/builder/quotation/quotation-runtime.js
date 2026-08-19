@@ -10,6 +10,9 @@
  * QuotationRuntime.render(ProjectDocument) paints that document — never rebuilds demos.
  */
 var QuotationRuntime = (function () {
+  var QR_RUNTIME_BUILD = (typeof QUOTATION_RUNTIME_BUILD !== 'undefined')
+    ? QUOTATION_RUNTIME_BUILD
+    : 'ws7980';
   var EXPERIENCE_TYPE = 'quotation';
   var DEFAULT_DESIGN_W = 1920;
   var DEFAULT_DESIGN_H = 1080;
@@ -923,15 +926,26 @@ var QuotationRuntime = (function () {
     btnsHost.className = 'qr-ix-buttons';
     buttons.forEach(function (rawB) {
       var b = runtimeNormalizeButtonIx(Object.assign({}, rawB));
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      if (b.id) btn.setAttribute('data-qr-ix-id', String(b.id));
-      var shapeKind = runtimeResolveButtonShapeKind(b);
-      if (shapeKind && typeof ExperienciaEngine !== 'undefined') {
-        runtimeApplyShapeButtonDom(btn, b, shapeKind, layerW, layerH);
-      } else {
-        runtimeApplyButtonDom(btn, b);
+      var btn = null;
+      if (typeof ButtonOverlayRenderer !== 'undefined' &&
+          ButtonOverlayRenderer.createRuntimeButtonElement) {
+        btn = ButtonOverlayRenderer.createRuntimeButtonElement(b, layerW, layerH);
       }
+      if (!btn) {
+        btn = document.createElement('button');
+        btn.type = 'button';
+        runtimeApplyButtonDom(btn, b);
+      } else if (btn.tagName !== 'BUTTON') {
+        var upgraded = document.createElement('button');
+        upgraded.type = 'button';
+        upgraded.className = btn.className;
+        upgraded.setAttribute('style', btn.getAttribute('style') || '');
+        upgraded.innerHTML = btn.innerHTML;
+        btn = upgraded;
+      } else {
+        btn.type = 'button';
+      }
+      if (b.id) btn.setAttribute('data-qr-ix-id', String(b.id));
       if (interactive) {
         btn.addEventListener('click', function (ev) {
           ev.preventDefault();
@@ -1473,6 +1487,7 @@ var QuotationRuntime = (function () {
         q += '&designWidth=' + encodeURIComponent(String(opts.designWidth || DEFAULT_DESIGN_W));
         q += '&designHeight=' + encodeURIComponent(String(opts.designHeight || DEFAULT_DESIGN_H));
       }
+      q += '&build=' + encodeURIComponent(QR_RUNTIME_BUILD);
       return base + '?' + q;
     }
     if (id) url.searchParams.set('projectId', id);
@@ -1485,6 +1500,7 @@ var QuotationRuntime = (function () {
       url.searchParams.set('designWidth', String(opts.designWidth || DEFAULT_DESIGN_W));
       url.searchParams.set('designHeight', String(opts.designHeight || DEFAULT_DESIGN_H));
     }
+    url.searchParams.set('build', QR_RUNTIME_BUILD);
     return url.href;
   }
 
@@ -2956,6 +2972,7 @@ var QuotationRuntime = (function () {
   }
 
   return {
+    BUILD: QR_RUNTIME_BUILD,
     EXPERIENCE_TYPE: EXPERIENCE_TYPE,
     DEFAULT_DESIGN_W: DEFAULT_DESIGN_W,
     DEFAULT_DESIGN_H: DEFAULT_DESIGN_H,

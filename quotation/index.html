@@ -8,6 +8,17 @@
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/taroa/favicon.png?v=ws7300">
   <link rel="icon" type="image/png" sizes="192x192" href="../assets/taroa/favicon.png?v=ws7300">
   <link rel="apple-touch-icon" href="../assets/taroa/favicon.png?v=ws7300">
+  <script src="../js/builder/quotation/quotation-runtime-build.js"></script>
+  <script>
+    (function () {
+      var build = window.QUOTATION_RUNTIME_BUILD || 'ws7980';
+      try {
+        var qBuild = new URLSearchParams(window.location.search || '').get('build');
+        if (qBuild) build = qBuild;
+      } catch (eBuild) { /* ignore */ }
+      window.__QR_RUNTIME_BUILD__ = build;
+    })();
+  </script>
   <script>
     /* V7.2.08 — Canvas mode: lock logical viewport before CSS/layout (1920×1080). */
     (function () {
@@ -44,7 +55,7 @@
   <link rel="stylesheet" href="../css/components.css?v=ws7259">
   <link rel="stylesheet" href="../css/platform/product-assistant.css">
   <link rel="stylesheet" href="../css/hall/hall.css">
-  <link rel="stylesheet" href="../css/boxies/quotation-runtime.css?v=ws7923">
+  <link rel="stylesheet" href="../css/boxies/quotation-runtime.css?v=ws7980">
   <link rel="stylesheet" href="../css/boxies/quotation-proposals-page.css?v=ws7975">
   <link rel="stylesheet" href="../css/boxies/hero-renderer.css?v=ws7866">
 </head>
@@ -66,12 +77,15 @@
   <script src="../js/auth/client.js"></script>
   <script src="../js/shared/hero-renderer.js?v=ws7866"></script>
   <script src="../js/shared/project-cover.js?v=ws7915"></script>
+  <script src="../js/builder/engines/scene-button-model.js?v=ws7980"></script>
   <script src="../js/builder/engines/experiencia-engine.js?v=ws7913"></script>
+  <script src="../js/builder/engines/button-presets.js?v=ws7980"></script>
+  <script src="../js/builder/engines/button-overlay-renderer.js?v=ws7980"></script>
   <script src="../js/builder/quotation/quotation-persist-audit.js?v=ws7227"></script>
   <script src="../js/builder/quotation/quotation-runtime-bridge.js?v=ws7226"></script>
   <script src="../js/builder/quotation/quotation-proposals-modal.js?v=ws7224"></script>
   <script src="../js/builder/quotation/quotation-proposals-page.js?v=ws7975"></script>
-  <script src="../js/builder/quotation/quotation-runtime.js?v=ws7923"></script>
+  <script src="../js/builder/quotation/quotation-runtime.js?v=ws7980"></script>
   <script>
     (function () {
       function start() {

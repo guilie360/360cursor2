@@ -2843,8 +2843,10 @@ function forceHeroIdleUi() {
   clearPreservedOverlay();
   clearNavFreezeState();
   liveNavSnapshot = null;
-  document.getElementById('mainMenuBackdrop').classList.remove('active');
-  document.getElementById('mainMenu').classList.remove('active');
+  var backdrop = document.getElementById('mainMenuBackdrop');
+  var menu = document.getElementById('mainMenu');
+  if (backdrop) backdrop.classList.remove('active');
+  if (menu) menu.classList.remove('active');
   document.body.classList.remove('main-menu-open');
   document.body.classList.remove('global-close-docked');
   document.body.classList.remove('nav-resume-active');

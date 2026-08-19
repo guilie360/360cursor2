@@ -700,6 +700,7 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   padding: 0 12px;
   min-width: 0;
   min-height: 0;
+  transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg));
 }
 
 .qr-ix-btn.has-local-look {
@@ -770,13 +771,19 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
 .qr-ix-btn.is-button-shape.is-hover-on:hover .builder-exp-stage-shape__body,
 .qr-ix-btn.is-button-shape.is-hover-on:hover .builder-exp-stage-shape__body > *,
 .qr-ix-btn.is-button-shape.is-hover-on:active .builder-exp-stage-shape__body,
-.qr-ix-btn.is-button-shape.is-hover-on:active .builder-exp-stage-shape__body > * {
+.qr-ix-btn.is-button-shape.is-hover-on:active .builder-exp-stage-shape__body > *,
+.qr-ix-btn.is-button-shape.is-hover-on:hover .qr-ix-shape-svg svg .builder-exp-stage-shape__body,
+.qr-ix-btn.is-button-shape.is-hover-on:hover .qr-ix-shape-svg svg .builder-exp-stage-shape__body > *,
+.qr-ix-btn.is-button-shape.is-hover-on:active .qr-ix-shape-svg svg .builder-exp-stage-shape__body,
+.qr-ix-btn.is-button-shape.is-hover-on:active .qr-ix-shape-svg svg .builder-exp-stage-shape__body > * {
   fill: color-mix(in srgb, var(--btn-hover-color, #6fbf86) 32%, rgba(8, 8, 8, 0.72));
   stroke: var(--btn-hover-color, #6fbf86);
 }
 
 .qr-ix-btn.is-button-shape.is-hover-on:active .builder-exp-stage-shape__body,
-.qr-ix-btn.is-button-shape.is-hover-on:active .builder-exp-stage-shape__body > * {
+.qr-ix-btn.is-button-shape.is-hover-on:active .builder-exp-stage-shape__body > *,
+.qr-ix-btn.is-button-shape.is-hover-on:active .qr-ix-shape-svg svg .builder-exp-stage-shape__body,
+.qr-ix-btn.is-button-shape.is-hover-on:active .qr-ix-shape-svg svg .builder-exp-stage-shape__body > * {
   fill: color-mix(in srgb, var(--btn-pressed-color, #5aaa74) 40%, rgba(8, 8, 8, 0.78));
   stroke: var(--btn-pressed-color, #5aaa74);
 }
