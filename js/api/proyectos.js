@@ -855,12 +855,14 @@ var ProyectosApi = (function () {
       if (mediaType !== 'image' && mediaType !== 'video') mediaType = null;
       /* V7.2.28 — validate structure only; never destroy valid public mediaUrl. */
       var mediaUrl = heroText(sc.mediaUrl) || heroText(sc.publicUrl) || null;
+      var embedUrl = heroText(sc.embedUrl) || null;
+      var sceneType = heroText(sc.type) || 'scene';
       var cover = sc.coverModel ? sanitizeCoverModel(sc.coverModel) : null;
       var guidesByViewport = sanitizeCanvasGuidesByViewport(sc.guidesByViewport, sc.guides);
       return {
         id: heroText(sc.id) || null,
         name: heroText(sc.name) || 'Escena',
-        type: heroText(sc.type) || 'scene',
+        type: sceneType,
         templateId: heroText(sc.templateId) || null,
         coverModel: cover,
         resourceId: heroText(sc.resourceId) || null,
@@ -870,6 +872,7 @@ var ProyectosApi = (function () {
         publicUrl: mediaUrl,
         mediaUrl: mediaUrl,
         mediaType: mediaType,
+        embedUrl: embedUrl,
         mediaFit: heroText(sc.mediaFit) === 'contain' || heroText(sc.mediaFit) === 'center'
           ? 'contain'
           : null,

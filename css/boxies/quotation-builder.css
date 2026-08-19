@@ -2202,6 +2202,24 @@ body.is-qe-outliner-dragging .qe-outliner__drag {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
 }
 
+.qe-scenes__thumb-frame.is-360 {
+  background:
+    radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.08), transparent 42%),
+    #050505;
+}
+
+.qe-scenes__thumb-frame.is-360::after {
+  content: '360';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.42);
+}
+
 .qe-scenes__thumb-name {
   display: block;
   max-width: 168px;

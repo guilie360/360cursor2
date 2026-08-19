@@ -320,15 +320,25 @@ var QuotationContextMenu = (function () {
     portal.appendChild(panel);
     openPanel = panel;
 
+    function collectInputValues() {
+      var values = {};
+      panel.querySelectorAll('[data-qe-ctx-input]').forEach(function (input) {
+        var key = input.getAttribute('data-qe-ctx-input');
+        if (key) values[key] = input.value;
+      });
+      return values;
+    }
+
     panel.addEventListener('click', function (e) {
       e.stopPropagation();
       var btn = e.target && e.target.closest ? e.target.closest('[data-qe-ctx-id]') : null;
       if (!btn || btn.disabled) return;
       var id = btn.getAttribute('data-qe-ctx-id');
       var item = findItem(items, id);
+      var values = collectInputValues();
       close();
-      if (typeof opts.onSelect === 'function') opts.onSelect(id, item);
-      if (item && typeof item.onSelect === 'function') item.onSelect(item);
+      if (typeof opts.onSelect === 'function') opts.onSelect(id, item, values);
+      if (item && typeof item.onSelect === 'function') item.onSelect(item, values);
     });
 
     panel.addEventListener('keydown', function (e) {

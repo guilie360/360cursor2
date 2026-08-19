@@ -71,6 +71,7 @@ var QuotationPersistAudit = (function () {
       /* Codebase uses resourceId — backgroundResourceId is NOT a persisted field */
       mediaUrl: sc.mediaUrl || null,
       mediaType: sc.mediaType || null,
+      embedUrl: sc.embedUrl || null,
       mediaIsBlob: !!(sc.mediaUrl && String(sc.mediaUrl).indexOf('blob:') === 0),
       coverImage: sc.coverModel && sc.coverModel.imageUrl || null,
       coverVideo: sc.coverModel && sc.coverModel.videoUrl || null,

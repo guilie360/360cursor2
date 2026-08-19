@@ -2229,6 +2229,10 @@ var QuotationEditor = (function () {
     return state.scenes[0].id === sc.id;
   }
 
+  function is360Scene(sc) {
+    return !!(sc && String(sc.type || '') === '360');
+  }
+
   function heroScene() {
     ensureScenes();
     return heroSceneRef();
@@ -4078,6 +4082,7 @@ var QuotationEditor = (function () {
   }
 
   function sceneHasResource(scene) {
+    if (is360Scene(scene)) return true;
     var res = sceneResource(scene);
     if (res && publicUrlOf(res)) return true;
     if (scene && scene.mediaUrl && String(scene.mediaUrl).indexOf('blob:') !== 0) return true;
@@ -4116,6 +4121,22 @@ var QuotationEditor = (function () {
   }
 
   function sceneMediaStageHtml(scene) {
+    if (is360Scene(scene)) {
+      var embed = String(scene.embedUrl || '').trim();
+      if (embed && isLapentorUrl(embed)) {
+        return '' +
+          '<div class="qe-scene-media hero-renderer qe-scene-media--embed" data-qe-drop-scene>' +
+            '<iframe class="qr-scene-embed" src="' + escapeHtml(embed) + '"' +
+              ' title="Visor 360" allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"' +
+              ' allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"' +
+              ' style="pointer-events:none"></iframe>' +
+          '</div>';
+      }
+      return '' +
+        '<div class="qe-scene-empty" data-qe-360-empty data-qe-drop-scene>' +
+          '<p class="qe-scene-empty__line">Pega la URL de Lapentor</p>' +
+        '</div>';
+    }
     var res = sceneResource(scene);
     var url = sceneDisplayUrl(scene);
     if (!url) return emptyScenePlaceholderHtml();
@@ -6274,7 +6295,8 @@ var QuotationEditor = (function () {
     var on = sc.id === state.activeSceneId;
     var hero = isHeroScene(sc);
     var selected = !!(state.sceneSelectedIds && state.sceneSelectedIds[sc.id]);
-    var thumbUrl = sceneDisplayUrl(sc) || null;
+    var pano = is360Scene(sc);
+    var thumbUrl = pano ? null : (sceneDisplayUrl(sc) || null);
     var bg = thumbUrl
       ? ' style="background-image:url(\'' + escapeHtml(thumbUrl) + '\');background-size:cover;background-position:center"'
       : '';
@@ -6301,7 +6323,7 @@ var QuotationEditor = (function () {
           ' data-qe-scene="' + escapeHtml(sc.id) + '"' +
           (hero ? '' : ' draggable="true" data-qe-scene-drag="' + escapeHtml(sc.id) + '"') +
           ' title="' + escapeHtml(hero ? 'H E R O' : (sc.name || 'Escena')) + '">' +
-          '<span class="qe-scenes__thumb-frame" aria-hidden="true"' + bg + '></span>' +
+          '<span class="qe-scenes__thumb-frame' + (pano ? ' is-360' : '') + '" aria-hidden="true"' + bg + '></span>' +
         '</button>' +
         '<span class="qe-scenes__thumb-name' + (hero ? ' is-hero-label' : '') + '"' +
           (hero
@@ -9259,7 +9281,7 @@ var QuotationEditor = (function () {
     if (!clone) return null;
     var fromHero = isHeroScene(src);
     clone.id = nextId('sc');
-    clone.type = 'scene';
+    clone.type = fromHero ? 'scene' : (src.type || 'scene');
     clone.templateId = null;
     clone.name = fromHero
       ? nextSceneName()
@@ -9676,14 +9698,33 @@ var QuotationEditor = (function () {
       {
         id: 'replace-bg',
         label: 'Reemplazar fondo',
-        disabled: batchIds.length > 1
-      },
-      {
-        id: 'duplicate',
-        label: 'Duplicar',
-        disabled: batchIds.length > 1
+        disabled: batchIds.length > 1 || is360Scene(sc)
       }
     ];
+    if (!hero && batchIds.length < 2) {
+      if (is360Scene(sc)) {
+        items.push({
+          id: 'lapentor-url',
+          label: 'URL de Lapentor'
+        });
+        items.push({
+          id: 'convert-image',
+          label: 'Convertir en imagen',
+          separatorBefore: true
+        });
+      } else {
+        items.push({
+          id: 'convert-360',
+          label: 'Convertir en 360',
+          separatorBefore: true
+        });
+      }
+    }
+    items.push({
+      id: 'duplicate',
+      label: 'Duplicar',
+      disabled: batchIds.length > 1
+    });
     if (!hero && hasGroups) {
       items.push({
         id: 'send-to-group',
@@ -9725,6 +9766,18 @@ var QuotationEditor = (function () {
         }
         if (id === 'replace-bg') {
           openResourcePicker(sceneId);
+          return;
+        }
+        if (id === 'convert-360') {
+          convertSceneContentType(sceneId, '360');
+          return;
+        }
+        if (id === 'convert-image') {
+          convertSceneContentType(sceneId, 'scene');
+          return;
+        }
+        if (id === 'lapentor-url') {
+          openScene360ConfigMenu(sceneId, clientX, clientY);
           return;
         }
         if (id === 'duplicate') {
@@ -9911,18 +9964,119 @@ var QuotationEditor = (function () {
     }, true);
   }
 
+  function convertSceneContentType(sceneId, nextType) {
+    var sc = sceneById(sceneId);
+    if (!sc || isHeroScene(sc)) return;
+    if (nextType === '360') {
+      sc.type = '360';
+      state.activeSceneId = sceneId;
+      state.selectedElementId = null;
+      state.expHasSelection = false;
+      markDirtyLocal();
+      rerender();
+      requestAnimationFrame(function () {
+        openScene360ConfigMenu(sceneId);
+      });
+      return;
+    }
+    sc.type = 'scene';
+    markDirtyLocal();
+    rerender();
+  }
+
+  function applySceneEmbedUrl(sceneId, raw) {
+    var sc = sceneById(sceneId);
+    if (!sc) return false;
+    var url = normalizeUrl(raw);
+    if (!url || !isLapentorUrl(url)) {
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error('Usa un enlace de Lapentor (app.lapentor.com).');
+      }
+      return false;
+    }
+    sc.embedUrl = url;
+    sc.type = '360';
+    markDirtyLocal();
+    rerender();
+    return true;
+  }
+
+  function openScene360ConfigMenu(sceneId, clientX, clientY) {
+    if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    var sc = sceneById(sceneId);
+    if (!sc) return;
+    var x = clientX;
+    var y = clientY;
+    if (x == null || y == null) {
+      var host = rootEl && rootEl.querySelector('[data-qe-viewport-window]');
+      var rect = host && host.getBoundingClientRect();
+      x = rect ? Math.round(rect.left + 28) : 80;
+      y = rect ? Math.round(rect.top + 28) : 80;
+    }
+    QuotationContextMenu.open({
+      x: x,
+      y: y,
+      ariaLabel: 'Visor 360',
+      items: [
+        { id: 'visor-360-title', type: 'label', label: 'Visor 360' },
+        {
+          id: 'embed-url',
+          type: 'input',
+          inputType: 'text',
+          label: 'URL de Lapentor',
+          placeholder: 'https://app.lapentor.com/...',
+          ariaLabel: 'URL de Lapentor',
+          value: sc.embedUrl || '',
+          onSubmit: function (raw) {
+            applySceneEmbedUrl(sceneId, raw);
+          }
+        },
+        { id: 'save-embed', label: 'Guardar' }
+      ],
+      onSelect: function (id, item, values) {
+        if (id !== 'save-embed') return;
+        var raw = values && values['embed-url'];
+        applySceneEmbedUrl(sceneId, raw);
+      }
+    });
+  }
+
+  function openNewSceneTypeMenu(anchorEl) {
+    if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    var rect = anchorEl && anchorEl.getBoundingClientRect
+      ? anchorEl.getBoundingClientRect()
+      : null;
+    var x = rect ? rect.left : 80;
+    var y = rect ? (rect.bottom + 6) : 80;
+    QuotationContextMenu.open({
+      x: x,
+      y: y,
+      ariaLabel: 'Nueva escena',
+      items: [
+        { id: 'new-image', label: 'Imagen' },
+        { id: 'new-360', label: '360' }
+      ],
+      onSelect: function (id) {
+        if (id === 'new-360') createScene({ type: '360' });
+        else createScene({});
+      }
+    });
+  }
+
   function createScene(opts) {
     opts = opts || {};
     var templateId = opts.templateId || null;
     var fromHeroDefault = templateId === 'hero-default' || opts.fromTemplate === true;
+    var as360 = opts.type === '360' || opts.contentType === '360';
     /* Empty until user assigns a library resource — never auto-bind media. */
     var scene = {
       id: nextId('sc'),
       name: fromHeroDefault ? 'Hero Default' : nextSceneName(),
-      type: fromHeroDefault ? 'hero' : 'scene',
+      type: fromHeroDefault ? 'hero' : (as360 ? '360' : 'scene'),
       templateId: fromHeroDefault ? 'hero-default' : null,
       resourceId: null,
       coverModel: null,
+      embedUrl: as360 ? (opts.embedUrl || null) : null,
       elements: [],
       interactions: [],
       buttons: [],
@@ -9942,9 +10096,13 @@ var QuotationEditor = (function () {
     markDirtyLocal();
     queueScenesStripReveal(scene.id);
     rerender();
+    if (as360 && !fromHeroDefault) {
+      var createdId = scene.id;
+      requestAnimationFrame(function () {
+        openScene360ConfigMenu(createdId);
+      });
+    }
   }
-
-  function applyResourceToCoverModel(scene, res) {
     if (!scene || !res) return;
     ensureHeroCoverModel(scene);
     var url = displayUrlOf(res);
@@ -9978,6 +10136,7 @@ var QuotationEditor = (function () {
     if (targetId) state.activeSceneId = targetId;
     var pub = publicUrlOf(res);
     var isVideo = res.media === 'video' || res.group === 'videos';
+    if (is360Scene(scene)) scene.type = 'scene';
     scene.resourceId = res.id;
     scene.mediaUrl = url;
     scene.publicUrl = pub || (String(url).indexOf('blob:') === 0 ? null : url);
@@ -12830,7 +12989,7 @@ var QuotationEditor = (function () {
         sceneAdd.addEventListener('click', function (e) {
           e.preventDefault();
           e.stopPropagation();
-          createScene({});
+          openNewSceneTypeMenu(sceneAdd);
         });
       }
 
@@ -12998,7 +13157,7 @@ var QuotationEditor = (function () {
     editor.querySelectorAll('[data-qe-scene-new]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var mode = btn.getAttribute('data-qe-scene-new');
-        if (mode === 'empty') createScene({});
+        if (mode === 'empty') openNewSceneTypeMenu(btn);
       });
     });
 
@@ -13534,6 +13693,7 @@ var QuotationEditor = (function () {
           mediaType: sc.mediaType ||
             (cover && cover.videoUrl ? 'video'
               : (cover && cover.imageUrl ? 'image' : null)),
+          embedUrl: sc.embedUrl || null,
           elements: Array.isArray(sc.elements) ? sc.elements : [],
           interactions: Array.isArray(sc.interactions) ? sc.interactions : [],
           guidesByViewport: serializeSceneGuides(sc),
@@ -13770,6 +13930,7 @@ var QuotationEditor = (function () {
           provider: sc.provider || null,
           mediaUrl: mediaUrl,
           mediaType: sc.mediaType || null,
+          embedUrl: sc.embedUrl || null,
           elements: Array.isArray(sc.elements) ? sc.elements : [],
           interactions: Array.isArray(sc.interactions) ? sc.interactions : [],
           buttons: Array.isArray(sc.buttons) ? sc.buttons : [],

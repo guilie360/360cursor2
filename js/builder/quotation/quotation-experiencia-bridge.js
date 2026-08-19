@@ -237,6 +237,7 @@ var QuotationExperienciaBridge = (function () {
 
   function mediaUrlForScene(scene, contentById) {
     if (!scene) return null;
+    if (String(scene.type || '') === '360') return null;
     if (scene.mediaUrl) return scene.mediaUrl;
     if (scene.publicUrl) return scene.publicUrl;
     if (scene.coverModel) {

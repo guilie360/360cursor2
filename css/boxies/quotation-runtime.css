@@ -640,6 +640,37 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
     #050505;
 }
 
+.qr-scene-embed,
+.qe-scene-media--embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #050505;
+}
+
+.qr-scene-embed-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.hero-canvas-host.is-360-edit .qr-scene-embed {
+  pointer-events: none;
+}
+
+.hero-canvas-host.is-360-live .qr-scene-embed {
+  pointer-events: auto;
+}
+
 .qr-ix-layer {
   position: absolute;
   inset: 0;

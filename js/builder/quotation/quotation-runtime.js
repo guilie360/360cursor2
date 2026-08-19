@@ -221,8 +221,18 @@ var QuotationRuntime = (function () {
    * Editor SSOT: a scene with mediaUrl / publicUrl / resourceId is a media scene.
    * Runtime must paint it on the stage — never substitute ProjectCover / hero.image_url.
    */
+  function sceneIs360(scene) {
+    return !!(scene && String(scene.type || '') === '360');
+  }
+
+  function sceneEmbedUrl(scene) {
+    if (!scene) return '';
+    return String(scene.embedUrl || '').trim();
+  }
+
   function sceneIsMediaScene(scene) {
     if (!scene) return false;
+    if (sceneIs360(scene)) return true;
     if (scene.resourceId) return true;
     var u = scene.mediaUrl || scene.publicUrl || null;
     return !!(u && String(u).indexOf('blob:') !== 0);
@@ -235,6 +245,13 @@ var QuotationRuntime = (function () {
       return null;
     }
     if (scene.type === 'backpack' || scene.id === '__qe_backpack__') {
+      return null;
+    }
+    if (sceneIs360(scene)) {
+      var embed = sceneEmbedUrl(scene);
+      if (embed && String(embed).indexOf('blob:') !== 0) {
+        return { url: embed, type: '360' };
+      }
       return null;
     }
     var url = scene.mediaUrl || scene.publicUrl || null;
@@ -1255,6 +1272,33 @@ var QuotationRuntime = (function () {
     return w > 900;
   }
 
+  function paintLapentorEmbed(slot, url, editMode) {
+    if (!slot) return;
+    slot.innerHTML = '';
+    slot.classList.add('hero-canvas__media--embed');
+    slot.classList.toggle('is-embed-edit', !!editMode);
+    slot.classList.toggle('is-embed-live', !editMode);
+    if (!url) {
+      var empty = document.createElement('div');
+      empty.className = 'qr-scene-embed-empty';
+      empty.setAttribute('data-qe-360-empty', '1');
+      empty.textContent = 'Pega la URL de Lapentor';
+      slot.appendChild(empty);
+      return;
+    }
+    var iframe = document.createElement('iframe');
+    iframe.className = 'qr-scene-embed';
+    iframe.src = url;
+    iframe.title = 'Visor 360';
+    iframe.setAttribute('allow', 'fullscreen; xr-spatial-tracking; gyroscope; accelerometer');
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+    iframe.setAttribute('loading', 'lazy');
+    if (editMode) iframe.style.pointerEvents = 'none';
+    else iframe.style.pointerEvents = 'auto';
+    slot.appendChild(iframe);
+  }
+
   function paintSceneMedia(parentEl, scene, bundle, opts) {
     opts = opts || {};
     if (!parentEl) return null;
@@ -1265,14 +1309,17 @@ var QuotationRuntime = (function () {
       return paintMiralagoBocetoPdf(parentEl);
     }
 
-    var media = resolveSceneMedia(scene, bundle);
-    var urlFinal = media && media.url ? media.url : null;
+    var is360 = sceneIs360(scene);
+    var media = is360 ? null : resolveSceneMedia(scene, bundle);
+    var urlFinal = is360 ? sceneEmbedUrl(scene) : (media && media.url ? media.url : null);
     console.log('[QR V7.2.64] paintSceneMedia URL final:', urlFinal);
 
     var enablePan = opts.enablePan != null ? !!opts.enablePan : !(editorMode && canvasMode);
+    if (is360) enablePan = false;
     var disableHint = opts.disableHint != null
       ? !!opts.disableHint
       : !!(editorMode && canvasMode);
+    var edit360 = is360 && (opts.mode === 'builder' || (editorMode && canvasMode && opts.mode !== 'preview'));
 
     if (typeof HeroCanvas === 'undefined' || !HeroCanvas.mount) {
       console.warn('[QR V7.2.64] HeroCanvas missing — fallback flat cover host');
@@ -1280,7 +1327,9 @@ var QuotationRuntime = (function () {
       fallback.className = 'qr-scene-media hero-renderer';
       parentEl.appendChild(fallback);
       sceneMediaEl = fallback;
-      if (media && media.url && typeof HeroRenderer !== 'undefined') {
+      if (is360) {
+        paintLapentorEmbed(fallback, urlFinal, edit360);
+      } else if (media && media.url && typeof HeroRenderer !== 'undefined') {
         HeroRenderer.paint(fallback, { src: media.url, kind: media.type === 'video' ? 'video' : 'image' });
       }
       return fallback;
@@ -1296,7 +1345,7 @@ var QuotationRuntime = (function () {
         (opts.mode === 'publish' || opts.mode === 'preview'));
 
     heroCanvasApi = HeroCanvas.mount(parentEl, {
-      media: media && media.url
+      media: (!is360 && media && media.url)
         ? { src: media.url, kind: media.type === 'video' ? 'video' : 'image' }
         : null,
       paintOpts: {
@@ -1304,8 +1353,8 @@ var QuotationRuntime = (function () {
       },
       enablePan: desktopFit ? false : enablePan,
       disableHint: disableHint,
-      allowZoom: !!opts.allowZoom,
-      middleButtonPan: !!opts.middleButtonPan,
+      allowZoom: (is360 && !edit360) ? false : !!opts.allowZoom,
+      middleButtonPan: is360 ? !!opts.middleButtonPan && edit360 : !!opts.middleButtonPan,
       fitDesignToHost: desktopFit,
       initialCamera: opts.initialCamera || null,
       onCameraChange: typeof opts.onCameraChange === 'function' ? opts.onCameraChange : null,
@@ -1314,7 +1363,11 @@ var QuotationRuntime = (function () {
     });
 
     sceneMediaEl = heroCanvasApi.mediaSlot;
-    if (!media || !media.url) {
+    if (is360) {
+      parentEl.classList.add(edit360 ? 'is-360-edit' : 'is-360-live');
+      parentEl.classList.remove(edit360 ? 'is-360-live' : 'is-360-edit');
+      paintLapentorEmbed(sceneMediaEl, urlFinal, edit360);
+    } else if (!media || !media.url) {
       if (heroCanvasApi.clearMedia) heroCanvasApi.clearMedia();
     }
     logPaintSceneMediaDomAudit(parentEl, sceneMediaEl);
@@ -1332,7 +1385,7 @@ var QuotationRuntime = (function () {
     var interactive = opts.interactive === true;
     var paintIx = opts.paintInteractions !== false;
     var canvas = paintSceneMedia(hostEl, scene, bundle, {
-      enablePan: opts.enablePan,
+      enablePan: sceneIs360(scene) ? false : opts.enablePan,
       disableHint: opts.disableHint != null ? opts.disableHint : (opts.mode === 'builder'),
       allowZoom: opts.allowZoom,
       middleButtonPan: opts.middleButtonPan,
@@ -1460,7 +1513,7 @@ var QuotationRuntime = (function () {
     var preferCover = scenePrefersCoverLanding(scene, bundle) &&
       !(liveMode || previewMode) && !(editorMode && canvasMode);
     var paintAsMedia = !preferCover &&
-      (sceneIsMediaScene(scene) || !!resolveSceneMedia(scene, bundle));
+      (sceneIs360(scene) || sceneIsMediaScene(scene) || !!resolveSceneMedia(scene, bundle));
     if ((!paintAsMedia || preferCover) && sceneHasCoverChrome(scene) && coverHostEl) {
       /* Cover→cover: remount ProjectCover so logo/title/CTAs match this scene. */
       if (scene.coverModel && coverModelIsMeaningful(scene.coverModel) &&
