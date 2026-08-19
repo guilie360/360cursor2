@@ -2913,6 +2913,31 @@ var ExperienciaCanvas = (function () {
       }).join('');
   }
 
+  function buttonInspectorVideoOptionsHtml(lists, selectedVideoId) {
+    var sel = String(selectedVideoId || '');
+    var videos = [];
+    if (lists && typeof lists.listVideos === 'function') {
+      videos = lists.listVideos() || [];
+    }
+    return '<option value="">— Seleccionar video —</option>' +
+      videos.map(function (entry) {
+        if (!entry || !entry.id) return '';
+        return '<option value="' + esc(String(entry.id)) + '"' +
+          (sel === String(entry.id) ? ' selected' : '') +
+          '>' + esc(entry.label || entry.id) + '</option>';
+      }).join('');
+  }
+
+  function buttonTransitionVideoConfigHint(selected) {
+    var cfg = (selected && selected.buttonConfig) || {};
+    var missing = [];
+    if (!(cfg.targetSceneId || selected.targetSceneId)) missing.push('escena destino');
+    if (!cfg.transitionVideoId) missing.push('video de transición');
+    if (!missing.length) return '';
+    return '<p class="builder-menu-hint is-warn">Configuración incompleta: falta ' +
+      esc(missing.join(' y ')) + '.</p>';
+  }
+
   function buttonKindTypeOptionsHtml(selectedType) {
     var cur = String(selectedType || 'unconfigured');
     var kinds = (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.BUTTON_KIND_TYPES)
@@ -2953,7 +2978,33 @@ var ExperienciaCanvas = (function () {
           '</select>' +
         '</div>';
     } else if (kind === 'transitionVideo') {
-      body = '<p class="builder-menu-hint">Aquí irán escena destino y video de transición.</p>';
+      var tvCfg = (selected && selected.buttonConfig) || {};
+      var tvTargetId = tvCfg.targetSceneId || selected.targetSceneId || '';
+      var tvVideoId = tvCfg.transitionVideoId || '';
+      var tvOwnerId = String((selected && selected.id) || (selected && selected.portId) || '');
+      body =
+        buttonTransitionVideoConfigHint(selected) +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Escena destino</label>' +
+          '<select data-exp-btn-config-target-scene class="builder-exp-btn-select"' +
+            (tvOwnerId ? ' data-exp-btn-kind-owner="' + esc(tvOwnerId) + '"' : '') +
+          '>' +
+            buttonInspectorSceneOptionsHtml(
+              state,
+              sceneNode && sceneNode.id,
+              tvTargetId,
+              lists && lists.listScenes
+            ) +
+          '</select>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Video de transición</label>' +
+          '<select data-exp-btn-config-transition-video class="builder-exp-btn-select"' +
+            (tvOwnerId ? ' data-exp-btn-kind-owner="' + esc(tvOwnerId) + '"' : '') +
+          '>' +
+            buttonInspectorVideoOptionsHtml(lists, tvVideoId) +
+          '</select>' +
+        '</div>';
     } else if (kind === 'toggle2D3D') {
       body = '<p class="builder-menu-hint">Aquí irá el selector de planta asociada.</p>';
     } else if (kind === 'toggleDayNight') {
@@ -5171,6 +5222,16 @@ var ExperienciaCanvas = (function () {
       syncPropsGroupOpen('btn-config');
     }
 
+    function applyButtonTransitionVideoId(videoId, videoEl) {
+      var ownerAttr = videoEl && videoEl.getAttribute
+        ? videoEl.getAttribute('data-exp-btn-kind-owner')
+        : null;
+      var buttonId = ownerAttr ? String(ownerAttr) : resolveSelectedOverlayButtonId();
+      routePatchBtn({
+        buttonConfig: { transitionVideoId: videoId || null }
+      }, { inspector: true, persist: true, buttonId: buttonId });
+    }
+
     function applyButtonChangeSceneTarget(targetSceneId, sceneEl) {
       var sceneId = canvas().selectedId;
       if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.overlaySceneIdsEqual &&
@@ -5224,7 +5285,6 @@ var ExperienciaCanvas = (function () {
         patchTargetSceneId: targetSceneId || null
       });
       var patched = routePatchBtn({
-        buttonType: 'changeScene',
         buttonConfig: { targetSceneId: targetSceneId || null }
       }, { inspector: true, persist: true, buttonId: buttonId });
       var ixAfter = null;
@@ -5273,6 +5333,12 @@ var ExperienciaCanvas = (function () {
       if (sceneEl && inspectorBody.contains(sceneEl)) {
         e.stopPropagation();
         applyButtonChangeSceneTarget(sceneEl.value, sceneEl);
+        return;
+      }
+      var videoEl = t.closest('[data-exp-btn-config-transition-video]');
+      if (videoEl && inspectorBody.contains(videoEl)) {
+        e.stopPropagation();
+        applyButtonTransitionVideoId(videoEl.value, videoEl);
       }
     }
 
@@ -5310,6 +5376,13 @@ var ExperienciaCanvas = (function () {
         cfgSceneEl.setAttribute('data-exp-btn-scene-bound', '1');
         cfgSceneEl.addEventListener('change', function () {
           applyButtonChangeSceneTarget(cfgSceneEl.value, cfgSceneEl);
+        });
+      }
+      var cfgVideoEl = inspectorBody.querySelector('[data-exp-btn-config-transition-video]');
+      if (cfgVideoEl && cfgVideoEl.getAttribute('data-exp-btn-video-bound') !== '1') {
+        cfgVideoEl.setAttribute('data-exp-btn-video-bound', '1');
+        cfgVideoEl.addEventListener('change', function () {
+          applyButtonTransitionVideoId(cfgVideoEl.value, cfgVideoEl);
         });
       }
     }

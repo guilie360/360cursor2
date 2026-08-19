@@ -202,7 +202,7 @@ function handoffQuotationPublicExperience(project) {
     var u = new URL('/quotation/', window.location.origin);
     u.searchParams.set('projectId', id);
     u.searchParams.set('experience_type', 'quotation');
-    u.searchParams.set('build', 'ws7980');
+    u.searchParams.set('build', 'ws7981');
     if (handoffParams.get('live') === '1' || handoffParams.get('live') === 'true') {
       u.searchParams.set('live', '1');
     }
@@ -212,7 +212,7 @@ function handoffQuotationPublicExperience(project) {
     runtimeSrc = u.href;
   } catch (e) {
     runtimeSrc = '/quotation/?projectId=' + encodeURIComponent(id) +
-      '&experience_type=quotation&build=ws7980';
+      '&experience_type=quotation&build=ws7981';
     try {
       var hp = new URLSearchParams(window.location.search || '');
       if (hp.get('live') === '1' || hp.get('live') === 'true') {

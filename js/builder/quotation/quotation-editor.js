@@ -7457,6 +7457,16 @@ var QuotationEditor = (function () {
       zoomMax: CANVAS_ZOOM_MAX,
       disableHint: true,
       paintInteractions: preview,
+      transitionVideo: preview ? {
+        host: host,
+        resolveVideoUrl: function (videoId) {
+          var item = contentById(videoId);
+          return item ? publicUrlOf(item) : null;
+        },
+        onNavigate: function (sceneId) {
+          selectScene(sceneId);
+        }
+      } : null,
       onAction: preview
         ? function (ix) {
             if (!ix) return true;

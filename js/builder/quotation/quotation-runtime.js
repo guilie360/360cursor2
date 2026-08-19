@@ -12,7 +12,7 @@
 var QuotationRuntime = (function () {
   var QR_RUNTIME_BUILD = (typeof QUOTATION_RUNTIME_BUILD !== 'undefined')
     ? QUOTATION_RUNTIME_BUILD
-    : 'ws7980';
+    : 'ws7981';
   var EXPERIENCE_TYPE = 'quotation';
   var DEFAULT_DESIGN_W = 1920;
   var DEFAULT_DESIGN_H = 1080;
@@ -714,7 +714,8 @@ var QuotationRuntime = (function () {
 
   function resolveInteractionGotoTarget(ix) {
     if (!ix) return null;
-    if (String(ix.buttonType || '') === 'changeScene') {
+    var bt = String(ix.buttonType || '');
+    if (bt === 'changeScene' || bt === 'transitionVideo') {
       if (ix.buttonConfig && ix.buttonConfig.targetSceneId) {
         return String(ix.buttonConfig.targetSceneId);
       }
@@ -724,6 +725,143 @@ var QuotationRuntime = (function () {
       : null;
   }
 
+  var transitionVideoActive = false;
+  var transitionVideoEl = null;
+  var transitionVideoOverlay = null;
+  var transitionVideoEndedHandler = null;
+
+  function resolveLibraryItemUrl(bundle, itemId) {
+    if (!itemId) return null;
+    var lib = bundle && bundle.hero && bundle.hero.library && bundle.hero.library.content;
+    if (!Array.isArray(lib)) return null;
+    var want = String(itemId);
+    for (var i = 0; i < lib.length; i++) {
+      var item = lib[i];
+      if (!item || String(item.id) !== want) continue;
+      var url = item.publicUrl || item.remoteUrl || item.previewUrl || null;
+      if (url && String(url).indexOf('blob:') !== 0) return String(url);
+    }
+    return null;
+  }
+
+  function resolveTransitionVideoConfig(ix) {
+    if (!ix || String(ix.buttonType || '') !== 'transitionVideo') return null;
+    var cfg = ix.buttonConfig && typeof ix.buttonConfig === 'object' ? ix.buttonConfig : {};
+    var targetSceneId = cfg.targetSceneId || ix.targetSceneId || null;
+    var transitionVideoId = cfg.transitionVideoId || null;
+    if (!targetSceneId || !transitionVideoId) return null;
+    return {
+      targetSceneId: String(targetSceneId),
+      transitionVideoId: String(transitionVideoId)
+    };
+  }
+
+  function cleanupTransitionVideoPlayback() {
+    transitionVideoActive = false;
+    if (transitionVideoEl && transitionVideoEndedHandler) {
+      transitionVideoEl.removeEventListener('ended', transitionVideoEndedHandler);
+    }
+    transitionVideoEndedHandler = null;
+    if (transitionVideoEl) {
+      try { transitionVideoEl.pause(); } catch (ePause) { /* ignore */ }
+      transitionVideoEl.removeAttribute('src');
+      try { transitionVideoEl.load(); } catch (eLoad) { /* ignore */ }
+    }
+    if (transitionVideoOverlay && transitionVideoOverlay.parentNode) {
+      transitionVideoOverlay.parentNode.removeChild(transitionVideoOverlay);
+    }
+    transitionVideoEl = null;
+    transitionVideoOverlay = null;
+  }
+
+  /**
+   * Play full-screen transition video, then navigate.
+   * opts.resolveVideoUrl(id) — optional override (editor preview).
+   * opts.onNavigate(sceneId) — optional override (default goToScene).
+   * opts.host — mount target (default runtime root).
+   */
+  function runTransitionVideo(ix, opts) {
+    opts = opts || {};
+    if (transitionVideoActive) return false;
+    var cfg = resolveTransitionVideoConfig(ix);
+    if (!cfg) {
+      console.warn('[QR transitionVideo] incomplete button config', ix && ix.id);
+      return false;
+    }
+    var bundle = loaded || blankEditorBundle();
+    if (!sceneById(bundle, cfg.targetSceneId)) {
+      console.warn('[QR transitionVideo] target scene not found', cfg.targetSceneId);
+      return false;
+    }
+    var videoUrl = typeof opts.resolveVideoUrl === 'function'
+      ? opts.resolveVideoUrl(cfg.transitionVideoId, ix)
+      : resolveLibraryItemUrl(bundle, cfg.transitionVideoId);
+    if (!videoUrl) {
+      console.warn('[QR transitionVideo] video asset not found', cfg.transitionVideoId);
+      return false;
+    }
+    var host = opts.host ||
+      presentationRootEl ||
+      document.getElementById('quotationRuntimeRoot') ||
+      document.body;
+    if (!host) return false;
+
+    transitionVideoActive = true;
+    var overlay = document.createElement('div');
+    overlay.className = 'qr-transition-video';
+    overlay.setAttribute('data-qr-transition-video', '1');
+    overlay.setAttribute('aria-hidden', 'false');
+
+    var video = document.createElement('video');
+    video.className = 'qr-transition-video__media';
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    video.setAttribute('preload', 'auto');
+    video.src = videoUrl;
+    overlay.appendChild(video);
+    host.appendChild(overlay);
+    transitionVideoOverlay = overlay;
+    transitionVideoEl = video;
+
+    var finished = false;
+    function finish(navigate) {
+      if (finished) return;
+      finished = true;
+      cleanupTransitionVideoPlayback();
+      if (navigate) {
+        if (typeof opts.onNavigate === 'function') {
+          opts.onNavigate(cfg.targetSceneId, ix);
+        } else {
+          goToScene(cfg.targetSceneId);
+        }
+      }
+    }
+
+    transitionVideoEndedHandler = function () { finish(true); };
+    video.addEventListener('ended', transitionVideoEndedHandler);
+    video.addEventListener('error', function () {
+      console.warn('[QR transitionVideo] playback error', videoUrl);
+      finish(false);
+    }, { once: true });
+
+    var playPromise;
+    try {
+      video.currentTime = 0;
+      playPromise = video.play();
+    } catch (ePlay) {
+      console.warn('[QR transitionVideo] play() threw', ePlay);
+      finish(false);
+      return false;
+    }
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(function (err) {
+        console.warn('[QR transitionVideo] play() rejected', err);
+        finish(false);
+      });
+    }
+    return true;
+  }
+
   function runInteractionAction(ix, actionOpts) {
     if (!ix) return;
     actionOpts = actionOpts || {};
@@ -731,6 +869,10 @@ var QuotationRuntime = (function () {
       try {
         if (actionOpts.onAction(ix) === true) return;
       } catch (eAct) { /* fall through */ }
+    }
+    if (String(ix.buttonType || '') === 'transitionVideo') {
+      runTransitionVideo(ix, actionOpts.transitionVideo || null);
+      return;
     }
     if (String(ix.buttonType || '') === 'changeScene') {
       var changeTarget = resolveInteractionGotoTarget(ix);
@@ -860,6 +1002,8 @@ var QuotationRuntime = (function () {
       });
     });
   }
+
+  var sceneInteractionOpts = null;
 
   function paintInteractionLayer(parentEl, scene, interactive, opts) {
     opts = opts || {};
@@ -1201,11 +1345,14 @@ var QuotationRuntime = (function () {
     });
     if (paintIx && canvas &&
         !(isMiralagoRuntime() && scene && String(scene.id) === 'sc-miralago-massing')) {
-      paintInteractionLayer(canvas, scene, interactive, {
+      sceneInteractionOpts = {
+        onAction: typeof opts.onAction === 'function' ? opts.onAction : null,
+        transitionVideo: opts.transitionVideo || null
+      };
+      paintInteractionLayer(canvas, scene, interactive, Object.assign({
         force: opts.mode === 'builder' || opts.mode === 'preview',
-        paintInteractions: true,
-        onAction: typeof opts.onAction === 'function' ? opts.onAction : null
-      });
+        paintInteractions: true
+      }, sceneInteractionOpts));
     }
     return {
       host: hostEl,
@@ -1215,11 +1362,12 @@ var QuotationRuntime = (function () {
       mode: opts.mode || 'publish',
       refreshInteractions: function (nextScene, nextInteractive) {
         if (!canvas) return null;
+        var ixOpts = sceneInteractionOpts || { paintInteractions: paintIx };
         return paintInteractionLayer(
           canvas,
           nextScene || scene,
           nextInteractive != null ? !!nextInteractive : interactive,
-          { force: true, paintInteractions: paintIx }
+          Object.assign({ force: true, paintInteractions: paintIx }, ixOpts)
         );
       },
       getCamera: function () {
@@ -1231,6 +1379,7 @@ var QuotationRuntime = (function () {
         if (heroCanvasApi && heroCanvasApi.setCamera) heroCanvasApi.setCamera(cam);
       },
       destroy: function () {
+        cleanupTransitionVideoPlayback();
         if (ixLayerEl && ixLayerEl.parentNode) {
           try { ixLayerEl.parentNode.removeChild(ixLayerEl); } catch (eR) { /* ignore */ }
         }
@@ -2981,6 +3130,9 @@ var QuotationRuntime = (function () {
     storeLiveEnvelope: storeLiveEnvelope,
     readLiveEnvelope: readLiveEnvelope,
     href: href,
+    runTransitionVideo: runTransitionVideo,
+    resolveTransitionVideoConfig: resolveTransitionVideoConfig,
+    resolveLibraryItemUrl: resolveLibraryItemUrl,
     boot: boot,
     render: render,
     paintScene: paintScene,
