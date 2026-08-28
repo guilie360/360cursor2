@@ -11412,7 +11412,7 @@ var QuotationEditor = (function () {
         }
       } else if (act.type === 'startHotspotDraw') {
         expOverlay.setEditMode('hotspots');
-        expOverlay.startHotspotDraw();
+        expOverlay.startHotspotDraw({ style: act.style || 'trazo' });
       }
     }
     bindLayersPanel();
@@ -12781,7 +12781,21 @@ var QuotationEditor = (function () {
   }
 
   function addStrokeElement() {
-    dockPlaceholderAction('stroke');
+    if (!activeScene()) return;
+    state.selectedElementId = null;
+    state.selectedItem = null;
+    state.expEditMode = 'hotspots';
+    state.dockOpen = false;
+    markDirtyLocal();
+    if (expOverlay) {
+      refreshInspectorOnly();
+      attachExperienciaInspectorHost();
+      expOverlay.setEditMode('hotspots');
+      expOverlay.startHotspotDraw({ style: 'trazo' });
+      return;
+    }
+    pendingExpAction = { type: 'startHotspotDraw', style: 'trazo' };
+    rerender();
   }
 
   function addContainerElement() {

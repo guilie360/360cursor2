@@ -4878,6 +4878,7 @@ var ExperienciaEngine = (function () {
       entityType: ix.entityType || null,
       cardTemplate: ix.cardTemplate || 'completa',
       cardFields: ix.cardFields || {},
+      sourceTool: ix.sourceTool || null,
       _ix: ix
     };
   }
@@ -4902,22 +4903,32 @@ var ExperienciaEngine = (function () {
     return null;
   }
 
-  function addSceneHotspotMask(state, nodeId, polygon) {
+  function addSceneHotspotMask(state, nodeId, polygon, opts) {
     var n = getNode(state, nodeId);
     if (!n || !isHotspotsEditableNode(n)) return null;
     var pts = normalizePolygon(polygon);
     if (pts.length < 3) return null;
-    var ix = addInteractionToScene(state, nodeId, 'HOTSPOT', 'Hotspot', {
+    opts = opts || {};
+    var isTrazo = opts.style === 'trazo' || opts.sourceTool === 'trazo';
+    var label = isTrazo ? 'Área' : 'Hotspot';
+    var ix = addInteractionToScene(state, nodeId, 'HOTSPOT', label, {
       group: 'content'
     });
     if (!ix) return null;
     ix.shape = 'polygon';
     ix.polygon = pts;
-    ix.name = 'Hotspot';
+    ix.name = label;
     ix.hotspotKind = 'highlight';
-    ix.color = HOTSPOT_DEFAULT_COLOR;
-    ix.opacity = 0.22;
-    ix.borderWidth = 1.5;
+    if (isTrazo) {
+      ix.sourceTool = 'trazo';
+      ix.color = '#ffffff';
+      ix.opacity = 0.13;
+      ix.borderWidth = 1;
+    } else {
+      ix.color = HOTSPOT_DEFAULT_COLOR;
+      ix.opacity = 0.22;
+      ix.borderWidth = 1.5;
+    }
     ix.animation = 'none';
     ix.contentMode = 'structure';
     ix.entityId = null;
@@ -5086,6 +5097,7 @@ var ExperienciaEngine = (function () {
     copy.cardFields = ix.cardFields
       ? JSON.parse(JSON.stringify(ix.cardFields))
       : null;
+    if (ix.sourceTool) copy.sourceTool = ix.sourceTool;
     ensureHotspotMaskDefaults(copy);
     syncScenePorts(n);
     return hotspotMaskViewModel(copy);

@@ -4408,8 +4408,39 @@ var ExperienciaCanvas = (function () {
     var protoHost = rootEl.querySelector('[data-exp-proto-host]');
     var protoRuntimePlayer = null;
     var protoFingerprint = null;
-    var hotspotDraw = null; /* { points: [{x,y}], cursor: {x,y}|null } */
+    var hotspotDraw = null; /* { points: [{x,y}], cursor: {x,y}|null, style: 'trazo'|null } */
     var hotspotDrag = null; /* vertex | poly move */
+    var skipHotspotVertexInsertUntil = 0;
+    var TRAZO_CLOSE_PCT = 2.4;
+    var TRAZO_STROKE = 'rgba(255,255,255,0.92)';
+    var TRAZO_FILL = 'rgba(255,255,255,0.13)';
+
+    function isTrazoDraw() {
+      return !!(hotspotDraw && hotspotDraw.style === 'trazo');
+    }
+
+    function isTrazoMask(m) {
+      return !!(m && m.sourceTool === 'trazo');
+    }
+
+    function distPct2(a, b) {
+      if (!a || !b) return Infinity;
+      var dx = Number(a.x) - Number(b.x);
+      var dy = Number(a.y) - Number(b.y);
+      return dx * dx + dy * dy;
+    }
+
+    function nearTrazoClose(pct, points) {
+      if (!pct || !points || points.length < 3) return false;
+      return distPct2(pct, points[0]) <= (TRAZO_CLOSE_PCT * TRAZO_CLOSE_PCT);
+    }
+
+    function syncHotspotDrawLayer() {
+      if (!hotspotsLayer) return;
+      var hsDraw = !!hotspotDraw;
+      hotspotsLayer.classList.toggle('is-draw-active', hsDraw);
+      hotspotsLayer.style.cursor = hsDraw ? 'crosshair' : '';
+    }
     var modeTabs = rootEl.querySelector('[data-exp-mode-tabs]');
     var inspectorBody = api.inspectorBody ||
       ((typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.getInspectorBody)
@@ -7187,11 +7218,9 @@ var ExperienciaCanvas = (function () {
         hotspotsStage.setAttribute('aria-hidden', 'false');
       }
       if (hotspotsLayer) {
-        /* Only capture empty-canvas clicks while actively drawing hotspots.
+        /* Only capture empty-canvas clicks while actively drawing (Trazo).
            Otherwise the full-size layer sits above shapes and freezes drag. */
-        var hsDraw = mode === 'hotspots' || !!hotspotDraw;
-        hotspotsLayer.classList.toggle('is-draw-active', hsDraw);
-        hotspotsLayer.style.cursor = hsDraw ? 'crosshair' : '';
+        syncHotspotDrawLayer();
       }
       if (buttonsLayer) {
         buttonsLayer.style.pointerEvents = mode === 'hotspots' && !overlayMode ? 'none' : 'auto';
@@ -9121,53 +9150,96 @@ var ExperienciaCanvas = (function () {
           return Number(p.x) + ',' + Number(p.y);
         }).join(' ');
         var isSel = selId && String(m.id) === selId;
-        var fillOp = isSel
-          ? Math.max(0.08, Math.min(0.28, (Number(m.opacity) || 0.22) * 0.55))
-          : 0.02;
-        var strokeOp = m.visible === false ? 0.25 : 0.9;
+        var trazo = isTrazoMask(m);
+        var fillOp;
+        if (trazo) {
+          fillOp = Number(m.opacity);
+          if (!(fillOp >= 0)) fillOp = 0.13;
+        } else {
+          fillOp = isSel
+            ? Math.max(0.08, Math.min(0.28, (Number(m.opacity) || 0.22) * 0.55))
+            : 0.02;
+        }
+        var strokeOp = m.visible === false ? 0.25 : (trazo ? 0.92 : 0.9);
+        var strokeCol = trazo ? TRAZO_STROKE : (m.color || '#6fbf86');
+        var fillCol = trazo ? '#ffffff' : (m.color || '#6fbf86');
+        var strokeW = trazo ? 1 : (m.borderWidth != null ? m.borderWidth : 1.5);
         var cls = 'builder-exp-hs-poly' +
           (isSel ? ' is-selected' : '') +
+          (trazo ? ' is-trazo' : '') +
           (m.visible === false ? ' is-invisible' : '') +
           (m.animation === 'pulse' ? ' is-anim-pulse' : '') +
           (m.animation === 'fade' ? ' is-anim-fade' : '');
         svgParts.push(
           '<polygon class="' + cls + '" data-exp-hs-poly="' + esc(m.id) + '"' +
           ' points="' + pts + '"' +
-          ' fill="' + esc(m.color || '#6fbf86') + '"' +
+          ' fill="' + esc(fillCol) + '"' +
           ' fill-opacity="' + fillOp + '"' +
-          ' stroke="' + esc(m.color || '#6fbf86') + '"' +
+          ' stroke="' + esc(strokeCol) + '"' +
           ' stroke-opacity="' + strokeOp + '"' +
-          ' stroke-width="' + esc(String(m.borderWidth != null ? m.borderWidth : 1.5)) + '"' +
+          ' stroke-width="' + esc(String(strokeW)) + '"' +
           ' vector-effect="non-scaling-stroke"></polygon>'
         );
         if (isSel) {
           m.polygon.forEach(function (p, idx) {
+            var vCls = 'builder-exp-hs-vertex' + (trazo ? ' is-trazo' : '') +
+              (idx === 0 && trazo ? ' is-close-origin' : '');
             svgParts.push(
-              '<circle class="builder-exp-hs-vertex" data-exp-hs-vertex="' + esc(m.id) + '"' +
+              '<circle class="' + vCls + '" data-exp-hs-vertex="' + esc(m.id) + '"' +
               ' data-exp-hs-vi="' + idx + '"' +
-              ' cx="' + Number(p.x) + '" cy="' + Number(p.y) + '" r="1.1"></circle>'
+              ' cx="' + Number(p.x) + '" cy="' + Number(p.y) + '"' +
+              ' r="' + (idx === 0 && trazo ? '1.35' : '1.1') + '"></circle>'
             );
           });
         }
       });
 
       if (hotspotDraw && hotspotDraw.points && hotspotDraw.points.length) {
-        var dPts = hotspotDraw.points.slice();
-        if (hotspotDraw.cursor) dPts.push(hotspotDraw.cursor);
-        var dStr = dPts.map(function (p) {
-          return Number(p.x) + ',' + Number(p.y);
-        }).join(' ');
-        if (dPts.length >= 2) {
+        var trazoDraft = isTrazoDraw();
+        var committed = hotspotDraw.points;
+        var preview = committed.slice();
+        if (hotspotDraw.cursor) preview.push(hotspotDraw.cursor);
+        var draftStroke = trazoDraft ? TRAZO_STROKE : '#6fbf86';
+        if (preview.length >= 3) {
           svgParts.push(
-            '<polyline class="builder-exp-hs-draft" points="' + dStr + '"' +
-            ' fill="none" stroke="#6fbf86" stroke-width="1.5"' +
-            ' stroke-dasharray="4 3" vector-effect="non-scaling-stroke"></polyline>'
+            '<polygon class="builder-exp-hs-draft-fill' + (trazoDraft ? ' is-trazo' : '') + '"' +
+            ' points="' + preview.map(function (p) {
+              return Number(p.x) + ',' + Number(p.y);
+            }).join(' ') + '"' +
+            ' fill="' + (trazoDraft ? TRAZO_FILL : 'rgba(111,191,134,0.14)') + '"' +
+            ' stroke="none"></polygon>'
           );
         }
-        hotspotDraw.points.forEach(function (p) {
+        if (committed.length >= 2) {
           svgParts.push(
-            '<circle class="builder-exp-hs-draft-vertex" cx="' + Number(p.x) +
-            '" cy="' + Number(p.y) + '" r="1.1"></circle>'
+            '<polyline class="builder-exp-hs-draft' + (trazoDraft ? ' is-trazo' : '') + '"' +
+            ' points="' + committed.map(function (p) {
+              return Number(p.x) + ',' + Number(p.y);
+            }).join(' ') + '"' +
+            ' fill="none" stroke="' + draftStroke + '" stroke-width="1"' +
+            ' vector-effect="non-scaling-stroke"></polyline>'
+          );
+        }
+        if (hotspotDraw.cursor && committed.length >= 1) {
+          var last = committed[committed.length - 1];
+          var closing = nearTrazoClose(hotspotDraw.cursor, committed);
+          svgParts.push(
+            '<polyline class="builder-exp-hs-draft-preview' + (trazoDraft ? ' is-trazo' : '') +
+              (closing ? ' is-closing' : '') + '"' +
+            ' points="' + Number(last.x) + ',' + Number(last.y) + ' ' +
+              Number(hotspotDraw.cursor.x) + ',' + Number(hotspotDraw.cursor.y) + '"' +
+            ' fill="none" stroke="' + draftStroke + '" stroke-width="1"' +
+            ' stroke-dasharray="3.5 3" vector-effect="non-scaling-stroke"></polyline>'
+          );
+        }
+        committed.forEach(function (p, idx) {
+          var first = idx === 0;
+          svgParts.push(
+            '<circle class="builder-exp-hs-draft-vertex' + (trazoDraft ? ' is-trazo' : '') +
+              (first ? ' is-close-origin' : '') + '"' +
+            (first && committed.length >= 3 ? ' data-exp-hs-draft-close="1"' : '') +
+            ' cx="' + Number(p.x) + '" cy="' + Number(p.y) + '"' +
+            ' r="' + (first ? '1.45' : '1.05') + '"></circle>'
           );
         });
       }
@@ -9193,14 +9265,30 @@ var ExperienciaCanvas = (function () {
     function closeHotspotDraft() {
       if (!hotspotDraw || !hotspotDraw.points || hotspotDraw.points.length < 3) {
         hotspotDraw = null;
+        skipHotspotVertexInsertUntil = Date.now() + 400;
+        syncHotspotDrawLayer();
         paintHotspotsStage();
         return;
       }
+      var pts = hotspotDraw.points.slice();
+      var last = pts[pts.length - 1];
+      var prev = pts[pts.length - 2];
+      if (last && prev && distPct2(last, prev) < 0.25) pts.pop();
+      if (pts.length >= 3 && distPct2(pts[pts.length - 1], pts[0]) < (TRAZO_CLOSE_PCT * TRAZO_CLOSE_PCT)) {
+        pts.pop();
+      }
+      var style = hotspotDraw.style;
       var sceneId = canvas().selectedId;
-      var created = ExperienciaEngine.addSceneHotspotMask(
-        state, sceneId, hotspotDraw.points
-      );
       hotspotDraw = null;
+      skipHotspotVertexInsertUntil = Date.now() + 400;
+      syncHotspotDrawLayer();
+      if (pts.length < 3) {
+        paintHotspotsStage();
+        return;
+      }
+      var created = ExperienciaEngine.addSceneHotspotMask(
+        state, sceneId, pts, { style: style }
+      );
       if (created) canvas().selectedHotspotId = created.id;
       paintHotspotsStage();
       paintInspector();
@@ -16154,13 +16242,14 @@ var ExperienciaCanvas = (function () {
     /* V6.2.00 — HOTSPOTS polygon draw / edit */
     if (hotspotsLayer) {
       hotspotsLayer.addEventListener('dblclick', function (ev) {
-        if (canvas().editMode !== 'hotspots') return;
+        if (canvas().editMode !== 'hotspots' && !hotspotDraw) return;
         ev.preventDefault();
         ev.stopPropagation();
         if (hotspotDraw) {
           closeHotspotDraft();
           return;
         }
+        if (Date.now() < skipHotspotVertexInsertUntil) return;
         /* Insert vertex on selected polygon at click */
         var poly = ev.target.closest('[data-exp-hs-poly]');
         if (!poly) return;
@@ -16189,14 +16278,20 @@ var ExperienciaCanvas = (function () {
         persist();
       });
       hotspotsLayer.addEventListener('pointerdown', function (ev) {
-        if (canvas().editMode !== 'hotspots') return;
         var pct = hotspotPercentFromPointer(ev);
         var vertex = ev.target.closest('[data-exp-hs-vertex]');
         var poly = ev.target.closest('[data-exp-hs-poly]');
+        var closeOrigin = ev.target.closest('[data-exp-hs-draft-close]');
+        if (!hotspotDraw && canvas().editMode !== 'hotspots' && !vertex && !poly) return;
 
         if (hotspotDraw) {
           ev.preventDefault();
           ev.stopPropagation();
+          if ((closeOrigin || nearTrazoClose(pct, hotspotDraw.points)) &&
+              hotspotDraw.points.length >= 3) {
+            closeHotspotDraft();
+            return;
+          }
           hotspotDraw.points.push(pct);
           paintHotspotsStage();
           return;
@@ -16243,7 +16338,7 @@ var ExperienciaCanvas = (function () {
         paintInspector();
       });
       hotspotsLayer.addEventListener('pointermove', function (ev) {
-        if (canvas().editMode !== 'hotspots') return;
+        if (!hotspotDraw && !hotspotDrag && canvas().editMode !== 'hotspots') return;
         var pct = hotspotPercentFromPointer(ev);
         if (hotspotDraw) {
           hotspotDraw.cursor = pct;
@@ -16760,6 +16855,7 @@ var ExperienciaCanvas = (function () {
         if (canvas().editMode === 'hotspots' && hotspotDraw) {
           ev.preventDefault();
           hotspotDraw = null;
+          syncHotspotDrawLayer();
           paintHotspotsStage();
           paintInspector();
           return;
@@ -17589,6 +17685,7 @@ var ExperienciaCanvas = (function () {
       cancelActiveTool: function () {
         if (!hotspotDraw) return false;
         hotspotDraw = null;
+        syncHotspotDrawLayer();
         paintHotspotsStage();
         paintInspector();
         return true;
@@ -17787,18 +17884,28 @@ var ExperienciaCanvas = (function () {
         persist();
         return true;
       },
-      startHotspotDraw: function () {
+      startHotspotDraw: function (opts) {
+        opts = opts || {};
         canvas().editMode = 'hotspots';
         canvas().selectedButtonId = null;
         canvas().selectedButtonIds = [];
         canvas().selectedHotspotId = null;
-        hotspotDraw = { points: [], cursor: null };
+        hotspotDraw = {
+          points: [],
+          cursor: null,
+          style: opts.style === 'trazo' ? 'trazo' : (opts.style || null)
+        };
         renderAll();
+        syncHotspotDrawLayer();
         paintHotspotsStage();
         paintInspector();
         requestAnimationFrame(recomputeOverlayLayout);
         if (typeof AdminNotify !== 'undefined' && AdminNotify.info) {
-          AdminNotify.info('Dibujo: clic para vértices · doble clic para cerrar · Esc cancela');
+          if (hotspotDraw.style === 'trazo') {
+            AdminNotify.info('Trazo: clic para vértices · clic en el primero o doble clic para cerrar · Esc cancela');
+          } else {
+            AdminNotify.info('Dibujo: clic para vértices · doble clic para cerrar · Esc cancela');
+          }
         }
       },
       setInspectorBody: function (el) {

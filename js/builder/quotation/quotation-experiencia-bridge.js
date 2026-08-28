@@ -621,8 +621,8 @@ var QuotationExperienciaBridge = (function () {
       addShape: function (kind) {
         return handle.addShape ? handle.addShape(kind) : null;
       },
-      startHotspotDraw: function () {
-        if (handle.startHotspotDraw) handle.startHotspotDraw();
+      startHotspotDraw: function (opts) {
+        if (handle.startHotspotDraw) handle.startHotspotDraw(opts);
       },
       getSelection: function () {
         return handle.getSelection ? handle.getSelection() : { hasSelection: false };

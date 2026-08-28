@@ -8111,8 +8111,14 @@ body.boxies-exp-canvas-mode .builder-exp-hotspots-stage,
 
 .builder-exp-hs-poly,
 .builder-exp-hs-vertex,
-.builder-exp-hs-draft {
+.builder-exp-hs-draft,
+.builder-exp-hs-draft-preview,
+.builder-exp-hs-draft-close {
   pointer-events: auto;
+}
+
+.builder-exp-hs-draft-fill {
+  pointer-events: none;
 }
 
 .builder-exp-hs-poly {
@@ -8122,6 +8128,10 @@ body.boxies-exp-canvas-mode .builder-exp-hotspots-stage,
 
 .builder-exp-hs-poly.is-selected {
   cursor: move;
+}
+
+.builder-exp-hs-poly.is-trazo {
+  cursor: pointer;
 }
 
 .builder-exp-hs-poly.is-invisible {
@@ -8136,6 +8146,18 @@ body.boxies-exp-canvas-mode .builder-exp-hotspots-stage,
   vector-effect: non-scaling-stroke;
 }
 
+.builder-exp-hs-vertex.is-trazo {
+  fill: #ffffff;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 0.4;
+}
+
+.builder-exp-hs-vertex.is-trazo.is-close-origin {
+  fill: #ffffff;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 0.55;
+}
+
 .builder-exp-hs-vertex:active {
   cursor: grabbing;
 }
@@ -8148,8 +8170,35 @@ body.boxies-exp-canvas-mode .builder-exp-hotspots-stage,
   vector-effect: non-scaling-stroke;
 }
 
+.builder-exp-hs-draft-vertex.is-trazo {
+  fill: #ffffff;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 0.35;
+}
+
+.builder-exp-hs-draft-vertex.is-close-origin {
+  pointer-events: auto;
+  cursor: pointer;
+  fill: #ffffff;
+  stroke: #ffffff;
+  stroke-width: 0.5;
+}
+
 .builder-exp-hs-draft {
   pointer-events: none;
+}
+
+.builder-exp-hs-draft.is-trazo,
+.builder-exp-hs-draft-preview.is-trazo {
+  stroke: rgba(255, 255, 255, 0.92);
+}
+
+.builder-exp-hs-draft-preview {
+  pointer-events: none;
+}
+
+.builder-exp-hs-draft-preview.is-closing {
+  stroke-opacity: 1;
 }
 
 .builder-exp-hs-poly.is-anim-pulse {
