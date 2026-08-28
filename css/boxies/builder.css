@@ -8130,7 +8130,7 @@ body.boxies-exp-canvas-mode .builder-exp-hotspots-stage,
   cursor: move;
 }
 
-.builder-exp-hs-poly.is-trazo {
+.builder-exp-hs-poly.is-trazo.is-selected {
   cursor: pointer;
 }
 

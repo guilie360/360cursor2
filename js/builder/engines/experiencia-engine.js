@@ -4842,6 +4842,15 @@ var ExperienciaEngine = (function () {
       ix.entityType = null;
       ix.entityId = null;
     }
+    if (ix.sourceTool === 'trazo') {
+      if (!ix.buttonType || ix.buttonType === '') ix.buttonType = 'unconfigured';
+      if (!BUTTON_KIND_TYPES[String(ix.buttonType)]) ix.buttonType = 'unconfigured';
+      if (!ix.buttonConfig || typeof ix.buttonConfig !== 'object' || Array.isArray(ix.buttonConfig)) {
+        ix.buttonConfig = {};
+      }
+      if (!ix.strokeColor || typeof ix.strokeColor !== 'string') ix.strokeColor = '#ffffff';
+      if (ix.strokeOpacity == null) ix.strokeOpacity = 0.92;
+    }
     if (!ix.cardTemplate || !({ compacta: 1, completa: 1, ficha: 1, premium: 1 }[ix.cardTemplate])) {
       ix.cardTemplate = 'completa';
     }
@@ -4879,6 +4888,11 @@ var ExperienciaEngine = (function () {
       cardTemplate: ix.cardTemplate || 'completa',
       cardFields: ix.cardFields || {},
       sourceTool: ix.sourceTool || null,
+      buttonType: ix.buttonType || 'unconfigured',
+      buttonConfig: ix.buttonConfig && typeof ix.buttonConfig === 'object' ? ix.buttonConfig : {},
+      targetSceneId: (ix.buttonConfig && ix.buttonConfig.targetSceneId) || ix.targetSceneId || '',
+      strokeColor: ix.strokeColor || null,
+      strokeOpacity: ix.strokeOpacity != null ? Number(ix.strokeOpacity) : null,
       _ix: ix
     };
   }
@@ -4924,6 +4938,10 @@ var ExperienciaEngine = (function () {
       ix.color = '#ffffff';
       ix.opacity = 0.13;
       ix.borderWidth = 1;
+      ix.strokeColor = '#ffffff';
+      ix.strokeOpacity = 0.92;
+      ix.buttonType = 'unconfigured';
+      ix.buttonConfig = {};
     } else {
       ix.color = HOTSPOT_DEFAULT_COLOR;
       ix.opacity = 0.22;
@@ -4957,7 +4975,11 @@ var ExperienciaEngine = (function () {
     if (patch.color != null && String(patch.color).trim()) {
       ix.color = String(patch.color).trim();
     }
+    if (patch.strokeColor != null && String(patch.strokeColor).trim()) {
+      ix.strokeColor = String(patch.strokeColor).trim();
+    }
     if (patch.opacity != null) ix.opacity = clampHotspotOpacity(patch.opacity);
+    if (patch.strokeOpacity != null) ix.strokeOpacity = clampHotspotOpacity(patch.strokeOpacity);
     if (patch.borderWidth != null) ix.borderWidth = clampHotspotBorder(patch.borderWidth);
     if (patch.animation != null && HOTSPOT_ANIMATIONS[patch.animation]) {
       ix.animation = patch.animation;
@@ -5016,6 +5038,21 @@ var ExperienciaEngine = (function () {
         base[k] = !!patch.cardFields[k];
       });
       ix.cardFields = base;
+    }
+    if (patch.buttonType != null) {
+      var bt = String(patch.buttonType || 'unconfigured');
+      if (!BUTTON_KIND_TYPES[bt]) bt = 'unconfigured';
+      ix.buttonType = bt;
+    }
+    if (patch.buttonConfig != null && typeof patch.buttonConfig === 'object') {
+      if (!ix.buttonConfig || typeof ix.buttonConfig !== 'object' || Array.isArray(ix.buttonConfig)) {
+        ix.buttonConfig = {};
+      }
+      Object.keys(patch.buttonConfig).forEach(function (key) {
+        var val = patch.buttonConfig[key];
+        if (val == null || val === '') delete ix.buttonConfig[key];
+        else ix.buttonConfig[key] = val;
+      });
     }
     ix.shape = 'polygon';
     ensureHotspotMaskDefaults(ix);
@@ -5098,6 +5135,13 @@ var ExperienciaEngine = (function () {
       ? JSON.parse(JSON.stringify(ix.cardFields))
       : null;
     if (ix.sourceTool) copy.sourceTool = ix.sourceTool;
+    if (ix.buttonType) copy.buttonType = ix.buttonType;
+    if (ix.buttonConfig && typeof ix.buttonConfig === 'object') {
+      try { copy.buttonConfig = JSON.parse(JSON.stringify(ix.buttonConfig)); }
+      catch (eCfg) { copy.buttonConfig = {}; }
+    }
+    if (ix.strokeColor) copy.strokeColor = ix.strokeColor;
+    if (ix.strokeOpacity != null) copy.strokeOpacity = ix.strokeOpacity;
     ensureHotspotMaskDefaults(copy);
     syncScenePorts(n);
     return hotspotMaskViewModel(copy);

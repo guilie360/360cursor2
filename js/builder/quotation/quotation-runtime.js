@@ -1070,8 +1070,9 @@ var QuotationRuntime = (function () {
       if (hs.id) path.setAttribute('data-qr-ix-id', String(hs.id));
       path.setAttribute('fill', hs.color || 'rgba(111,191,134,0.28)');
       path.setAttribute('fill-opacity', String(hs.opacity != null ? hs.opacity : 0.22));
-      path.setAttribute('stroke', hs.color || 'rgba(255,255,255,0.85)');
-      path.setAttribute('stroke-width', '0.35');
+      path.setAttribute('stroke', hs.strokeColor || hs.color || 'rgba(255,255,255,0.85)');
+      path.setAttribute('stroke-opacity', hs.strokeOpacity != null ? String(hs.strokeOpacity) : '1');
+      path.setAttribute('stroke-width', hs.sourceTool === 'trazo' ? '0.28' : '0.35');
       if (interactive) {
         path.style.cursor = 'pointer';
         path.addEventListener('click', function (ev) {
