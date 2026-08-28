@@ -4436,10 +4436,27 @@ var ExperienciaCanvas = (function () {
     }
 
     function syncHotspotDrawLayer() {
-      if (!hotspotsLayer) return;
       var hsDraw = !!hotspotDraw;
-      hotspotsLayer.classList.toggle('is-draw-active', hsDraw);
-      hotspotsLayer.style.cursor = hsDraw ? 'crosshair' : '';
+      if (rootEl) rootEl.classList.toggle('is-trazo-draw', hsDraw);
+      if (hotspotsStage) hotspotsStage.classList.toggle('is-trazo-draw', hsDraw);
+      if (hotspotsLayer) {
+        hotspotsLayer.classList.toggle('is-draw-active', hsDraw);
+        hotspotsLayer.style.cursor = hsDraw ? 'crosshair' : '';
+      }
+      /* Quotation overlay: buttons-stage is z-index 7 over hotspots (z 6) and keeps
+         pointer-events:auto, so map clicks never reached Trazo. While drawing,
+         punch through the buttons hit layer and raise the hotspot stage. */
+      if (buttonsStage) {
+        buttonsStage.style.pointerEvents = hsDraw ? 'none' : '';
+      }
+      if (buttonsLayer) {
+        if (hsDraw) {
+          buttonsLayer.style.pointerEvents = 'none';
+        } else {
+          buttonsLayer.style.pointerEvents =
+            (canvas().editMode === 'hotspots' && !overlayMode) ? 'none' : 'auto';
+        }
+      }
     }
     var modeTabs = rootEl.querySelector('[data-exp-mode-tabs]');
     var inspectorBody = api.inspectorBody ||
@@ -7217,14 +7234,8 @@ var ExperienciaCanvas = (function () {
         hotspotsStage.hidden = false;
         hotspotsStage.setAttribute('aria-hidden', 'false');
       }
-      if (hotspotsLayer) {
-        /* Only capture empty-canvas clicks while actively drawing (Trazo).
-           Otherwise the full-size layer sits above shapes and freezes drag. */
-        syncHotspotDrawLayer();
-      }
-      if (buttonsLayer) {
-        buttonsLayer.style.pointerEvents = mode === 'hotspots' && !overlayMode ? 'none' : 'auto';
-      }
+      /* Trazo draw vs Forma hit-testing: keep buttons on top except while hotspotDraw. */
+      syncHotspotDrawLayer();
       if (protoStage) {
         protoStage.hidden = mode !== 'prototype';
         protoStage.setAttribute('aria-hidden', mode === 'prototype' ? 'false' : 'true');

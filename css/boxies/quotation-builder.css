@@ -2952,6 +2952,20 @@ body.is-qe-outliner-dragging .qe-outliner__drag {
   z-index: 6;
 }
 
+/* Trazo: hotspot draw layer must sit above the buttons hit-stage or clicks never land. */
+.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-stage.is-trazo-draw,
+.hero-canvas .qe-exp-overlay .builder-exp-hotspots-stage.is-trazo-draw,
+[data-hero-canvas] .qe-exp-overlay .builder-exp-hotspots-stage.is-trazo-draw {
+  z-index: 8;
+  pointer-events: auto;
+}
+
+.qe-canvas__design .qe-exp-overlay.is-trazo-draw .builder-exp-buttons-stage,
+.hero-canvas .qe-exp-overlay.is-trazo-draw .builder-exp-buttons-stage,
+[data-hero-canvas] .qe-exp-overlay.is-trazo-draw .builder-exp-buttons-stage {
+  pointer-events: none;
+}
+
 .qe-insp__exp-host {
   min-height: 120px;
 }
