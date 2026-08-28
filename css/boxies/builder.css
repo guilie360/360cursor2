@@ -8173,15 +8173,18 @@ body.boxies-exp-canvas-mode .builder-exp-hotspots-stage,
 .builder-exp-hs-draft-vertex.is-trazo {
   fill: #ffffff;
   stroke: rgba(255, 255, 255, 0.95);
-  stroke-width: 0.35;
+  stroke-width: 0.18;
 }
 
 .builder-exp-hs-draft-vertex.is-close-origin {
   pointer-events: auto;
   cursor: pointer;
+}
+
+.builder-exp-hs-draft-vertex.is-trazo.is-close-origin {
   fill: #ffffff;
   stroke: #ffffff;
-  stroke-width: 0.5;
+  stroke-width: 0.22;
 }
 
 .builder-exp-hs-draft {
