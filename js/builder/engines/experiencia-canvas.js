@@ -3464,6 +3464,65 @@ var ExperienciaCanvas = (function () {
       '</div>');
   }
 
+  function trazoAppearanceFieldsHtml(state, selected) {
+    var fillOp = selected.opacity != null ? Number(selected.opacity) : 0.13;
+    var strokeOp = selected.strokeOpacity != null ? Number(selected.strokeOpacity) : 0.92;
+    var fillCol = hexOr(selected.color, '#ffffff');
+    var strokeCol = hexOr(selected.strokeColor || selected.color, '#ffffff');
+    return builderExpBlockHtml(state, 'hs-trazo-look', 'Apariencia',
+      '<div class="builder-exp-btn-hover-row">' +
+        '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+          '<label>Relleno</label>' +
+          '<input type="color" data-exp-hs-color value="' + esc(fillCol) + '">' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+          '<label>Opacidad relleno</label>' +
+          '<input type="range" data-exp-hs-opacity min="0" max="1" step="0.05" value="' +
+            esc(String(fillOp)) + '">' +
+        '</div>' +
+      '</div>' +
+      '<div class="builder-exp-btn-hover-row">' +
+        '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+          '<label>Trazo</label>' +
+          '<input type="color" data-exp-hs-stroke-color value="' + esc(strokeCol) + '">' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+          '<label>Opacidad trazo</label>' +
+          '<input type="range" data-exp-hs-stroke-opacity min="0" max="1" step="0.05" value="' +
+            esc(String(strokeOp)) + '">' +
+        '</div>' +
+      '</div>');
+  }
+
+  function trazoInspectorHtml(state, n, selected, lists) {
+    var ix = selected._ix || selected;
+    var kind = String(ix.buttonType || selected.buttonType || 'unconfigured');
+    var vm = {
+      id: selected.id || selected.portId,
+      buttonType: kind,
+      buttonConfig: ix.buttonConfig || selected.buttonConfig || {},
+      targetSceneId: selected.targetSceneId ||
+        (ix.buttonConfig && ix.buttonConfig.targetSceneId) || ''
+    };
+    return '' +
+      '<div class="builder-exp-btn-panel">' +
+        '<div class="builder-exp-inspector__kind">Trazo</div>' +
+        builderExpBlockHtml(state, 'btn-behavior', 'Comportamiento',
+          '<div class="builder-field builder-exp-inspector__field">' +
+            '<label>Tipo de acción</label>' +
+            '<select data-exp-btn-kind-type class="builder-exp-btn-select"' +
+              ' data-exp-btn-kind-owner="' + esc(String(vm.id)) + '">' +
+              buttonKindTypeOptionsHtml(kind) +
+            '</select>' +
+          '</div>' +
+          (kind === 'unconfigured'
+            ? '<p class="builder-menu-hint">Elige un tipo para configurar la acción del área.</p>'
+            : '')) +
+        buttonKindConfigSectionHtml(state, kind, n, vm, lists) +
+        trazoAppearanceFieldsHtml(state, selected) +
+      '</div>';
+  }
+
   function hotspotsInspectorHtml(state, n) {
     var list = (ExperienciaEngine.listSceneHotspotMasks
       ? ExperienciaEngine.listSceneHotspotMasks(state, n)
@@ -5018,11 +5077,30 @@ var ExperienciaCanvas = (function () {
       opts = opts || {};
       var sceneId = canvas().selectedId;
       var id = opts.buttonId ? String(opts.buttonId) : resolveSelectedOverlayButtonId();
+      if (!id && canvas().selectedHotspotId) id = String(canvas().selectedHotspotId);
       if (!sceneId || !id) return false;
       var n = ExperienciaEngine.getNode(state, sceneId);
       var ix = n && ExperienciaEngine.getInteraction
         ? ExperienciaEngine.getInteraction(n, id)
         : null;
+      if (ix && ExperienciaEngine.isSceneHotspotMask &&
+          ExperienciaEngine.isSceneHotspotMask(ix)) {
+        if (opts.history !== false) {
+          if (opts.gesture) armButtonOp(sceneId);
+          else {
+            pushButtonHistory(sceneId);
+            endButtonOp();
+          }
+        }
+        ExperienciaEngine.updateSceneHotspotMask(state, sceneId, id, patch);
+        paintHotspotsStage();
+        if (opts.inspector) paintInspector();
+        if (opts.persist) {
+          endButtonOp();
+          persist();
+        }
+        return true;
+      }
       if (ix && ExperienciaEngine.isInteractiveButtonGroup &&
           ExperienciaEngine.isInteractiveButtonGroup(ix)) {
         return patchOverlayGroupButton(patch, Object.assign({}, opts, { buttonId: id }));
@@ -5536,6 +5614,25 @@ var ExperienciaCanvas = (function () {
         listVideos: api.listVideos || null,
         listScenes: typeof api.listScenes === 'function' ? api.listScenes : null
       };
+
+      var hsSelId = canvas().selectedHotspotId;
+      if (hsSelId) {
+        var hsScene = ExperienciaEngine.getNode(state, canvas().selectedId);
+        var hsMask = hsScene && ExperienciaEngine.getSceneHotspotMask
+          ? ExperienciaEngine.getSceneHotspotMask(state, hsScene, hsSelId)
+          : null;
+        if (hsMask) {
+          inspectorBody.innerHTML = (hsMask.sourceTool === 'trazo')
+            ? trazoInspectorHtml(state, hsScene, hsMask, inspectorLists)
+            : hotspotsInspectorHtml(state, hsScene);
+          bindHotspotsInspectorActions();
+          if (hsMask.sourceTool === 'trazo') bindButtonKindInspectorControls();
+          if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.enhance) {
+            WorkspaceSelect.enhance(inspectorBody);
+          }
+          return;
+        }
+      }
 
       if (editMode === 'buttons') {
         var scene = ExperienciaEngine.getNode(state, canvas().selectedId);
@@ -6187,10 +6284,34 @@ var ExperienciaCanvas = (function () {
       var opacityEl = inspectorBody.querySelector('[data-exp-hs-opacity]');
       if (opacityEl) {
         opacityEl.addEventListener('input', function () {
-          patchHs({ opacity: Number(opacityEl.value) / 100 });
+          var n = Number(opacityEl.value);
+          patchHs({ opacity: n > 1 ? n / 100 : n });
         });
         opacityEl.addEventListener('change', function () {
-          patchHs({ opacity: Number(opacityEl.value) / 100 }, {
+          var n = Number(opacityEl.value);
+          patchHs({ opacity: n > 1 ? n / 100 : n }, {
+            inspector: true, persist: true
+          });
+        });
+      }
+      var strokeColEl = inspectorBody.querySelector('[data-exp-hs-stroke-color]');
+      if (strokeColEl) {
+        strokeColEl.addEventListener('input', function () {
+          patchHs({ strokeColor: strokeColEl.value });
+        });
+        strokeColEl.addEventListener('change', function () {
+          patchHs({ strokeColor: strokeColEl.value }, { persist: true });
+        });
+      }
+      var strokeOpEl = inspectorBody.querySelector('[data-exp-hs-stroke-opacity]');
+      if (strokeOpEl) {
+        strokeOpEl.addEventListener('input', function () {
+          var n = Number(strokeOpEl.value);
+          patchHs({ strokeOpacity: n > 1 ? n / 100 : n });
+        });
+        strokeOpEl.addEventListener('change', function () {
+          var n = Number(strokeOpEl.value);
+          patchHs({ strokeOpacity: n > 1 ? n / 100 : n }, {
             inspector: true, persist: true
           });
         });
@@ -9166,15 +9287,19 @@ var ExperienciaCanvas = (function () {
         if (trazo) {
           fillOp = Number(m.opacity);
           if (!(fillOp >= 0)) fillOp = 0.13;
+          if (isSel) fillOp = Math.min(0.28, Math.max(fillOp, 0.16));
         } else {
           fillOp = isSel
             ? Math.max(0.08, Math.min(0.28, (Number(m.opacity) || 0.22) * 0.55))
             : 0.02;
         }
-        var strokeOp = m.visible === false ? 0.25 : (trazo ? 0.92 : 0.9);
-        var strokeCol = trazo ? TRAZO_STROKE : (m.color || '#6fbf86');
-        var fillCol = trazo ? '#ffffff' : (m.color || '#6fbf86');
-        var strokeW = trazo ? 1 : (m.borderWidth != null ? m.borderWidth : 1.5);
+        var strokeOp = m.visible === false ? 0.25
+          : (trazo
+            ? (isSel ? 1 : (m.strokeOpacity != null ? Number(m.strokeOpacity) : 0.92))
+            : 0.9);
+        var strokeCol = trazo ? (m.strokeColor || TRAZO_STROKE) : (m.color || '#6fbf86');
+        var fillCol = trazo ? (m.color || '#ffffff') : (m.color || '#6fbf86');
+        var strokeW = trazo ? (isSel ? 1.65 : 1) : (m.borderWidth != null ? m.borderWidth : 1.5);
         var cls = 'builder-exp-hs-poly' +
           (isSel ? ' is-selected' : '') +
           (trazo ? ' is-trazo' : '') +
@@ -9191,15 +9316,15 @@ var ExperienciaCanvas = (function () {
           ' stroke-width="' + esc(String(strokeW)) + '"' +
           ' vector-effect="non-scaling-stroke"></polygon>'
         );
-        if (isSel) {
+        var showVerts = isSel && (!trazo || canvas().editMode === 'hotspots');
+        if (showVerts) {
           m.polygon.forEach(function (p, idx) {
-            var vCls = 'builder-exp-hs-vertex' + (trazo ? ' is-trazo' : '') +
-              (idx === 0 && trazo ? ' is-close-origin' : '');
+            var vCls = 'builder-exp-hs-vertex' + (trazo ? ' is-trazo' : '');
             svgParts.push(
               '<circle class="' + vCls + '" data-exp-hs-vertex="' + esc(m.id) + '"' +
               ' data-exp-hs-vi="' + idx + '"' +
               ' cx="' + Number(p.x) + '" cy="' + Number(p.y) + '"' +
-              ' r="' + (idx === 0 && trazo ? '1.35' : '1.1') + '"></circle>'
+              ' r="' + (trazo ? '0.28' : '1.1') + '"></circle>'
             );
           });
         }
@@ -9245,12 +9370,13 @@ var ExperienciaCanvas = (function () {
         }
         committed.forEach(function (p, idx) {
           var first = idx === 0;
+          var r = trazoDraft ? (first ? '0.32' : '0.22') : (first ? '1.45' : '1.05');
           svgParts.push(
             '<circle class="builder-exp-hs-draft-vertex' + (trazoDraft ? ' is-trazo' : '') +
               (first ? ' is-close-origin' : '') + '"' +
             (first && committed.length >= 3 ? ' data-exp-hs-draft-close="1"' : '') +
             ' cx="' + Number(p.x) + '" cy="' + Number(p.y) + '"' +
-            ' r="' + (first ? '1.45' : '1.05') + '"></circle>'
+            ' r="' + r + '"></circle>'
           );
         });
       }
@@ -9300,10 +9426,52 @@ var ExperienciaCanvas = (function () {
       var created = ExperienciaEngine.addSceneHotspotMask(
         state, sceneId, pts, { style: style }
       );
-      if (created) canvas().selectedHotspotId = created.id;
+      if (created && style !== 'trazo') canvas().selectedHotspotId = created.id;
+      if (style === 'trazo') canvas().editMode = 'buttons';
       paintHotspotsStage();
       paintInspector();
       persist();
+    }
+
+    function pointInPolygonPct(x, y, pts) {
+      if (!pts || pts.length < 3) return false;
+      var inside = false;
+      for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        var xi = Number(pts[i].x);
+        var yi = Number(pts[i].y);
+        var xj = Number(pts[j].x);
+        var yj = Number(pts[j].y);
+        var inter = ((yi > y) !== (yj > y)) &&
+          (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-9) + xi);
+        if (inter) inside = !inside;
+      }
+      return inside;
+    }
+
+    function pickHotspotIdAtPct(pct) {
+      if (!pct) return null;
+      var n = ExperienciaEngine.getNode(state, canvas().selectedId);
+      var masks = (ExperienciaEngine.listSceneHotspotMasks
+        ? ExperienciaEngine.listSceneHotspotMasks(state, n)
+        : []) || [];
+      var hit = null;
+      masks.forEach(function (m) {
+        if (!m || !m.polygon || m.polygon.length < 3) return;
+        if (pointInPolygonPct(pct.x, pct.y, m.polygon)) hit = m.id;
+      });
+      return hit;
+    }
+
+    function selectTrazoHotspot(id, opts) {
+      opts = opts || {};
+      canvas().selectedButtonId = null;
+      canvas().selectedButtonIds = [];
+      canvas().selectedHotspotId = id ? String(id) : null;
+      canvas().editMode = opts.geometry ? 'hotspots' : 'buttons';
+      paintButtonsStage();
+      paintHotspotsStage();
+      paintInspector();
+      notifyOverlaySelection();
     }
 
     function overlayHalfSizePct(btn) {
@@ -14263,6 +14431,7 @@ var ExperienciaCanvas = (function () {
         } else if (!om.shift) {
           canvas().selectedButtonId = null;
           canvas().selectedButtonIds = [];
+          canvas().selectedHotspotId = null;
         }
         paintButtonsStage();
         paintInspector();
@@ -15369,6 +15538,7 @@ var ExperienciaCanvas = (function () {
         var hit = pickOverlayStageBtnFromPoint(ev.clientX, ev.clientY);
         var sceneIdHit = canvas().selectedId;
         if (hit) {
+          canvas().selectedHotspotId = null;
           var bidProbe = hit.getAttribute('data-exp-stage-btn');
           if (bidProbe && isOverlayEffectivelyLocked(sceneIdHit, bidProbe)) return;
         }
@@ -15379,10 +15549,19 @@ var ExperienciaCanvas = (function () {
             return;
           }
           if (ev.button !== 0) return;
+          var hsHit = pickHotspotIdAtPct(percentFromPointer(ev));
+          if (hsHit) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            selectTrazoHotspot(hsHit);
+            return;
+          }
           if (!overlaysEditable()) {
             canvas().selectedButtonId = null;
             canvas().selectedButtonIds = [];
+            canvas().selectedHotspotId = null;
             renderAll();
+            notifyOverlaySelection();
             return;
           }
           ev.preventDefault();
@@ -15535,6 +15714,16 @@ var ExperienciaCanvas = (function () {
         });
       });
       buttonsLayer.addEventListener('dblclick', function (ev) {
+        if (!hotspotDraw && !ev.target.closest('[data-exp-stage-btn]') &&
+            !ev.target.closest('[data-exp-gizmo]')) {
+          var hidGeom = pickHotspotIdAtPct(percentFromPointer(ev));
+          if (hidGeom) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            selectTrazoHotspot(hidGeom, { geometry: true });
+            return;
+          }
+        }
         var sceneId = canvas().selectedId;
         var grouped = resolveGroupedChildFromEvent(ev, sceneId);
         groupDebugLog('dblclick (native fallback)', grouped);
@@ -17747,7 +17936,7 @@ var ExperienciaCanvas = (function () {
         var t = String(ix.type || '').toUpperCase();
         if (t === 'HOTSPOT') {
           pinOverlayGroupMemberGlow(null);
-          canvas().editMode = 'hotspots';
+          canvas().editMode = ix.sourceTool === 'trazo' ? 'buttons' : 'hotspots';
           canvas().selectedHotspotId = String(itemId);
           canvas().selectedButtonId = null;
           canvas().selectedButtonIds = [];
