@@ -1,0 +1,84 @@
+/*
+ * HALL chrome — Style Engine V3 premium scale.
+ * Depth from layers & hush, never from loud shadows.
+ */
+
+body.dashboard-shell,
+body.login-page,
+body.hall-login,
+body.hall-app,
+body.platform-builder-shell,
+body.visitor-dashboard,
+.bx-admin2 {
+  /* Spacing scale: 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64 */
+  --hall-space-1: 4px;
+  --hall-space-2: 8px;
+  --hall-space-3: 12px;
+  --hall-space-4: 16px;
+  --hall-space-5: 24px;
+  --hall-space-6: 32px;
+  --hall-space-7: 48px;
+  --hall-space-8: 64px;
+
+  --hall-radius-card: 24px;
+  --hall-radius-control: 14px;
+  --hall-radius-nav: 12px;
+  --hall-radius-pill: 999px;
+
+  --hall-pad-card: 40px;
+  --hall-pad-card-flush-x: 8px;
+  --hall-pad-section: 48px 44px 72px;
+  --hall-gap-section: 32px;
+  --hall-gap-row: 16px;
+  --hall-header-h: 48px;
+  --hall-sidebar-w: 208px;
+
+  --hall-title-size: 1.625rem;
+  --hall-lead-size: 0.9375rem;
+  --hall-label-size: 0.6875rem;
+  --hall-btn-min-h: 48px;
+  --hall-btn-compact-h: 38px;
+  --hall-input-h: 50px;
+  --hall-tracking-ui: 0.1em;
+  --hall-tracking-action: 0.12em;
+  --hall-tracking-brand: 0.18em;
+  --hall-leading-body: 1.6;
+  --hall-leading-tight: 1.35;
+
+  /* Motion — natural, never snappy */
+  --hall-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --hall-duration: 0.28s;
+  --hall-duration-fast: 0.18s;
+
+  /* Surfaces — quiet layers */
+  --hall-bg: #050505;
+  --hall-surface: rgba(255, 255, 255, 0.028);
+  --hall-surface-raised: rgba(255, 255, 255, 0.045);
+  --hall-surface-hover: rgba(255, 255, 255, 0.055);
+  --hall-border: rgba(255, 255, 255, 0.06);
+  --hall-border-strong: rgba(255, 255, 255, 0.11);
+  --hall-border-hairline: rgba(255, 255, 255, 0.04);
+  /* Subtle interactive borders (cards, selectors) */
+  --hall-border-subtle: var(--hall-border);
+  --hall-border-subtle-hover: rgba(255, 255, 255, 0.14);
+  --border-subtle: var(--hall-border-subtle);
+  --border-subtle-hover: var(--hall-border-subtle-hover);
+
+  --hall-text: rgba(255, 255, 255, 0.94);
+  --hall-text-muted: rgba(255, 255, 255, 0.52);
+  --hall-text-faint: rgba(255, 255, 255, 0.34);
+
+  /* Buttons — glass outline, hush */
+  --hall-btn-bg: rgba(255, 255, 255, 0.03);
+  --hall-btn-border: rgba(255, 255, 255, 0.1);
+  --hall-btn-hover-bg: rgba(255, 255, 255, 0.055);
+  --hall-btn-hover-border: rgba(255, 255, 255, 0.16);
+  --hall-btn-solid-bg: rgba(255, 255, 255, 0.94);
+  --hall-btn-solid-text: rgba(10, 10, 10, 0.92);
+
+  /* Light — felt, not seen */
+  --hall-inset: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  --hall-shadow-card: 0 24px 64px rgba(0, 0, 0, 0.28);
+  --hall-shadow-soft: 0 8px 28px rgba(0, 0, 0, 0.18);
+  --hall-input-inset: inset 0 1px 2px rgba(0, 0, 0, 0.28);
+}

@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/visitor-auth.js');}catch(_e){}
 /* Visitor authentication orchestration */
 var VisitorAuth = (function () {
   var session = null;
@@ -298,3 +299,5 @@ var VisitorAuth = (function () {
     getSessionData: function () { return session; }
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/visitor-auth.js');}catch(_e){}

@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-personalization.js');}catch(_e){}
 /* Visitor identity & appearance prefs — local + Supabase display name */
 var VisitorPersonalization = (function () {
   var LEGACY_COLORS = {
@@ -121,12 +122,13 @@ var VisitorPersonalization = (function () {
 
   function renderAvatarHtml(sizeClass) {
     var prefs = getPrefs();
-    var cls = 'menu-profile-avatar' + (sizeClass ? ' ' + sizeClass : '');
+    var size = String(sizeClass || '').replace(/\bmenu-profile-avatar-status\b/g, '').replace(/\s+/g, ' ').trim();
     if (prefs.avatarColorMode === 'image' && prefs.avatarImageUrl) {
-      return '<div class="' + cls + ' menu-profile-avatar-image" aria-hidden="true">' +
-        '<img src="' + escapeAttr(prefs.avatarImageUrl) + '" alt="">' +
-      '</div>';
+      /* Foto directa: sin contenedor, fondo ni decoración */
+      var photoCls = ('menu-profile-avatar menu-profile-avatar-photo ' + size).replace(/\s+/g, ' ').trim();
+      return '<img class="' + photoCls + '" src="' + escapeAttr(prefs.avatarImageUrl) + '" alt="" aria-hidden="true" draggable="false">';
     }
+    var cls = 'menu-profile-avatar' + (sizeClass ? ' ' + sizeClass : '');
     var color = getAvatarColor();
     return '<div class="' + cls + '" style="--avatar-color:' + color + '" aria-hidden="true"></div>';
   }
@@ -234,23 +236,7 @@ var VisitorPersonalization = (function () {
     if (profile) {
       var prefs = readPrefs(profile.id);
       prefs.themeKey = ThemeSystem.CUSTOM_THEME_KEY;
-      prefs.customTheme = {
-        bg: config.bg,
-        menuColor: config.menuColor || config.panelColor || config.bg,
-        surface: config.surface,
-        accent: config.accent,
-        textMode: config.textMode === 'dark' ? 'dark' : 'light',
-        bgTextMode: config.bgTextMode === 'dark' ? 'dark' : 'light',
-        visualDepth: ThemeSystem.normalizeVisualDepth(config.visualDepth),
-        bgGlass: ThemeSystem.normalizePanelGlass(config.bgGlass || config.panelGlass),
-        panelGlass: ThemeSystem.normalizePanelGlass(config.panelGlass),
-        buttonGlass: ThemeSystem.normalizePanelGlass(config.buttonGlass),
-        borderGlass: ThemeSystem.normalizePanelGlass(config.borderGlass),
-        shadowGlass: ThemeSystem.normalizeShadowGlass(config.shadowGlass),
-        heroSurface: config.heroSurface || config.surface,
-        heroButtonGlass: ThemeSystem.normalizePanelGlass(config.heroButtonGlass || config.buttonGlass),
-        heroBorderGlass: ThemeSystem.normalizePanelGlass(config.heroBorderGlass || config.borderGlass)
-      };
+      prefs.customTheme = ThemeSystem.normalizeCustomConfig(config);
       writePrefs(profile.id, prefs);
     }
     markPersonalThemeChoice();
@@ -266,29 +252,14 @@ var VisitorPersonalization = (function () {
 
   function buildThemeConfigPayload(config) {
     var prefs = getPrefs();
-    return {
+    return Object.assign({}, ThemeSystem.normalizeCustomConfig(config), {
       themeKey: ThemeSystem.CUSTOM_THEME_KEY,
-      bg: config.bg,
-      menuColor: config.menuColor || config.panelColor || config.bg,
-      surface: config.surface,
-      accent: config.accent,
-      textMode: config.textMode === 'dark' ? 'dark' : 'light',
-      bgTextMode: config.bgTextMode === 'dark' ? 'dark' : 'light',
-      visualDepth: ThemeSystem.normalizeVisualDepth(config.visualDepth),
-      bgGlass: ThemeSystem.normalizePanelGlass(config.bgGlass || config.panelGlass),
-      panelGlass: ThemeSystem.normalizePanelGlass(config.panelGlass),
-      buttonGlass: ThemeSystem.normalizePanelGlass(config.buttonGlass),
-      borderGlass: ThemeSystem.normalizePanelGlass(config.borderGlass),
-      shadowGlass: ThemeSystem.normalizeShadowGlass(config.shadowGlass),
-      heroSurface: config.heroSurface || config.surface,
-      heroButtonGlass: ThemeSystem.normalizePanelGlass(config.heroButtonGlass || config.buttonGlass),
-      heroBorderGlass: ThemeSystem.normalizePanelGlass(config.heroBorderGlass || config.borderGlass),
       avatar: {
         mode: prefs.avatarColorMode || 'auto',
         customColor: prefs.avatarCustomColor || null,
         imageUrl: prefs.avatarImageUrl || null
       }
-    };
+    });
   }
 
   function applyAvatarFromThemeConfig(avatarConfig) {
@@ -314,23 +285,7 @@ var VisitorPersonalization = (function () {
     if (config.avatar) applyAvatarFromThemeConfig(config.avatar);
 
     if (themeKey === customKey) {
-      return saveCustomTheme(ThemeSystem.normalizeCustomConfig({
-        bg: config.bg || config.background,
-        menuColor: config.menuColor || config.panelColor || config.bg || config.background,
-        surface: config.surface,
-        accent: config.accent,
-        textMode: config.textMode,
-        bgTextMode: config.bgTextMode,
-        visualDepth: config.visualDepth,
-        bgGlass: config.bgGlass || config.panelGlass,
-        panelGlass: config.panelGlass,
-        buttonGlass: config.buttonGlass,
-        borderGlass: config.borderGlass,
-        shadowGlass: config.shadowGlass,
-        heroSurface: config.heroSurface || config.surface,
-        heroButtonGlass: config.heroButtonGlass || config.buttonGlass,
-        heroBorderGlass: config.heroBorderGlass || config.borderGlass
-      }));
+      return saveCustomTheme(ThemeSystem.normalizeCustomConfig(config));
     }
 
     setThemeKey(themeKey);
@@ -556,3 +511,5 @@ window.onThemeChanged = function () {
     }
   }
 };
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-personalization.js');}catch(_e){}

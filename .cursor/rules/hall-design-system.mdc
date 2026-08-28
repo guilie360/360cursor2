@@ -1,0 +1,40 @@
+---
+description: HALL is the official BOXIES Design System — Style Engine V3 is the living contract
+alwaysApply: true
+---
+
+# HALL — Design System oficial de BOXIES
+
+## Decisión permanente
+
+**HALL es el Design System oficial.** El **Style Engine V3** es su documentación viva.
+
+No es un tema. No es un skin. Toda superficie de plataforma debe sentirse como el chrome del Style Engine / BOXIES AI builder.
+
+## Pipeline
+
+```
+variables.css → components.css → css/hall/hall.css → ThemeSystem → HallDesignSystem.paint() → render
+```
+
+Árbol: `hall-chrome.css` (escala + lock) → `hall-primitives.css` → `hall-layouts.css`.
+
+## Contrato visual (Style Engine V3)
+
+- Fondo near-black; superficies layered con borde fino (~10% blanco)
+- Botones plataforma: outline glass / pill — **nunca** relleno de acento del showroom
+- CTA sólido: blanco (`hall-btn--solid` / `.is-primary` builder)
+- Cards ~22px radius, padding ~36px
+- Header fino (~52px), sidebar ~200px, nav active soft rounded
+- Tipografía: títulos blancos; leads muted; labels uppercase tracking
+- Densidad baja: aire entre bloques
+
+## Prohibido
+
+- Inventar layouts/botones/cards por módulo
+- Dejar que `--btn-surface` del tema pinte de rojo/accent el chrome de admin/admin2/auth/builder
+- CSS de identidad fuera de `css/hall/`
+
+## Showroom
+
+El visitante sigue ThemeSystem (botones del proyecto). El **editor** Style Engine y todas las herramientas BOXIES usan el chrome HALL bloqueado.

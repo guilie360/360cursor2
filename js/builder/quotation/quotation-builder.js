@@ -1,0 +1,1038 @@
+/**
+ * QuotationBuilderView — Quotation Room builder host.
+ * V7.1.09 — Config 3-col + dock action states + shared BuilderHero.
+ */
+var QuotationBuilderView = (function () {
+  var rootEl = null;
+  var currentStep = 'config';
+  var stepNavToken = 0;
+  var projectCtx = {
+    id: '',
+    name: '',
+    slug: '',
+    constructora_id: null,
+    og_image: '',
+    og_title: '',
+    og_description: '',
+    favicon_url: '',
+    page_title: '',
+    published: false
+  };
+  var sectionChecks = {};
+  var processing = false;
+  var builderExperienceType = 'quotation';
+  var leftCollapsed = false;
+  var rightCollapsed = false;
+  var leftLocked = false;
+  var rightLocked = false;
+  var RECURSOS_W = '220px';
+  var PROPS_W = '220px';
+  var FLOAT_BTN_ID = 'quotationLeftFloatBtn';
+  var RIGHT_FLOAT_BTN_ID = 'quotationRightFloatBtn';
+
+  function escapeHtml(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function iconHtml(name) {
+    if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
+      return BuilderIcons.render(name);
+    }
+    return '‹';
+  }
+
+  function resolvePanel(stepId) {
+    var id = typeof QuotationRouter !== 'undefined'
+      ? QuotationRouter.normalize(stepId)
+      : (stepId || 'config');
+    if (id === 'editor' && typeof QuotationEditor !== 'undefined') return QuotationEditor;
+    if (id === 'hero' && typeof QuotationHero !== 'undefined') return QuotationHero;
+    if (id === 'config' && typeof QuotationConfig !== 'undefined') return QuotationConfig;
+    return null;
+  }
+
+  function mountHeaderSteps(stepId) {
+    var host = document.getElementById('boxiesHeaderBuilderSteps');
+    if (!host || typeof QuotationSidebar === 'undefined' || !QuotationSidebar.renderHtml) {
+      return null;
+    }
+    host.innerHTML =
+      '<nav class="quotation-header-steps" id="quotationStepsBar" aria-label="Pasos del Builder">' +
+        QuotationSidebar.renderHtml(stepId || currentStep, sectionChecks) +
+      '</nav>';
+    host.hidden = false;
+    if (QuotationSidebar.bind) QuotationSidebar.bind(host, goToStep);
+    return host;
+  }
+
+  function clearHeaderSteps() {
+    var host = document.getElementById('boxiesHeaderBuilderSteps');
+    if (!host) return;
+    host.innerHTML = '';
+    host.hidden = true;
+  }
+
+  function floatLockIcon() {
+    return iconHtml('lock');
+  }
+
+  function leftFloatLabel() {
+    if (leftLocked) return leftCollapsed ? 'Recursos bloqueados (ocultos)' : 'Recursos bloqueados';
+    return leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos';
+  }
+
+  function rightFloatLabel() {
+    if (rightLocked) return rightCollapsed ? 'Capas bloqueadas (ocultas)' : 'Capas bloqueadas';
+    return rightCollapsed ? 'Expandir capas' : 'Colapsar capas';
+  }
+
+  function leftFloatHtml() {
+    return (
+      '<button type="button" class="quotation-panel-float quotation-panel-float--left' +
+        (leftLocked ? ' is-locked' : '') + '"' +
+        ' id="' + FLOAT_BTN_ID + '"' +
+        ' data-collapsed="' + (leftCollapsed ? '1' : '0') + '"' +
+        ' data-locked="' + (leftLocked ? '1' : '0') + '"' +
+        ' aria-expanded="' + (leftCollapsed ? 'false' : 'true') + '"' +
+        ' aria-label="' + leftFloatLabel() + '"' +
+        ' data-tooltip="' + leftFloatLabel() + '">' +
+        (leftLocked ? floatLockIcon() : iconHtml('chevron-left')) +
+      '</button>'
+    );
+  }
+
+  function rightFloatHtml() {
+    return (
+      '<button type="button" class="quotation-panel-float quotation-panel-float--right' +
+        (rightLocked ? ' is-locked' : '') + '"' +
+        ' id="' + RIGHT_FLOAT_BTN_ID + '"' +
+        ' data-collapsed="' + (rightCollapsed ? '1' : '0') + '"' +
+        ' data-locked="' + (rightLocked ? '1' : '0') + '"' +
+        ' aria-expanded="' + (rightCollapsed ? 'false' : 'true') + '"' +
+        ' aria-label="' + rightFloatLabel() + '"' +
+        ' data-tooltip="' + rightFloatLabel() + '">' +
+        (rightLocked ? floatLockIcon() : iconHtml('chevron-right')) +
+      '</button>'
+    );
+  }
+
+  function openPanelLockMenu(btn, locked, setLocked, clientX, clientY) {
+    if (!btn || typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    QuotationContextMenu.open({
+      x: clientX,
+      y: clientY,
+      ariaLabel: 'Bloqueo de columna',
+      items: [
+        {
+          id: locked ? 'unlock' : 'lock',
+          label: locked ? 'Desbloquear' : 'Bloquear'
+        }
+      ],
+      onSelect: function (id) {
+        if (id === 'lock') setLocked(true);
+        else if (id === 'unlock') setLocked(false);
+      }
+    });
+  }
+
+  function shellHtml(stepId) {
+    var actions =
+      typeof BuilderDockActions !== 'undefined' && BuilderDockActions.mountHostHtml
+        ? BuilderDockActions.mountHostHtml({ published: !!projectCtx.published })
+        : (
+          '<div class="builder-header-actions" hidden>' +
+            '<button type="button" class="builder-header-action-btn" id="builderSaveBtn">Guardar</button>' +
+            '<button type="button" class="builder-header-action-btn is-primary" id="builderPublishBtn">' +
+              (projectCtx.published ? 'Republicar' : 'Publicar') +
+            '</button>' +
+          '</div>'
+        );
+    return '' +
+      '<div class="quotation-builder builder-app quotation-canvas-first" id="quotationBuilderRoot" data-quotation-builder' +
+        (builderExperienceType === 'template' ? ' data-template-builder' : '') + '>' +
+        actions +
+        '<div class="builder-workspace quotation-workspace' +
+          (leftCollapsed ? ' is-left-collapsed' : '') +
+          (rightCollapsed ? ' is-right-collapsed' : '') + '">' +
+          '<div class="quotation-left-block" id="quotationLeftBlock">' +
+            '<aside class="quotation-recursos' + (leftCollapsed ? ' is-collapsed' : '') + '"' +
+              ' id="quotationRecursosPanel" aria-label="Recursos">' +
+              '<div class="quotation-left-body" id="quotationLeftBody"></div>' +
+            '</aside>' +
+          '</div>' +
+          /* Float is a workspace sibling — never inside the left rail (avoids shadow column). */
+          leftFloatHtml() +
+          '<div class="quotation-main">' +
+            '<section class="quotation-panel" id="quotationPanel" data-quotation-panel></section>' +
+          '</div>' +
+          '<aside class="quotation-props' + (rightCollapsed ? ' is-collapsed' : '') + '"' +
+            ' id="quotationPropsPanel" aria-label="Capas y propiedades" hidden>' +
+            rightFloatHtml() +
+            '<div class="quotation-props-body" id="quotationRightBody"></div>' +
+          '</aside>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function syncFloatButton() {
+    var btn = (rootEl && rootEl.querySelector('#' + FLOAT_BTN_ID)) ||
+      document.getElementById(FLOAT_BTN_ID);
+    if (!btn) return;
+    btn.setAttribute('data-collapsed', leftCollapsed ? '1' : '0');
+    btn.setAttribute('data-locked', leftLocked ? '1' : '0');
+    btn.classList.toggle('is-locked', leftLocked);
+    btn.setAttribute('aria-expanded', leftCollapsed ? 'false' : 'true');
+    btn.setAttribute('aria-label', leftFloatLabel());
+    btn.setAttribute('data-tooltip', leftFloatLabel());
+    btn.innerHTML = leftLocked ? floatLockIcon() : iconHtml('chevron-left');
+  }
+
+  function syncRightFloatButton() {
+    var btn = (rootEl && rootEl.querySelector('#' + RIGHT_FLOAT_BTN_ID)) ||
+      document.getElementById(RIGHT_FLOAT_BTN_ID);
+    if (!btn) return;
+    btn.setAttribute('data-collapsed', rightCollapsed ? '1' : '0');
+    btn.setAttribute('data-locked', rightLocked ? '1' : '0');
+    btn.classList.toggle('is-locked', rightLocked);
+    btn.setAttribute('aria-expanded', rightCollapsed ? 'false' : 'true');
+    btn.setAttribute('aria-label', rightFloatLabel());
+    btn.setAttribute('data-tooltip', rightFloatLabel());
+    btn.innerHTML = rightLocked ? floatLockIcon() : iconHtml('chevron-right');
+  }
+
+  function setLeftLocked(on) {
+    leftLocked = !!on;
+    syncFloatButton();
+  }
+
+  function setRightLocked(on) {
+    rightLocked = !!on;
+    syncRightFloatButton();
+  }
+
+  var chromeFoldBatch = false;
+  var LIBRARY_PANEL_SLIDE_MS = 440;
+
+  function whenLibraryPanelTransition(onDone) {
+    if (!rootEl) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
+    var leftBlock = rootEl.querySelector('.quotation-left-block');
+    var mainEl = rootEl.querySelector('.quotation-main');
+    if (!leftBlock) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
+    leftBlock.classList.add('is-library-panel-sliding');
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch (eR) { /* ignore */ }
+    var finished = false;
+    function finish() {
+      if (finished) return;
+      finished = true;
+      leftBlock.removeEventListener('transitionend', onEnd);
+      if (mainEl) mainEl.removeEventListener('transitionend', onEnd);
+      leftBlock.classList.remove('is-library-panel-sliding');
+      try {
+        window.dispatchEvent(new Event('resize'));
+      } catch (eR2) { /* ignore */ }
+      if (typeof onDone === 'function') onDone();
+    }
+    function onEnd(ev) {
+      var t = ev.target;
+      if (t !== leftBlock && t !== mainEl) return;
+      if (ev.propertyName !== 'transform' && ev.propertyName !== 'margin-left') return;
+      finish();
+    }
+    leftBlock.addEventListener('transitionend', onEnd);
+    if (mainEl) mainEl.addEventListener('transitionend', onEnd);
+    window.setTimeout(finish, LIBRARY_PANEL_SLIDE_MS + 32);
+  }
+
+  function scenesCollapsedNow() {
+    return typeof QuotationEditor !== 'undefined' &&
+      typeof QuotationEditor.isScenesCollapsed === 'function' &&
+      !!QuotationEditor.isScenesCollapsed();
+  }
+
+  function scenesLockedNow() {
+    return typeof QuotationEditor !== 'undefined' &&
+      typeof QuotationEditor.isScenesLocked === 'function' &&
+      !!QuotationEditor.isScenesLocked();
+  }
+
+  /** True when every unlocked panel is collapsed (locked ones are ignored). */
+  function isChromeCollapsed() {
+    var leftOk = leftLocked || leftCollapsed;
+    var rightOk = rightLocked || rightCollapsed;
+    var scenesOk = scenesLockedNow() || scenesCollapsedNow();
+    return !!(leftOk && rightOk && scenesOk);
+  }
+
+  function hasUnlockedChromePanels() {
+    return !leftLocked || !rightLocked || !scenesLockedNow();
+  }
+
+  function syncChromeFoldButton() {
+    var btn = document.getElementById('builderChromeFoldBtn');
+    if (!btn) return;
+    var onEditor = currentStep === 'editor' && !!rootEl;
+    btn.hidden = !onEditor;
+    if (!onEditor) return;
+    var collapsed = isChromeCollapsed();
+    var canFold = hasUnlockedChromePanels();
+    btn.classList.toggle('is-active', collapsed);
+    btn.classList.toggle('is-disabled', !canFold);
+    btn.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+    btn.setAttribute('aria-disabled', canFold ? 'false' : 'true');
+    btn.setAttribute(
+      'aria-label',
+      !canFold
+        ? 'Paneles bloqueados'
+        : (collapsed ? 'Mostrar paneles y escenas' : 'Ocultar paneles y escenas')
+    );
+    btn.setAttribute(
+      'data-tooltip',
+      !canFold
+        ? 'Paneles bloqueados'
+        : (collapsed ? 'Mostrar paneles y escenas' : 'Ocultar paneles y escenas')
+    );
+  }
+
+  function setChromeCollapsed(on) {
+    if (!hasUnlockedChromePanels()) return;
+    var next = !!on;
+    chromeFoldBatch = true;
+    if (!leftLocked) applyLeftCollapsed(next);
+    if (!rightLocked) applyRightCollapsed(next);
+    if (typeof QuotationEditor !== 'undefined' &&
+        typeof QuotationEditor.applyScenesCollapsed === 'function') {
+      QuotationEditor.applyScenesCollapsed(next);
+    }
+    chromeFoldBatch = false;
+    syncChromeFoldButton();
+  }
+
+  function toggleChromeCollapsed() {
+    if (!hasUnlockedChromePanels()) return;
+    setChromeCollapsed(!isChromeCollapsed());
+  }
+
+  function applyLeftCollapsed(collapsed, onDone) {
+    if (leftLocked) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
+    leftCollapsed = !!collapsed;
+    if (!rootEl) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
+    var workspace = rootEl.querySelector('.quotation-workspace');
+    var recursos = rootEl.querySelector('#quotationRecursosPanel');
+    if (workspace) workspace.classList.toggle('is-left-collapsed', leftCollapsed);
+    if (recursos) recursos.classList.toggle('is-collapsed', leftCollapsed);
+    try {
+      document.documentElement.style.setProperty(
+        '--quotation-recursos-w',
+        leftCollapsed ? '0px' : RECURSOS_W
+      );
+    } catch (eW) { /* ignore */ }
+    syncFloatButton();
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch (eResize) { /* ignore */ }
+    whenLibraryPanelTransition(function () {
+      if (!chromeFoldBatch) syncChromeFoldButton();
+      if (typeof onDone === 'function') onDone();
+    });
+  }
+
+  function applyRightCollapsed(collapsed) {
+    if (rightLocked) return;
+    rightCollapsed = !!collapsed;
+    if (!rootEl) return;
+    var workspace = rootEl.querySelector('.quotation-workspace');
+    var props = rootEl.querySelector('#quotationPropsPanel');
+    if (workspace) workspace.classList.toggle('is-right-collapsed', rightCollapsed);
+    if (props) props.classList.toggle('is-collapsed', rightCollapsed);
+    try {
+      document.documentElement.style.setProperty(
+        '--quotation-props-w',
+        rightCollapsed ? '0px' : PROPS_W
+      );
+    } catch (eW) {}
+    syncRightFloatButton();
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch (eR) {}
+    if (!chromeFoldBatch) syncChromeFoldButton();
+  }
+
+  function setPropsPanelVisible(on) {
+    if (!rootEl) return;
+    var props = rootEl.querySelector('#quotationPropsPanel');
+    if (!props) return;
+    if (on) {
+      props.hidden = false;
+      applyRightCollapsed(rightCollapsed);
+    } else {
+      props.hidden = true;
+      try {
+        document.documentElement.style.setProperty('--quotation-props-w', '0px');
+      } catch (eW) {}
+    }
+  }
+
+  /** Left rail + fold: Editor (library) and Config (empty for now). Hero stays hidden. */
+  function stepShowsLeftRail(stepId) {
+    return stepId === 'editor' || stepId === 'config';
+  }
+
+  function setRecursosVisible(on) {
+    if (!rootEl) return;
+    var recursos = rootEl.querySelector('#quotationRecursosPanel');
+    var leftBlock = rootEl.querySelector('#quotationLeftBlock');
+    var workspace = rootEl.querySelector('.quotation-workspace');
+    var floatBtn = rootEl.querySelector('#' + FLOAT_BTN_ID);
+    if (workspace) {
+      workspace.classList.toggle('is-recursos-hidden', !on);
+    }
+    if (leftBlock) leftBlock.hidden = !on;
+    if (!recursos) return;
+    if (on) {
+      recursos.hidden = false;
+      if (floatBtn) floatBtn.hidden = false;
+      applyLeftCollapsed(leftCollapsed);
+      ensureFloatButton();
+    } else {
+      recursos.hidden = true;
+      if (floatBtn) floatBtn.hidden = true;
+      try {
+        document.documentElement.style.setProperty('--quotation-recursos-w', '0px');
+      } catch (eW) {}
+    }
+  }
+
+  function ensureFloatButton() {
+    if (!rootEl) return null;
+    var btn = rootEl.querySelector('#' + FLOAT_BTN_ID);
+    if (!btn) return null;
+    if (!btn.dataset.bound) {
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (leftLocked) return;
+        applyLeftCollapsed(!leftCollapsed);
+      });
+      btn.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openPanelLockMenu(btn, leftLocked, setLeftLocked, e.clientX, e.clientY);
+      });
+    }
+    syncFloatButton();
+    return btn;
+  }
+
+  function ensureRightFloatButton() {
+    if (!rootEl) return null;
+    var btn = rootEl.querySelector('#' + RIGHT_FLOAT_BTN_ID);
+    if (!btn) return null;
+    if (!btn.dataset.bound) {
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (rightLocked) return;
+        applyRightCollapsed(!rightCollapsed);
+      });
+      btn.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openPanelLockMenu(btn, rightLocked, setRightLocked, e.clientX, e.clientY);
+      });
+    }
+    syncRightFloatButton();
+    return btn;
+  }
+
+  function destroyFloatButton() {
+    /* Remove orphaned viewport-fixed floats from prior versions. */
+    var orphan = document.getElementById(FLOAT_BTN_ID);
+    if (orphan && (!rootEl || !rootEl.contains(orphan))) {
+      try { orphan.parentNode.removeChild(orphan); } catch (e) {}
+    }
+    var orphanR = document.getElementById(RIGHT_FLOAT_BTN_ID);
+    if (orphanR && (!rootEl || !rootEl.contains(orphanR))) {
+      try { orphanR.parentNode.removeChild(orphanR); } catch (e2) {}
+    }
+  }
+
+  function refreshSidebar() {
+    mountHeaderSteps(currentStep);
+  }
+
+  function clearLeftBody() {
+    var body = rootEl && rootEl.querySelector('#quotationLeftBody');
+    if (body) body.innerHTML = '';
+  }
+
+  function clearRightBody() {
+    var body = rootEl && rootEl.querySelector('#quotationRightBody');
+    if (body) body.innerHTML = '';
+  }
+
+  /** Same chrome typography as Biblioteca / recursos del showroom. */
+  function configLeftChromeHtml() {
+    var title = String(projectCtx.name || projectCtx.slug || 'Proyecto').trim() || 'Proyecto';
+    var slug = String(projectCtx.slug || '').trim();
+    return '' +
+      '<div class="qe-lib-chrome qe-lib-chrome--config">' +
+        '<div class="qe-lib-chrome__head">' +
+          '<h2 class="qe-lib-chrome__title" data-qe-config-left-title' +
+            (slug ? ' title="/' + escapeHtml(slug) + '"' : '') + '>' +
+            escapeHtml(title) +
+          '</h2>' +
+          '<p class="qe-lib-chrome__sub">configuración del showroom</p>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function fillConfigLeftBody() {
+    var body = rootEl && rootEl.querySelector('#quotationLeftBody');
+    if (!body) return;
+    var nav =
+      typeof QuotationConfig !== 'undefined' && QuotationConfig.leftNavHtml
+        ? QuotationConfig.leftNavHtml()
+        : '';
+    body.innerHTML = configLeftChromeHtml() + nav;
+    if (typeof QuotationConfig !== 'undefined' && QuotationConfig.bindLeftNav) {
+      QuotationConfig.bindLeftNav(
+        body,
+        rootEl.querySelector('[data-quotation-panel]')
+      );
+    }
+  }
+
+  function syncConfigLeftChrome() {
+    if (currentStep !== 'config' || !rootEl) return;
+    var titleEl = rootEl.querySelector('[data-qe-config-left-title]');
+    if (!titleEl) {
+      fillConfigLeftBody();
+      return;
+    }
+    var title = String(projectCtx.name || projectCtx.slug || 'Proyecto').trim() || 'Proyecto';
+    var slug = String(projectCtx.slug || '').trim();
+    titleEl.textContent = title;
+    if (slug) titleEl.setAttribute('title', '/' + slug);
+    else titleEl.removeAttribute('title');
+  }
+
+  function bindSectionCheck(panel) {
+    if (!panel) return;
+    var input = panel.querySelector('#builderSectionDoneCheck');
+    if (!input) return;
+    input.addEventListener('change', function () {
+      var stepId = input.getAttribute('data-section-id') || currentStep;
+      sectionChecks[stepId] = !!input.checked;
+      refreshSidebar();
+    });
+  }
+
+  function configAdapter() {
+    return {
+      getProjectId: function () { return projectCtx.id || null; },
+      getIdentity: function () {
+        return {
+          nombre: projectCtx.name || '',
+          slug: projectCtx.slug || '',
+          constructora_id: projectCtx.constructora_id || null
+        };
+      },
+      resolveConstructoraId: function () {
+        return projectCtx.constructora_id ||
+          (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
+            ? AdminState.getConstructoraId()
+            : null);
+      },
+      onSaved: function (payload) {
+        var previousSlug = projectCtx.slug || '';
+        projectCtx.id = payload.id;
+        projectCtx.name = payload.nombre;
+        projectCtx.slug = payload.slug;
+        projectCtx.constructora_id = payload.constructora_id || projectCtx.constructora_id;
+        syncConfigLeftChrome();
+        if (typeof QuotationEditor !== 'undefined' && QuotationEditor.applyProjectIdentity) {
+          try {
+            QuotationEditor.applyProjectIdentity({
+              id: projectCtx.id,
+              slug: projectCtx.slug,
+              name: projectCtx.name,
+              previousSlug: payload.previousSlug || previousSlug
+            });
+          } catch (eApply) {}
+        }
+      },
+      onShareSaved: function (meta) {
+        projectCtx.og_image = meta.og_image || '';
+        projectCtx.og_title = meta.og_title || '';
+        projectCtx.og_description = meta.og_description || '';
+        if (meta.favicon_url != null) projectCtx.favicon_url = meta.favicon_url || '';
+        if (meta.page_title != null) projectCtx.page_title = meta.page_title || '';
+      }
+    };
+  }
+
+  function setDockState(phase) {
+    if (typeof BuilderDockActions === 'undefined' || !BuilderDockActions.setState) return;
+    try { BuilderDockActions.setState(phase); } catch (eDock) {}
+  }
+
+  async function handleSave() {
+    if (processing) return;
+    processing = true;
+    setDockState('saving');
+    try {
+      var panel = rootEl && rootEl.querySelector('[data-quotation-panel]');
+      /* Only persist identity/OG when Config DOM is mounted — never wipe from Editor. */
+      var configMounted = !!(panel && panel.querySelector('#showroomNameInput'));
+      if (configMounted && typeof BuilderConfig !== 'undefined' && BuilderConfig.commitAll) {
+        await BuilderConfig.commitAll(configAdapter(), panel, { silent: true });
+      }
+      /* Hero only when its panel was opened this session (avoid blank overwrite). */
+      if (typeof QuotationHero !== 'undefined' && QuotationHero.commit &&
+          (typeof QuotationHero.isMounted !== 'function' || QuotationHero.isMounted())) {
+        await QuotationHero.commit(configAdapter());
+      }
+      /* Editor commit LAST — only if SSOT is loaded (never wipe canvas from Config-only save). */
+      var editorReady =
+        typeof QuotationEditor !== 'undefined' &&
+        typeof QuotationEditor.isDocumentReady === 'function' &&
+        projectCtx && projectCtx.id &&
+        QuotationEditor.isDocumentReady(projectCtx.id);
+      if (editorReady && QuotationEditor.commit) {
+        await QuotationEditor.commit(configAdapter());
+      }
+      if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
+        BuilderDirtyState.clear();
+      }
+      setDockState('success');
+    } catch (err) {
+      setDockState('error');
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error((err && err.message) || 'No se pudo guardar.');
+      }
+    } finally {
+      processing = false;
+    }
+  }
+
+  async function handlePublish() {
+    if (processing) return;
+    if (!projectCtx.id) {
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error('No hay un proyecto vinculado.');
+      }
+      return;
+    }
+    processing = true;
+    setDockState('publishing');
+    try {
+      var panel = rootEl && rootEl.querySelector('[data-quotation-panel]');
+      var configMounted = !!(panel && panel.querySelector('#showroomNameInput'));
+      if (configMounted && typeof BuilderConfig !== 'undefined' && BuilderConfig.commitAll) {
+        try {
+          await BuilderConfig.commitAll(configAdapter(), panel, { silent: true });
+        } catch (eShare) {}
+      }
+      if (typeof QuotationHero !== 'undefined' && QuotationHero.commit &&
+          (typeof QuotationHero.isMounted !== 'function' || QuotationHero.isMounted())) {
+        try { await QuotationHero.commit(configAdapter()); } catch (eHero) {}
+      }
+      /* Editor LAST — load SSOT if needed so publish does not skip canvas write. */
+      if (typeof QuotationEditor !== 'undefined' && QuotationEditor.commit) {
+        try {
+          if (typeof QuotationEditor.ensureLoaded === 'function' && projectCtx.id) {
+            await QuotationEditor.ensureLoaded(projectCtx);
+          }
+          await QuotationEditor.commit(configAdapter());
+        } catch (eEditor) {}
+      }
+      if (typeof QuotationPersistAudit !== 'undefined' && QuotationPersistAudit.onPublish) {
+        var pubDoc = null;
+        try {
+          pubDoc = typeof QuotationEditor !== 'undefined' && QuotationEditor.serializeDocument
+            ? QuotationEditor.serializeDocument()
+            : null;
+        } catch (eDoc) {}
+        QuotationPersistAudit.onPublish({
+          projectId: projectCtx.id,
+          slug: projectCtx.slug,
+          source: 'QuotationBuilder.handlePublish',
+          documentOrigin:
+            '1) QuotationHero.commit (hero_quotation top-level, canvas preserved if absent) → ' +
+            '2) QuotationEditor.commit (hero_quotation.canvas = serializeDocument) → ' +
+            '3) ProyectosApi.update({ publicado: true }) — flag only, does not rewrite canvas',
+          note: 'Public Runtime /{slug} will load hero_quotation from DB after this, not Editor memory.',
+          memoryDocumentSummary: pubDoc
+        });
+      }
+      if (typeof ProyectosApi === 'undefined' || !ProyectosApi.update) {
+        throw new Error('API de publicación no disponible.');
+      }
+      var updated = await ProyectosApi.update(projectCtx.id, { publicado: true });
+      projectCtx.published = !!(updated && updated.publicado !== false);
+      if (typeof BuilderDockActions !== 'undefined' && BuilderDockActions.setPublished) {
+        BuilderDockActions.setPublished(true);
+      }
+      setDockState('success');
+    } catch (err) {
+      setDockState('error');
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error((err && err.message) || 'No se pudo publicar.');
+      }
+    } finally {
+      processing = false;
+    }
+  }
+
+  function mountDockActions(host) {
+    if (typeof BuilderDockActions === 'undefined') return;
+    BuilderDockActions.promote(host);
+    BuilderDockActions.bind({
+      onSave: handleSave,
+      onPublish: handlePublish
+    });
+    BuilderDockActions.setPublished(!!projectCtx.published);
+  }
+
+  function renderStep(stepId) {
+    if (!rootEl) return;
+    currentStep = typeof QuotationRouter !== 'undefined'
+      ? QuotationRouter.writeToUrl(stepId)
+      : stepId;
+    var panel = rootEl.querySelector('[data-quotation-panel]');
+    var workspace = rootEl.querySelector('.quotation-workspace') ||
+      rootEl.querySelector('.builder-workspace');
+    var mod = resolvePanel(currentStep);
+    /* Detach editor UI only — never reset QuotationEditor document SSOT. */
+    if (typeof QuotationEditor !== 'undefined' && QuotationEditor.detachUi) {
+      try { QuotationEditor.detachUi(); } catch (eDetach) {}
+    }
+    clearLeftBody();
+    clearRightBody();
+    setPropsPanelVisible(currentStep === 'editor');
+    setRecursosVisible(stepShowsLeftRail(currentStep));
+    if (currentStep === 'config') fillConfigLeftBody();
+    if (workspace) {
+      workspace.classList.toggle('is-editor', currentStep === 'editor');
+      workspace.classList.toggle('is-config', currentStep === 'config');
+      workspace.classList.toggle('is-hero', currentStep === 'hero');
+      workspace.classList.toggle('is-left-collapsed', leftCollapsed);
+      workspace.classList.toggle('is-right-collapsed', rightCollapsed);
+      workspace.classList.remove('is-canvas-preview');
+    }
+    if (panel) {
+      panel.classList.toggle('quotation-panel--editor', currentStep === 'editor');
+      panel.classList.toggle('quotation-panel--hero', currentStep === 'hero');
+      panel.classList.toggle('is-framed-step', currentStep === 'hero');
+      panel.innerHTML = mod && mod.render
+        ? mod.render(projectCtx, { sectionChecks: sectionChecks, stepId: currentStep })
+        : '<p class="builder-step-desc">Paso no disponible.</p>';
+      if (mod && mod.bind) {
+        try { mod.bind(panel, projectCtx); } catch (eBind) {}
+      }
+      bindSectionCheck(panel);
+    }
+    refreshSidebar();
+    syncChromeFoldButton();
+  }
+
+  function showStepLoader() {
+    if (typeof AdminUI !== 'undefined' && typeof AdminUI.showGlobalBusy === 'function') {
+      AdminUI.showGlobalBusy('', { opaque: true });
+    }
+  }
+
+  function hideStepLoader() {
+    if (typeof AdminUI !== 'undefined' && typeof AdminUI.hideGlobalBusy === 'function') {
+      AdminUI.hideGlobalBusy();
+    }
+  }
+
+  function goToStep(stepId) {
+    var next = typeof QuotationRouter !== 'undefined'
+      ? QuotationRouter.normalize(stepId)
+      : String(stepId || '').trim().toLowerCase();
+    if (!next) return;
+    /* Same step: ignore — remounting editor wiped UX and felt frozen. */
+    if (next === currentStep) return;
+
+    var token = ++stepNavToken;
+
+    if (next === 'editor' &&
+        typeof QuotationEditor !== 'undefined' &&
+        typeof QuotationEditor.ensureLoaded === 'function' &&
+        projectCtx && projectCtx.id) {
+      var alreadyReady = typeof QuotationEditor.isDocumentReady === 'function' &&
+        QuotationEditor.isDocumentReady(projectCtx.id);
+      if (!alreadyReady) showStepLoader();
+      QuotationEditor.ensureLoaded(projectCtx).then(function () {
+        if (token !== stepNavToken) return;
+        renderStep(next);
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            if (token === stepNavToken) hideStepLoader();
+          });
+        });
+      }).catch(function (eLoad) {
+        console.warn('[QuotationBuilderView] goToStep ensureLoaded', eLoad);
+        if (token !== stepNavToken) return;
+        renderStep(next);
+        hideStepLoader();
+      });
+      return;
+    }
+
+    hideStepLoader();
+    renderStep(next);
+  }
+
+  function activateSharedChrome() {
+    document.body.classList.add('quotation-canvas-first', 'boxies-builder-chrome');
+    document.documentElement.classList.add('quotation-canvas-first', 'boxies-builder-chrome');
+    document.body.classList.remove('boxies-rail-collapsed');
+    document.documentElement.classList.remove('boxies-rail-collapsed');
+    try {
+      document.documentElement.style.setProperty('--builder-rail-width', '0px');
+      document.documentElement.style.setProperty(
+        '--quotation-recursos-w',
+        leftCollapsed ? '0px' : RECURSOS_W
+      );
+      document.documentElement.style.setProperty(
+        '--quotation-props-w',
+        rightCollapsed ? '0px' : PROPS_W
+      );
+    } catch (eW) {}
+    if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
+      try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
+    }
+    destroyFloatButton();
+    ensureFloatButton();
+    ensureRightFloatButton();
+    applyLeftCollapsed(leftCollapsed);
+    applyRightCollapsed(rightCollapsed);
+    setRecursosVisible(stepShowsLeftRail(currentStep));
+    setPropsPanelVisible(currentStep === 'editor');
+    syncChromeFoldButton();
+  }
+
+  function deactivateSharedChrome() {
+    document.body.classList.remove('quotation-canvas-first', 'boxies-builder-chrome');
+    document.documentElement.classList.remove('quotation-canvas-first', 'boxies-builder-chrome');
+    try {
+      document.documentElement.style.removeProperty('--builder-rail-width');
+      document.documentElement.style.removeProperty('--quotation-recursos-w');
+      document.documentElement.style.removeProperty('--quotation-props-w');
+      document.documentElement.style.removeProperty('--quotation-left-w');
+    } catch (eW) {}
+    destroyFloatButton();
+  }
+
+  async function hydrateIdentity(projectId, slug, experienceType) {
+    var expType = experienceType || 'quotation';
+    projectCtx = {
+      id: String(projectId || '').trim(),
+      slug: String(slug || '').trim(),
+      name: String(slug || projectId || (expType === 'template' ? 'Plantilla' : 'Quotation Room')),
+      constructora_id: null,
+      og_image: '',
+      og_title: '',
+      og_description: '',
+      favicon_url: '',
+      page_title: '',
+      published: false
+    };
+    try {
+      if (typeof BoxiesAdmin2ProjectsApi !== 'undefined' && BoxiesAdmin2ProjectsApi.list) {
+        var rows = await BoxiesAdmin2ProjectsApi.list({ experienceType: expType });
+        var match = null;
+        (rows || []).some(function (row) {
+          if (projectCtx.id && String(row.id) === projectCtx.id) {
+            match = row;
+            return true;
+          }
+          if (projectCtx.slug && String(row.slug) === projectCtx.slug) {
+            match = row;
+            return true;
+          }
+          return false;
+        });
+        if (match) {
+          projectCtx.id = match.id || projectCtx.id;
+          projectCtx.name = match.nombre || match.name || projectCtx.name;
+          projectCtx.slug = match.slug || projectCtx.slug;
+          projectCtx.constructora_id = match.constructora_id || null;
+          projectCtx.published = !!match.publicado;
+        }
+      }
+    } catch (eHydrate) {}
+
+    /* List may miss the row (scope / experience filter). Resolve slug by id — SSOT for editorProjectCtx. */
+    if (
+      projectCtx.id &&
+      !projectCtx.slug &&
+      typeof ProyectosApi !== 'undefined' &&
+      typeof ProyectosApi.getById === 'function'
+    ) {
+      try {
+        var row = await ProyectosApi.getById(projectCtx.id);
+        if (row) {
+          projectCtx.slug = String(row.slug || '').trim() || projectCtx.slug;
+          projectCtx.name = row.nombre || row.name || projectCtx.name;
+          if (row.constructora_id) projectCtx.constructora_id = row.constructora_id;
+          if (row.publicado != null) projectCtx.published = !!row.publicado;
+        }
+      } catch (eById) {}
+    }
+
+    if (projectCtx.id && typeof ProyectosApi !== 'undefined' && ProyectosApi.fetchShareMeta) {
+      try {
+        var share = await ProyectosApi.fetchShareMeta(projectCtx.id);
+        projectCtx.og_image = share.og_image || '';
+        projectCtx.og_title = share.og_title || '';
+        projectCtx.og_description = share.og_description || '';
+        projectCtx.favicon_url = share.favicon_url || '';
+        projectCtx.page_title = share.page_title || '';
+      } catch (eShare) {}
+    }
+
+    if (typeof BoxiesShell !== 'undefined' && BoxiesShell.setProjectContext) {
+      BoxiesShell.setProjectContext({
+        id: projectCtx.id,
+        name: projectCtx.name,
+        slug: projectCtx.slug,
+        experienceType: expType
+      });
+    }
+  }
+
+  async function render(host, opts) {
+    opts = opts || {};
+    rootEl = host;
+    var expType = String(opts.experienceType || opts.experience_type || 'quotation').toLowerCase();
+    builderExperienceType = expType === 'template' ? 'template' : 'quotation';
+    host.classList.add('boxies-builder-embed', 'quotation-builder-host');
+    if (builderExperienceType === 'template') {
+      host.classList.add('template-builder-host');
+    }
+    var projectId = (opts.projectId || '').trim();
+    var slug = (opts.project || opts.slug || opts.proyecto || '').trim();
+    await hydrateIdentity(projectId, slug, builderExperienceType);
+
+    currentStep = typeof QuotationRouter !== 'undefined'
+      ? QuotationRouter.readFromUrl()
+      : 'config';
+
+    /* Hydrate editor SSOT before first paint — avoids empty library/scenes flash. */
+    if (currentStep === 'editor' &&
+        typeof QuotationEditor !== 'undefined' &&
+        typeof QuotationEditor.ensureLoaded === 'function' &&
+        projectCtx && projectCtx.id) {
+      try {
+        await QuotationEditor.ensureLoaded(projectCtx);
+      } catch (eLoad) {
+        console.warn('[QuotationBuilderView] ensureLoaded', eLoad);
+      }
+    }
+
+    host.innerHTML = shellHtml(currentStep);
+    mountHeaderSteps(currentStep);
+    activateSharedChrome();
+    mountDockActions(host);
+    renderStep(currentStep);
+    return {
+      goToStep: goToStep,
+      getProjectIdentity: function () {
+        return {
+          id: projectCtx.id,
+          slug: projectCtx.slug,
+          nombre: projectCtx.name
+        };
+      },
+      getProjectLabel: function () {
+        return projectCtx.name || projectCtx.slug || '';
+      }
+    };
+  }
+
+  function onLeave() {
+    if (typeof QuotationEditor !== 'undefined' && QuotationEditor.detachUi) {
+      try { QuotationEditor.detachUi(); } catch (eEd) {}
+    }
+    if (typeof QuotationHero !== 'undefined' && QuotationHero.reset) {
+      try { QuotationHero.reset(); } catch (eHero) {}
+    }
+    if (typeof BuilderDockActions !== 'undefined' && BuilderDockActions.restore) {
+      try { BuilderDockActions.restore(); } catch (eDock) {}
+    }
+    deactivateSharedChrome();
+    clearHeaderSteps();
+    if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
+      try { BuilderProgressRail.destroyFloatButton(); } catch (eL) {}
+    }
+    if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.deactivate) {
+      try { BuilderPropertiesRail.deactivate(); } catch (eR) {}
+    }
+    if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearProjectContext) {
+      BoxiesShell.clearProjectContext();
+    }
+    rootEl = null;
+    currentStep = '';
+    syncChromeFoldButton();
+    sectionChecks = {};
+    projectCtx = {
+      id: '', name: '', slug: '', constructora_id: null,
+      og_image: '', og_title: '', og_description: '',
+      favicon_url: '', page_title: '', published: false
+    };
+  }
+
+  return {
+    render: render,
+    onLeave: onLeave,
+    goToStep: goToStep,
+    refreshSidebar: refreshSidebar,
+    applyLeftCollapsed: applyLeftCollapsed,
+    applyRightCollapsed: applyRightCollapsed,
+    setLeftLocked: setLeftLocked,
+    setRightLocked: setRightLocked,
+    isLeftLocked: function () { return !!leftLocked; },
+    isRightLocked: function () { return !!rightLocked; },
+    setChromeCollapsed: setChromeCollapsed,
+    toggleChromeCollapsed: toggleChromeCollapsed,
+    syncChromeFoldButton: syncChromeFoldButton,
+    isChromeCollapsed: isChromeCollapsed,
+    setPropsPanelVisible: setPropsPanelVisible,
+    setRecursosVisible: setRecursosVisible,
+    syncConfigLeftChrome: syncConfigLeftChrome,
+    expandPropsPanel: function () { applyRightCollapsed(false); },
+    save: handleSave,
+    getProjectLabel: function () {
+      return projectCtx.name || projectCtx.slug || '';
+    },
+    getProjectIdentity: function () {
+      return {
+        id: projectCtx.id,
+        slug: projectCtx.slug,
+        nombre: projectCtx.name
+      };
+    }
+  };
+})();

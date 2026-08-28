@@ -1,9 +1,12 @@
-/* Extracción fiel de colores del logo — sin inventar ni interpolar tonos */
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-brand-analyzer.js');}catch(_e){}
+/* Extracción densa del logo + Brand Intelligence Engine */
 var ThemeBrandAnalyzer = (function () {
   var C = ThemeColorMath;
-  var MAX_SAMPLE = 256;
-  var MERGE_DISTANCE = 14;
-  var MIN_PIXEL_SHARE = 0.008;
+  var MAX_SAMPLE = 512;
+  var MERGE_DISTANCE = 8;
+  var MIN_PIXEL_SHARE = 0.001;
+  var TARGET_MIN = ThemeBrandIntelligence.MIN_COLORS;
+  var TARGET_MAX = ThemeBrandIntelligence.MAX_COLORS;
 
   var SOURCE_TYPES = {
     image: 'image',
@@ -53,49 +56,77 @@ var ThemeBrandAnalyzer = (function () {
     });
   }
 
-  function extractExactCounts(img) {
+  function extractRichSamples(img) {
     var canvas = document.createElement('canvas');
     var ratio = img.width / img.height || 1;
-    var width = ratio >= 1 ? MAX_SAMPLE : Math.max(48, Math.round(MAX_SAMPLE * ratio));
-    var height = ratio >= 1 ? Math.max(48, Math.round(MAX_SAMPLE / ratio)) : MAX_SAMPLE;
+    var width = ratio >= 1 ? MAX_SAMPLE : Math.max(64, Math.round(MAX_SAMPLE * ratio));
+    var height = ratio >= 1 ? Math.max(64, Math.round(MAX_SAMPLE / ratio)) : MAX_SAMPLE;
     canvas.width = width;
     canvas.height = height;
     var ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(img, 0, 0, width, height);
     var data = ctx.getImageData(0, 0, width, height).data;
     var counts = {};
+    var spatial = {};
     var total = 0;
+    var cx = (width - 1) / 2;
+    var cy = (height - 1) / 2;
+    var maxDist = Math.sqrt(cx * cx + cy * cy) || 1;
 
-    for (var i = 0; i < data.length; i += 4) {
-      if (data[i + 3] < 128) continue;
-      var hex = C.rgbToHex(data[i], data[i + 1], data[i + 2]);
-      counts[hex] = (counts[hex] || 0) + 1;
-      total += 1;
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        var i = (y * width + x) * 4;
+        if (data[i + 3] < 128) continue;
+        var hex = C.rgbToHex(data[i], data[i + 1], data[i + 2]);
+        counts[hex] = (counts[hex] || 0) + 1;
+        if (!spatial[hex]) spatial[hex] = { center: 0, edge: 0, n: 0 };
+        var dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) / maxDist;
+        spatial[hex].center += 1 - dist;
+        spatial[hex].edge += dist;
+        spatial[hex].n += 1;
+        total += 1;
+      }
     }
 
-    return { counts: counts, total: total };
+    return { counts: counts, spatial: spatial, total: total, width: width, height: height };
   }
 
-  function clusterExactColors(counts, total) {
+  function clusterColors(counts, spatial, total, mergeDistance, minShare) {
     var entries = Object.keys(counts).map(function (hex) {
-      return { hex: C.normalizeHex(hex), count: counts[hex], share: counts[hex] / total };
+      var norm = C.normalizeHex(hex);
+      var sp = spatial[hex] || spatial[norm] || { center: 0, edge: 0, n: 1 };
+      return {
+        hex: norm,
+        count: counts[hex],
+        share: counts[hex] / total,
+        centerWeight: sp.n ? sp.center / sp.n : 0,
+        edgeWeight: sp.n ? sp.edge / sp.n : 0
+      };
     }).sort(function (a, b) { return b.count - a.count; });
 
     var clusters = [];
     entries.forEach(function (entry) {
-      if (entry.share < MIN_PIXEL_SHARE) return;
+      if (entry.share < minShare) return;
       var cluster = null;
       for (var i = 0; i < clusters.length; i++) {
-        if (C.colorDistance(clusters[i].representative, entry.hex) <= MERGE_DISTANCE) {
+        if (C.colorDistance(clusters[i].representative, entry.hex) <= mergeDistance) {
           cluster = clusters[i];
           break;
         }
       }
       if (!cluster) {
-        cluster = { representative: entry.hex, count: 0, members: [] };
+        cluster = {
+          representative: entry.hex,
+          count: 0,
+          centerWeight: 0,
+          edgeWeight: 0,
+          members: []
+        };
         clusters.push(cluster);
       }
       cluster.count += entry.count;
+      cluster.centerWeight += entry.centerWeight * entry.count;
+      cluster.edgeWeight += entry.edgeWeight * entry.count;
       cluster.members.push(entry);
       if (entry.count > (counts[cluster.representative] || 0)) {
         cluster.representative = entry.hex;
@@ -109,98 +140,36 @@ var ThemeBrandAnalyzer = (function () {
           hex: best.hex,
           count: cluster.count,
           share: cluster.count / total,
-          isNeutral: C.isNeutral(best.hex)
+          centerWeight: cluster.centerWeight / cluster.count,
+          edgeWeight: cluster.edgeWeight / cluster.count
         };
       })
       .sort(function (a, b) { return b.count - a.count; });
   }
 
-  function buildPaletteFromClusters(clusters) {
-    var chromatic = clusters.filter(function (c) { return !c.isNeutral; });
-    var neutrals = clusters.filter(function (c) { return c.isNeutral; });
-    var isMonochrome = chromatic.length === 0;
+  function tuneSampleCount(samples) {
+    if (samples.length >= TARGET_MIN && samples.length <= TARGET_MAX) return samples;
+    if (samples.length > TARGET_MAX) return samples.slice(0, TARGET_MAX);
+    return samples;
+  }
 
-    var primary = isMonochrome
-      ? (neutrals[0] ? neutrals[0].hex : '#1a1a1a')
-      : chromatic[0].hex;
-    var secondary = chromatic[1] ? chromatic[1].hex : null;
-    var tertiary = chromatic[2] ? chromatic[2].hex : null;
-    var accent = tertiary || secondary || primary;
-
-    var darkNeutral = neutrals.length
-      ? neutrals.slice().sort(function (a, b) { return C.relativeLuminance(a.hex) - C.relativeLuminance(b.hex); })[0].hex
-      : C.adjustLightness(primary, -35);
-    var lightNeutral = neutrals.length
-      ? neutrals.slice().sort(function (a, b) { return C.relativeLuminance(b.hex) - C.relativeLuminance(a.hex); })[0].hex
-      : C.adjustLightness(primary, 35);
-    var neutral = neutrals[0] ? neutrals[0].hex : C.adjustLightness(primary, 0);
-
-    var background = lightNeutral;
-    var surface = secondary || C.adjustLightness(primary, 8);
-    var border = neutrals[1] ? neutrals[1].hex : C.adjustLightness(primary, -8);
-    var dark = darkNeutral;
-    var light = lightNeutral;
-
-    var textPrimary;
-    var textSecondary;
-    if (C.relativeLuminance(background) > 0.52) {
-      textPrimary = dark;
-      textSecondary = neutrals[2] ? neutrals[2].hex : C.adjustLightness(dark, 12);
-    } else {
-      textPrimary = light;
-      textSecondary = neutrals[2] ? neutrals[2].hex : C.adjustLightness(light, -12);
-    }
-
-    if (isMonochrome) {
-      background = lightNeutral;
-      surface = neutrals[1] ? neutrals[1].hex : C.adjustLightness(primary, 6);
-      border = C.adjustLightness(primary, -12);
-      accent = primary;
-      secondary = neutrals[1] ? neutrals[1].hex : C.adjustLightness(primary, 10);
-      textPrimary = C.relativeLuminance(background) > 0.55 ? dark : light;
-      textSecondary = C.relativeLuminance(background) > 0.55
-        ? (neutrals[2] ? neutrals[2].hex : C.adjustLightness(dark, 12))
-        : (neutrals[2] ? neutrals[2].hex : C.adjustLightness(light, -12));
-    }
-
-    if (!secondary) secondary = C.adjustLightness(primary, 10);
-    if (!tertiary) tertiary = accent;
-
-    var colors = {
-      primary: primary,
-      secondary: secondary,
-      accent: accent,
-      tertiary: tertiary,
-      dark: dark,
-      light: light,
-      neutral: neutral,
-      background: background,
-      surface: surface,
-      border: border,
-      success: C.adjustLightness(primary, -5),
-      warning: C.adjustLightness(accent, 5),
-      error: C.adjustLightness(primary, -15),
-      textPrimary: textPrimary,
-      textSecondary: textSecondary
-    };
-
+  function buildPaletteFromSamples(samples, meta) {
+    var intelligence = ThemeBrandIntelligence.analyze(samples, meta);
     return {
-      colors: colors,
-      variants: {
-        primary: C.deriveVariants(primary),
-        accent: C.deriveVariants(accent)
-      },
-      extracted: clusters.map(function (c, index) {
-        return {
-          hex: c.hex,
-          percent: Math.round(c.share * 1000) / 10,
-          isNeutral: c.isNeutral,
-          rank: index + 1
-        };
-      }),
-      chromaticCount: chromatic.length,
-      neutralCount: neutrals.length,
-      isMonochrome: isMonochrome
+      colors: intelligence.colors,
+      roles: intelligence.roles,
+      families: intelligence.families,
+      reasoning: intelligence.reasoning,
+      personality: intelligence.personality,
+      roleFamilies: intelligence.roleFamilies,
+      variants: intelligence.variants,
+      extracted: intelligence.extracted,
+      chromaticCount: intelligence.chromaticCount,
+      neutralCount: intelligence.neutralCount,
+      colorCount: intelligence.colorCount,
+      isMonochrome: intelligence.isMonochrome,
+      engine: intelligence.engine,
+      isDarkBackground: intelligence.isDarkBackground
     };
   }
 
@@ -210,15 +179,36 @@ var ThemeBrandAnalyzer = (function () {
 
   function analyzeImage(file) {
     return loadImageSource(file).then(function (img) {
-      var sampled = extractExactCounts(img);
+      var sampled = extractRichSamples(img);
       if (!sampled.total) {
         throw new Error('No se detectaron colores en la imagen.');
       }
-      var clusters = clusterExactColors(sampled.counts, sampled.total);
+
+      var mergeDistance = MERGE_DISTANCE;
+      var minShare = MIN_PIXEL_SHARE;
+      var clusters = clusterColors(sampled.counts, sampled.spatial, sampled.total, mergeDistance, minShare);
+
+      if (clusters.length < TARGET_MIN) {
+        clusters = clusterColors(sampled.counts, sampled.spatial, sampled.total, 4, 0.0005);
+      }
+      if (clusters.length < TARGET_MIN) {
+        clusters = clusterColors(sampled.counts, sampled.spatial, sampled.total, 2, 0.0002);
+      }
+      if (clusters.length > TARGET_MAX) {
+        mergeDistance = 12;
+        clusters = clusterColors(sampled.counts, sampled.spatial, sampled.total, mergeDistance, minShare);
+      }
+
+      clusters = tuneSampleCount(clusters);
       if (!clusters.length) {
         throw new Error('No se detectaron colores suficientes en la imagen.');
       }
-      var palette = buildPaletteFromClusters(clusters);
+
+      var palette = buildPaletteFromSamples(clusters, {
+        width: sampled.width,
+        height: sampled.height,
+        sampledPixels: sampled.total
+      });
 
       return {
         sourceType: SOURCE_TYPES.image,
@@ -229,8 +219,9 @@ var ThemeBrandAnalyzer = (function () {
           avgLuminance: clusters.reduce(function (sum, c) {
             return sum + C.relativeLuminance(c.hex) * c.share;
           }, 0),
-          colorCount: clusters.length,
-          chromaticCount: palette.chromaticCount
+          colorCount: palette.colorCount,
+          chromaticCount: palette.chromaticCount,
+          familyCount: palette.families ? palette.families.length : 0
         }
       };
     });
@@ -242,3 +233,5 @@ var ThemeBrandAnalyzer = (function () {
     buildFingerprint: buildFingerprint
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-brand-analyzer.js');}catch(_e){}

@@ -1,0 +1,539 @@
+/* Product Assistant V5.9.32
+   Panel surface = same recipe as .main-menu (::before / ::after).
+   FAB = pre-V5.9.30 appearance (hero trigger unchanged by panel theme).
+   @media = layout only. */
+
+:root {
+  --pa-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --pa-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ——— FAB: restored to pre-V5.9.30 (panel theme must not restyle this) ——— */
+.pa-fab {
+  position: fixed;
+  right: max(1.15rem, env(safe-area-inset-right));
+  bottom: max(1.15rem, env(safe-area-inset-bottom));
+  z-index: 950;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: #080808;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 12px 28px rgba(0, 0, 0, 0.4);
+  transition:
+    border-color 0.35s var(--pa-ease),
+    transform 0.35s var(--pa-ease),
+    box-shadow 0.35s var(--pa-ease),
+    filter 0.35s var(--pa-ease);
+}
+
+.pa-fab:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 18px rgba(255, 255, 255, 0.06),
+    0 14px 32px rgba(0, 0, 0, 0.45);
+}
+
+.pa-fab.is-active {
+  border-color: rgba(255, 255, 255, 0.32);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.08));
+}
+
+/* Desktop: ceder a Hall de Iniciar (components.css) — sin hover glass genérico */
+@media (min-width: 601px) {
+  .pa-fab,
+  .pa-fab:hover,
+  .pa-fab:focus-visible,
+  .pa-fab.is-active {
+    border-color: var(--btn-border, var(--glass-border));
+    background: var(--btn-glass-surface, var(--btn-surface));
+    box-shadow:
+      var(--btn-shadow, 0 8px 24px rgba(0, 0, 0, 0.32)),
+      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent));
+    filter: none;
+  }
+  .pa-fab:hover,
+  .pa-fab:focus-visible,
+  .pa-fab.is-active {
+    background: var(--btn-glass-hover, var(--hover));
+    color: var(--btn-text-hover, var(--text-primary));
+    border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+    border-width: var(--btn-border-width-hover, var(--btn-border-width, 2px));
+    transform: translateY(-1px);
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, 0.36),
+      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent));
+  }
+}
+
+.pa-fab__mark {
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: 0 auto;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  border-radius: 4px 4px 4px 1px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.pa-root {
+  position: fixed;
+  inset: 0;
+  z-index: 960;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  overflow: hidden; /* clip slide — no horizontal page scroll */
+  transition: none;
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+.pa-root.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Fully prepared but not yet painted — avoids intermediate open frame */
+.pa-root.is-preparing,
+.pa-root.is-preparing.is-open {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: none !important;
+}
+
+/* Same motion as .main-menu, inverted: right → left */
+.pa-panel {
+  position: absolute;
+  right: max(1.15rem, env(safe-area-inset-right));
+  bottom: max(5rem, calc(env(safe-area-inset-bottom) + 4.5rem));
+  display: flex;
+  flex-direction: column;
+  width: min(420px, calc(100vw - 1.5rem));
+  height: min(560px, calc(100dvh - 6.5rem));
+  border: none;
+  border-radius: 18px;
+  background: transparent;
+  isolation: isolate;
+  overflow: hidden;
+  transform: translateX(100%);
+  transform-origin: bottom right;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  color: var(--text-primary);
+  will-change: transform;
+}
+
+.pa-root.is-open.is-entered .pa-panel {
+  transform: translateX(0);
+}
+
+.pa-root.is-preparing .pa-panel {
+  transition: none !important;
+  transform: translateX(100%) !important;
+}
+
+/* Same overlay source + close timing as .main-menu-backdrop */
+.pa-backdrop {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  background: var(--overlay-mask, var(--modal-backdrop, var(--backdrop-94)));
+  -webkit-backdrop-filter: blur(var(--modal-backdrop-blur, 0px)) saturate(140%);
+  backdrop-filter: blur(var(--modal-backdrop-blur, 0px)) saturate(140%);
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+
+.pa-backdrop.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.pa-root.is-closing {
+  pointer-events: none;
+}
+
+/* Exact surface recipe from .main-menu::before (components.css) */
+.pa-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(168deg,
+      color-mix(in srgb, var(--glass-panel) 72%, var(--text-primary) 4%) 0%,
+      var(--glass-panel) 42%,
+      color-mix(in srgb, var(--glass-panel) 92%, var(--bg-main) 8%) 100%);
+  backdrop-filter: blur(var(--menu-glass-blur, var(--glass-blur))) saturate(112%) brightness(1.02);
+  -webkit-backdrop-filter: blur(var(--menu-glass-blur, var(--glass-blur))) saturate(112%) brightness(1.02);
+  border: 1px solid color-mix(in srgb, var(--text-primary) 5%, transparent);
+  box-shadow:
+    var(--glass-shadow, 24px 0 64px color-mix(in srgb, var(--bg-main) 28%, transparent)),
+    inset 0 1px 0 color-mix(in srgb, var(--text-primary) 4%, transparent);
+  z-index: -2;
+  pointer-events: none;
+}
+
+body[data-panel-glass="glass"] .pa-panel::before {
+  border-color: color-mix(in srgb, var(--border) 78%, transparent);
+}
+
+/* Exact highlight recipe from .main-menu::after */
+.pa-panel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 42%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--text-primary) 5%, transparent), transparent 72%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.pa-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-primary) 5%, transparent);
+  position: relative;
+  z-index: 0;
+}
+
+.pa-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  opacity: var(--text-secondary-opacity, 0.82);
+}
+
+.pa-close {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  opacity: var(--text-muted-opacity, 0.72);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.25s ease, background 0.25s ease, opacity 0.25s ease;
+}
+
+.pa-close:hover {
+  color: var(--text-primary);
+  opacity: 1;
+  background: var(--btn-glass-hover, var(--hover));
+}
+
+.pa-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 0;
+}
+
+.pa-messages {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.1rem 1rem;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.pa-bubble {
+  max-width: 92%;
+  padding: 0.85rem 1rem;
+  border-radius: var(--menu-card-radius, 14px);
+  font-size: 0.88rem;
+  font-weight: 300;
+  line-height: 1.55;
+}
+
+.pa-bubble p {
+  margin: 0 0 0.45rem;
+}
+
+.pa-bubble p:last-child {
+  margin-bottom: 0;
+}
+
+/* Same inner surface as .main-menu .personalize-block.glass-surface */
+.pa-bubble--bot {
+  align-self: flex-start;
+  background: var(--panel-glass-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(calc(var(--glass-blur, 22px) * 0.65)) saturate(125%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur, 22px) * 0.65)) saturate(125%);
+}
+
+.pa-bubble--user {
+  align-self: flex-end;
+  background: var(--panel-glass-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(calc(var(--glass-blur, 22px) * 0.65)) saturate(125%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur, 22px) * 0.65)) saturate(125%);
+}
+
+.pa-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+
+/* Quick actions = same surface/border recipe as .menu-item */
+.pa-chip {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--text-primary) 6%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--btn-glass-surface, var(--btn-surface)) 88%, var(--text-primary) 3%);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-primary) 5%, transparent);
+  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+
+.pa-chip:hover {
+  color: var(--btn-text-hover, var(--text-primary));
+  border-color: var(--btn-border-hover, var(--btn-border, color-mix(in srgb, var(--text-primary) 9%, transparent)));
+  background: var(--btn-glass-hover, var(--hover));
+}
+
+.pa-handoff {
+  flex-shrink: 0;
+  padding: 0.95rem 1.1rem 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--text-primary) 5%, transparent);
+  text-align: center;
+  position: relative;
+  z-index: 0;
+}
+
+.pa-handoff__copy {
+  margin: 0 0 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  opacity: var(--text-muted-opacity, 0.72);
+}
+
+/* WhatsApp CTA = menu button tokens */
+.pa-wa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1rem;
+  border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
+  border-radius: 999px;
+  background: var(--btn-glass-surface, var(--btn-surface));
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  box-shadow: var(--glass-inset-shadow);
+  transition: color 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+}
+
+.pa-wa:hover {
+  color: var(--btn-text-hover, var(--text-primary));
+  border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+  background: var(--btn-glass-hover, var(--hover));
+}
+
+.pa-wa__icon {
+  flex-shrink: 0;
+  color: inherit;
+  fill: currentColor;
+}
+
+.pa-compose {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--text-primary) 5%, transparent);
+  background: transparent;
+  position: relative;
+  z-index: 0;
+}
+
+.pa-compose input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: var(--panel-glass-surface);
+  color: var(--text-primary);
+  caret-color: var(--text-primary);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 300;
+  outline: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+.pa-compose input::placeholder {
+  color: var(--text-muted);
+  opacity: var(--text-muted-opacity, 0.72);
+  font-size: 16px;
+}
+
+.pa-compose input:focus {
+  border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+  background: var(--panel-glass-surface);
+}
+
+.pa-send {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: var(--btn-border-width, 1px) solid var(--btn-border, var(--glass-border));
+  border-radius: 999px;
+  background: var(--btn-glass-surface, var(--btn-surface));
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+
+.pa-send:hover {
+  color: var(--btn-text-hover, var(--text-primary));
+  border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+  background: var(--btn-glass-hover, var(--hover));
+}
+
+.pa-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Mobile: layout / spacing only — no color overrides */
+@media (max-width: 600px) {
+  .pa-root {
+    z-index: 960;
+  }
+
+  .pa-panel {
+    left: max(0.75rem, env(safe-area-inset-left));
+    right: max(0.75rem, env(safe-area-inset-right));
+    width: auto;
+    bottom: calc(
+      var(--mobile-shell-foot-h, 62px) + env(safe-area-inset-bottom) + 0.55rem
+    );
+    height: auto;
+    max-height: calc(
+      100dvh - max(0.75rem, env(safe-area-inset-top)) -
+      var(--mobile-shell-foot-h, 62px) - env(safe-area-inset-bottom) - 1.1rem
+    );
+    max-height: calc(
+      100svh - max(0.75rem, env(safe-area-inset-top)) -
+      var(--mobile-shell-foot-h, 62px) - env(safe-area-inset-bottom) - 1.1rem
+    );
+    transform-origin: bottom center;
+    border-radius: var(--menu-card-radius, 14px);
+  }
+
+  body:has(#projectCover[data-hero-layout="bottom-bar"]) .pa-panel {
+    border-radius: 18px;
+  }
+
+  .pa-head {
+    padding: 0.9rem 1rem 0.8rem;
+  }
+
+  .pa-title {
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    font-weight: 550;
+  }
+
+  .pa-close {
+    display: none !important;
+  }
+
+  .pa-bubble--bot,
+  .pa-bubble--user {
+    border-radius: var(--menu-card-radius, 14px);
+  }
+
+  .pa-wa {
+    border-radius: var(--menu-card-radius, 14px);
+  }
+
+  body:has(#projectCover[data-hero-layout="bottom-bar"]) .pa-wa {
+    border-radius: 999px;
+  }
+
+  .pa-compose {
+    padding: 0.75rem 0.85rem;
+  }
+
+  .pa-compose input {
+    border-radius: calc(var(--menu-card-radius, 14px) - 4px);
+  }
+
+  .pa-send {
+    border-radius: var(--menu-card-radius, 14px);
+  }
+
+  body:has(#projectCover[data-hero-layout="bottom-bar"]) .pa-send {
+    border-radius: 999px;
+  }
+
+  .pa-root.is-keyboard .pa-panel {
+    top: calc(var(--pa-vv-offset, 0px) + 0.5rem);
+    bottom: auto;
+    height: calc(var(--pa-vv-height, 100dvh) - 1rem);
+    max-height: calc(var(--pa-vv-height, 100dvh) - 1rem);
+    transform: none !important;
+  }
+
+  .pa-root.is-keyboard.is-open .pa-panel,
+  .pa-root.is-keyboard.is-entered .pa-panel {
+    transform: none !important;
+  }
+
+  .pa-root.is-keyboard .pa-compose {
+    padding-bottom: 0.75rem;
+  }
+}

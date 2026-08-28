@@ -1,4 +1,5 @@
-/* Vista previa de paleta extraída y propuestas de tema IA */
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-ai-preview.js');}catch(_e){}
+/* Vista previa de identidad de marca y propuestas de tema IA */
 var ThemeAIPreview = (function () {
   var C = ThemeColorMath;
 
@@ -10,61 +11,128 @@ var ThemeAIPreview = (function () {
       .replace(/"/g, '&quot;');
   }
 
-  function renderSwatch(label, hex) {
+  function renderSwatch(label, hex, note) {
+    if (!hex) return '';
     return (
       '<div class="theme-ai-palette-item">' +
         '<span class="theme-ai-palette-swatch" style="background:' + escapeHtml(hex) + '"></span>' +
         '<div class="theme-ai-palette-meta">' +
           '<span class="theme-ai-palette-label">' + escapeHtml(label) + '</span>' +
           '<span class="theme-ai-palette-hex">' + escapeHtml(hex) + '</span>' +
+          (note ? '<span class="theme-ai-palette-role-note">' + escapeHtml(note) + '</span>' : '') +
         '</div>' +
       '</div>'
+    );
+  }
+
+  function renderPersonalityBadge(profile) {
+    var personality = profile && profile.palette && profile.palette.personality;
+    if (!personality || !personality.primary) return '';
+    var label = ThemeAIGenerator.formatPersonality(personality);
+    return (
+      '<div class="theme-ai-personality">' +
+        '<span class="theme-ai-personality-label">Personalidad detectada</span>' +
+        '<span class="theme-ai-personality-value">' + escapeHtml(label) + '</span>' +
+        '<span class="theme-ai-personality-meta">' +
+          escapeHtml(profile.palette.colorCount + ' colores · ' +
+          (profile.palette.families ? profile.palette.families.length : 0) + ' familias cromáticas') +
+        '</span>' +
+      '</div>'
+    );
+  }
+
+  function renderFamiliesPanel(profile) {
+    var families = profile && profile.palette && profile.palette.families;
+    if (!families || !families.length) return '';
+    return (
+      '<section class="theme-ai-families-panel">' +
+        '<h3 class="theme-ai-palette-title">Familias cromáticas</h3>' +
+        '<p class="theme-ai-palette-note">Colores agrupados por identidad. Sin tonos inventados.</p>' +
+        '<div class="theme-ai-families-list">' +
+          families.map(function (family) {
+            var swatches = family.members.slice(0, 8).map(function (m) {
+              return '<span class="theme-ai-family-swatch" style="background:' + escapeHtml(m.hex) + '" title="' + escapeHtml(m.hex + ' · ' + m.percent + '%') + '"></span>';
+            }).join('');
+            return (
+              '<article class="theme-ai-family-card">' +
+                '<div class="theme-ai-family-head">' +
+                  '<strong>' + escapeHtml(family.name) + '</strong>' +
+                  '<span>' + escapeHtml(family.areaShare + '% · peso ' + family.visualWeight) + '</span>' +
+                '</div>' +
+                '<div class="theme-ai-family-swatches">' + swatches + '</div>' +
+              '</article>'
+            );
+          }).join('') +
+        '</div>' +
+      '</section>'
+    );
+  }
+
+  function renderReasoningPanel(profile) {
+    var reasoning = profile && profile.palette && profile.palette.reasoning;
+    if (!reasoning || !reasoning.length) return '';
+    var items = reasoning.filter(function (r) { return !r.skipped; }).slice(0, 8);
+    return (
+      '<section class="theme-ai-reasoning-panel">' +
+        '<h3 class="theme-ai-palette-title">Decisiones del Director de Arte</h3>' +
+        '<ul class="theme-ai-reasoning-list">' +
+          items.map(function (item) {
+            return '<li><strong>' + escapeHtml(item.role) + '</strong> ' + escapeHtml(item.reason) + '</li>';
+          }).join('') +
+        '</ul>' +
+      '</section>'
     );
   }
 
   function renderPalettePanel(profile) {
     if (!profile || !profile.palette) return '';
     var colors = profile.palette.colors;
+    var roles = profile.palette.roles || {};
     return (
+      renderPersonalityBadge(profile) +
+      renderFamiliesPanel(profile) +
       '<section class="theme-ai-palette-panel">' +
-        '<h3 class="theme-ai-palette-title">Paleta extraída del logo</h3>' +
-        '<p class="theme-ai-palette-note">Colores detectados en la imagen. Sin tonos inventados.</p>' +
+        '<h3 class="theme-ai-palette-title">Sistema cromático asignado</h3>' +
+        '<p class="theme-ai-palette-note">Roles únicos derivados del logo. Sin duplicados ni colores genéricos.</p>' +
         '<div class="theme-ai-palette-grid">' +
-          renderSwatch('Color principal', colors.primary) +
-          renderSwatch('Color secundario', colors.secondary) +
-          renderSwatch('Color terciario', colors.tertiary) +
-          renderSwatch('Neutro', colors.neutral) +
-          renderSwatch('Background', colors.background) +
-          renderSwatch('Surface', colors.surface) +
-          renderSwatch('Text', colors.textPrimary) +
-          renderSwatch('Borders', colors.border) +
-          renderSwatch('Accent', colors.accent) +
-          renderSwatch('Success', colors.success) +
-          renderSwatch('Warning', colors.warning) +
-          renderSwatch('Error', colors.error) +
+          renderSwatch('Background', roles.background || colors.background) +
+          renderSwatch('Surface', roles.surface || colors.surface) +
+          renderSwatch('Acento principal', roles.accentPrimary || colors.accent) +
+          renderSwatch('Acento secundario', roles.accentSecondary || colors.secondary) +
+          renderSwatch('Texto principal', roles.primaryText || colors.textPrimary) +
+          renderSwatch('Texto secundario', roles.secondaryText || colors.textSecondary) +
+          renderSwatch('Bordes', roles.border || colors.border) +
+          (colors.success ? renderSwatch('Success', colors.success) : '') +
+          (colors.warning ? renderSwatch('Warning', colors.warning) : '') +
+          (colors.error ? renderSwatch('Error', colors.error) : '') +
         '</div>' +
-      '</section>'
+      '</section>' +
+      renderReasoningPanel(profile)
     );
   }
 
   function derivePreviewTokens(config, palette) {
     var colors = palette && palette.colors ? palette.colors : {};
+    var roles = palette && palette.roles ? palette.roles : {};
     var textMode = config.textMode === 'dark' ? 'dark' : 'light';
+    var bg = config.bg;
+    var text = roles.primaryText || colors.textPrimary || (textMode === 'light' ? '#f4f4f4' : '#1a1a1a');
+    text = C.ensureContrast(text, bg, 4.5, text);
     return {
-      bg: config.bg,
+      bg: bg,
       menu: config.menuColor || config.bg,
       surface: config.surface,
       accent: config.accent,
-      secondary: colors.secondary || config.heroSurface || config.surface,
-      border: colors.border || C.adjustLightness(config.bg, -10),
-      text: colors.textPrimary || (textMode === 'light' ? '#f4f4f4' : '#1a1a1a'),
-      textSecondary: colors.textSecondary || (textMode === 'light' ? '#b8b8b8' : '#5a5a5a'),
+      secondary: roles.accentSecondary || colors.secondary || config.heroSurface || config.surface,
+      border: roles.border || colors.border || C.adjustLightness(config.bg, -10),
+      text: text,
+      textSecondary: roles.secondaryText || colors.textSecondary || (textMode === 'light' ? '#b8b8b8' : '#5a5a5a'),
       heroSurface: config.heroSurface || config.surface,
-      link: colors.accent || config.accent,
-      badge: colors.accent || config.accent,
+      link: config.accent,
+      badge: config.accent,
       input: C.adjustLightness(config.bg, textMode === 'dark' ? 6 : -4),
-      hover: C.adjustLightness(colors.accent || config.accent, -6),
-      active: C.adjustLightness(colors.accent || config.accent, -12)
+      hover: C.adjustLightness(config.accent, -6),
+      active: C.adjustLightness(config.accent, -12)
     };
   }
 
@@ -120,9 +188,9 @@ var ThemeAIPreview = (function () {
     return (
       renderPalettePanel(profile) +
       '<section class="theme-ai-proposals-section">' +
-        '<h3 class="theme-ai-proposals-title">Propuestas de aplicación</h3>' +
-        '<p class="theme-ai-proposals-note">Misma paleta. Solo cambia profundidad, contraste y acabados.</p>' +
-        '<div class="theme-ai-proposals-grid">' +
+        '<h3 class="theme-ai-proposals-title">Aplicaciones de la identidad</h3>' +
+        '<p class="theme-ai-proposals-note">Misma identidad cromática. Solo cambian profundidad, elevaciones, sombras y acabados.</p>' +
+        '<div class="theme-ai-proposals-grid theme-ai-proposals-grid--wide">' +
           (proposals || []).map(renderProposalCard).join('') +
         '</div>' +
       '</section>'
@@ -135,3 +203,5 @@ var ThemeAIPreview = (function () {
     renderProposalCard: renderProposalCard
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-ai-preview.js');}catch(_e){}

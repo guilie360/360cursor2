@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es" class="theme-ready">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- QE bundle ws7985 -->
+  <link rel="icon" type="image/png" href="/assets/brand/360preventa-mark.png">
+  <link rel="apple-touch-icon" href="/assets/brand/360preventa-mark.png">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/components.css?v=ws7376">
+  <link rel="stylesheet" href="../css/platform/product-assistant.css">
+  <link rel="stylesheet" href="../css/hall/hall.css">
+  <link rel="stylesheet" href="../css/auth/admin-auth.css">
+  <link rel="stylesheet" href="../css/boxies/builder-tokens.css?v=ws7105">
+  <link rel="stylesheet" href="../css/boxies/builder.css?v=ws7986">
+  <link rel="stylesheet" href="../css/boxies/workspace-ui-system.css?v=ws7247">
+  <link rel="stylesheet" href="../css/interactive-areas.css?v=ws41">
+  <link rel="stylesheet" href="../css/boxies/shell.css?v=ws7677">
+  <link rel="stylesheet" href="../css/boxies/content.css?v=ws7326">
+  <link rel="stylesheet" href="../css/boxies/tooltip.css?v=ws5940">
+  <link rel="stylesheet" href="../css/boxies/builder-embed.css?v=ws7105">
+  <link rel="stylesheet" href="../css/boxies/quotation-builder.css?v=ws7987">
+  <link rel="stylesheet" href="../css/themes/theme-classic.css?v=ws7672">
+  <link rel="stylesheet" href="../css/themes/theme-premium.css?v=ws7674">
+  <link rel="stylesheet" href="../css/themes/theme-graphite.css?v=ws7676">
+  <link rel="stylesheet" href="../css/boxies/hero-renderer.css?v=ws7984">
+  <link rel="stylesheet" href="../css/boxies/sistema.css?v=ws51">
+</head>
+<body class="boxies-host theme-classic">
+  <script>
+    /* Editor theme — apply stored preference before paint (Classic = default) */
+    (function () {
+      var KEY = 'boxies_editor_theme_v1';
+      var VALID = { classic: 1, premium: 1, graphite: 1 };
+      var id = 'classic';
+      try {
+        id = String(localStorage.getItem(KEY) || 'classic').trim().toLowerCase();
+      } catch (_) {}
+      if (!VALID[id]) id = 'classic';
+      document.body.classList.remove('theme-classic', 'theme-premium', 'theme-graphite');
+      document.body.classList.add('theme-' + id);
+      document.body.dataset.editorTheme = id;
+    })();
+  </script>
+  <script src="../js/boxies/editor-theme.js?v=ws7676"></script>
+  <script>
+    /* Identity debug probe — must exist before any builder click */
+    window.__BOXIES_IDENTITY_PROBE__ = 'ws54i2';
+    window.__BOXIES_IDENTITY_TRACE__ = [{
+      t: Date.now(),
+      step: 'boot',
+      probe: 'ws54i2',
+      href: String(location.href || '')
+    }];
+    console.log('[IDENTITY] boot probe=ws54i2');
+  </script>
+
+  <!-- Login (outside Shell) -->
+  <div id="bxLoginView" class="hall-login-page boxies-login" hidden>
+    <button type="button" class="boxies-header__fs boxies-login__fs" id="bxLoginFullscreenBtn" aria-label="Pantalla completa" data-tooltip="Pantalla completa" data-fullscreen="enter"></button>
+    <div class="content-modal-box auth-experience-box boxies-login__card">
+      <div class="hall-login-brand boxies-login__brand" aria-label="BOXIES">B O X I E S</div>
+      <p class="boxies-login__subtitle">Administra tu Showroom Digital <span class="boxies-login__brand-mark">360Preventa</span>.</p>
+
+      <div class="auth-oauth-row">
+        <button type="button" class="outline-btn auth-oauth-btn" id="bxGoogleBtn">Continuar con Google</button>
+      </div>
+      <div class="auth-oauth-divider" aria-hidden="true">o</div>
+
+      <form id="bxLoginForm" class="auth-modal-form boxies-login__form" novalidate>
+        <label class="auth-field">
+          <span>Correo electrónico</span>
+          <input id="bxEmail" type="email" autocomplete="email" placeholder="correo@empresa.com" required>
+        </label>
+        <label class="auth-field">
+          <span>Contraseña</span>
+          <input id="bxPassword" type="password" autocomplete="current-password" placeholder="••••••••" required>
+          <button type="button" class="auth-toggle-password boxies-login__eye" id="bxTogglePassword" aria-label="Mostrar contraseña" title="Mostrar" data-icon-toggle="1"></button>
+        </label>
+        <label class="auth-remember-row">
+          <input id="bxRemember" type="checkbox" checked>
+          <span>Recordarme</span>
+        </label>
+        <button type="submit" class="outline-btn auth-action-btn boxies-login__submit" id="bxLoginSubmit">
+          <span id="bxLoginSubmitText">Iniciar sesión</span>
+        </button>
+      </form>
+
+      <div class="auth-modal-message" id="bxLoginMessage" role="alert"></div>
+    </div>
+  </div>
+
+  <div id="bxForbiddenView" class="hall-login-page" hidden>
+    <div class="panel-card" style="width:min(460px,100%);text-align:center">
+      <h1 class="panel-card-title">Acceso denegado</h1>
+      <p class="placeholder-copy">Tu cuenta está autenticada, pero no tiene rol de administrador en BOXIES.</p>
+      <button type="button" class="boxies-action-btn" id="bxForbiddenLogout">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <!-- Shell mounts here once; pages only fill #boxiesContent -->
+  <div id="bxAppView" hidden></div>
+
+  <!-- V7.2.44 — Showroom main menu host (same IDs; BOXIES only; Showroom index untouched) -->
+  <div class="main-menu-backdrop" id="mainMenuBackdrop"></div>
+  <nav class="main-menu" id="mainMenu" aria-label="Menú principal">
+    <div class="main-menu-shell">
+      <div class="main-menu-header">
+        <button type="button" class="main-menu-recovery-close" id="mainMenuRecoveryClose" aria-label="Cerrar menú" hidden>&times;</button>
+        <div class="main-menu-project" id="mainMenuProject"></div>
+        <div class="main-menu-constructora" id="mainMenuConstructora"></div>
+      </div>
+      <div class="main-menu-body">
+        <div class="main-menu-nav-col">
+          <div class="menu-nav-toolbar" id="menuNavToolbar">
+            <button type="button" class="menu-nav-back" id="menuNavBack" hidden>
+              <span class="menu-nav-back-icon" aria-hidden="true">↶</span>
+              <span class="menu-nav-back-label">volver</span>
+            </button>
+            <div class="menu-nav-v2-col" id="menuNavV2Col" hidden>
+              <div class="personalize-v2-actions" id="menuNavV2Actions" role="group" aria-label="Acciones del estilo"></div>
+            </div>
+            <div class="menu-nav-save-col" id="menuNavSaveCol" hidden>
+              <p class="menu-nav-save-message" id="menuNavSaveThemeMessage" hidden></p>
+              <button type="button" class="menu-nav-save" id="menuNavSaveTheme">
+                <span class="menu-nav-back-label">guardar tema</span>
+              </button>
+            </div>
+          </div>
+          <div class="main-menu-content">
+            <div class="main-menu-list" id="mainMenuListPrimary">
+              <div class="menu-item" id="menuConoce">
+                <span class="menu-item-label">Conoce el proyecto</span>
+              </div>
+              <div class="menu-item" id="menuTour360">
+                <span class="menu-item-label">Experiencia 360°</span>
+              </div>
+              <div class="menu-item" id="menuViviendas">
+                <span class="menu-item-label">Viviendas</span>
+              </div>
+              <div class="menu-item" id="menuUbicacion">
+                <span class="menu-item-label">Ubicación</span>
+              </div>
+              <div class="menu-item" id="menuContacto">
+                <span class="menu-item-label">Contacto</span>
+              </div>
+            </div>
+            <div class="main-menu-list menu-personalize-panel" id="mainMenuListPersonalizar" style="display:none;"></div>
+            <div class="main-menu-list menu-personalize-panel" id="mainMenuListPersonalizarV2" style="display:none;"></div>
+            <div class="main-menu-list" id="mainMenuListProyecto" style="display:none;">
+              <div class="menu-item" id="menuDescripcion"><span class="menu-item-label">Descripción</span></div>
+              <div class="menu-item" id="menuVideo"><span class="menu-item-label">Video</span></div>
+              <div class="menu-item" id="menuRenders"><span class="menu-item-label">Galería</span></div>
+              <div class="menu-item" id="menuAmenidades"><span class="menu-item-label">Amenidades</span></div>
+              <div class="menu-item" id="menuAreas"><span class="menu-item-label">Áreas</span></div>
+              <div class="menu-item" id="menuEstado"><span class="menu-item-label">Estado del proyecto</span></div>
+              <div class="menu-item" id="menuConstructora"><span class="menu-item-label">Constructora</span></div>
+              <div class="menu-item" id="menuDescargas"><span class="menu-item-label">Descargas</span></div>
+            </div>
+            <div class="main-menu-list" id="mainMenuListContacto" style="display:none;"></div>
+          </div>
+          <div class="main-menu-profile-slot" id="mainMenuProfileSlot"></div>
+          <footer class="main-menu-footer" aria-label="Plataforma">
+            <span class="main-menu-brand">B O X I E S</span>
+            <span class="main-menu-version">v 2.5.0</span>
+          </footer>
+        </div>
+      </div>
+      <div class="main-menu-glass-vignette" aria-hidden="true"></div>
+    </div>
+  </nav>
+
+  <!-- Estado del proyecto (showroom panel — toggled from Biblioteca toolbar) -->
+  <div class="content-modal" id="estadoModal">
+    <span class="modal-close" id="estadoModalClose">&times;</span>
+    <div class="content-modal-box">
+      <div class="content-modal-title">Estado del proyecto</div>
+
+      <div class="progress-overall">
+        <div class="progress-overall-header">
+          <span class="progress-overall-label">Avance general</span>
+          <span class="progress-overall-pct" id="progressOverallPct">0%</span>
+        </div>
+        <div class="progress-overall-track">
+          <div class="progress-overall-fill" id="progressOverallFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="progress-list" id="progressList"></div>
+
+      <p class="progress-updated-note" id="progressUpdatedNote"></p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/shared/config.js"></script>
+  <script src="../js/shared/constants.js"></script>
+  <script src="../js/shared/formatters.js"></script>
+  <script src="../js/theme-system.js"></script>
+  <script src="../js/platform/hall-design-system.js"></script>
+  <script>
+    try {
+      if (typeof HallDesignSystem !== 'undefined') HallDesignSystem.paint({ persist: false });
+      else document.documentElement.classList.add('theme-ready');
+    } catch (e) {
+      document.documentElement.classList.add('theme-ready');
+    }
+  </script>
+  <script src="../js/auth/client.js"></script>
+  <script src="../js/auth/storage-prefs.js"></script>
+  <script src="../js/auth/redirects.js?v=ws54"></script>
+  <script src="../js/auth/errors.js"></script>
+  <script src="../js/auth/roles-permissions.js?v=auth-unify-001"></script>
+  <script src="../js/auth/api/login.js"></script>
+  <script src="../js/auth/api/profiles.js"></script>
+  <script src="../js/auth/api/visitantes.js"></script>
+  <script src="../js/auth/api/visitor-provisioning.js"></script>
+  <script src="../js/auth/api/favoritos.js"></script>
+  <script src="../js/auth/api/oauth.js?v=auth-unify-001"></script>
+  <script src="../js/auth/visitor-auth.js"></script>
+  <script src="../js/visitor-session.js"></script>
+  <script src="../js/visitor-menu.js?v=ws7244"></script>
+  <script src="../js/builder/quotation/quotation-main-menu-host.js?v=ws7244"></script>
+
+  <!-- Theme AI (Builder engines) -->
+  <script src="../js/theme-ai/theme-color-math.js"></script>
+  <script src="../js/theme-ai/theme-brand-intelligence.js"></script>
+  <script src="../js/theme-ai/theme-brand-analyzer.js"></script>
+  <script src="../js/theme-ai/theme-role-mapper.js"></script>
+  <script src="../js/theme-ai/theme-ai-generator.js"></script>
+
+  <!-- Builder stack -->
+  <script src="../js/boxies/ui.js?v=ws7664"></script>
+  <script src="../js/boxies/tooltip.js?v=ws7430"></script>
+  <script src="../js/boxies/notifications.js?v=ws54"></script>
+  <script src="../js/builder/core/session.js?v=ws7107"></script>
+  <script src="../js/builder/core/wizard.js?v=ws6004"></script>
+  <script src="../js/builder/icons.js?v=ws7638"></script>
+  <script src="../js/builder/dock.js?v=ws54"></script>
+  <script src="../js/builder/progress-rail.js?v=ws7008"></script>
+  <script src="../js/builder/properties-rail.js?v=ws7008"></script>
+  <script src="../js/builder/engines/project-types.js?v=ws595"></script>
+  <script src="../js/builder/engines/estructura-engine.js?v=ws5989"></script>
+  <script src="../js/builder/engines/estructura-entity.js?v=ws6500"></script>
+  <script src="../js/builder/engines/experiencia-snapshot.js?v=ws6501"></script>
+  <script src="https://unpkg.com/konva@9.3.6/konva.min.js" crossorigin="anonymous"></script>
+  <script src="../js/builder/engines/scene-button-model.js?v=ws7922"></script>
+  <script src="../js/builder/engines/experiencia-engine.js?v=ws7986"></script>
+  <script src="../js/builder/engines/button-presets.js?v=ws7913"></script>
+  <script src="../js/builder/engines/button-overlay-renderer.js?v=ws7980"></script>
+  <script src="../js/builder/engines/button-components.js?v=ws7898"></script>
+  <script src="../js/builder/engines/experiencia-prototype.js?v=ws6303"></script>
+  <script src="../js/builder/engines/konva-overlay-renderer.js?v=ws7793"></script>
+  <script src="../js/builder/engines/experiencia-canvas.js?v=ws7987"></script>
+  <script src="../js/builder/engines/architecture-engine.js?v=ws5948"></script>
+  <script src="../js/builder/engines/branding-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/media-engine.js?v=ws7278"></script>
+  <script src="../js/builder/engines/media-nodes-engine.js?v=ws6007"></script>
+  <script src="../js/builder/engines/bunny-media-api.js?v=ws7604"></script>
+  <script src="../js/builder/engines/media-tours-engine.js?v=ws5988"></script>
+  <script src="../js/builder/engines/gallery-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/panorama-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/document-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/theme-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/hero-sync-engine.js?v=ws7604"></script>
+  <script src="../js/menu-config.js?v=ws5994"></script>
+  <script src="../js/builder/engines/menu-sync-engine.js?v=ws5983"></script>
+  <script src="../js/builder/engines/viviendas-sync-engine.js?v=ws7604"></script>
+  <script src="../js/builder/engines/estructura-sync-engine.js?v=ws5989"></script>
+  <script src="../js/builder/engines/ai-assistant-engine.js?v=ws5991"></script>
+  <script src="../js/builder/engines/hotspot-engine.js?v=ws595"></script>
+  <script src="../js/interactive-areas/mock-plan.js?v=ia3"></script>
+  <script src="../js/interactive-areas/interactive-areas-core.js?v=ia3"></script>
+  <script src="../js/interactive-areas/interactive-areas-canvas.js?v=ia3"></script>
+  <script src="../js/builder/engines/interactive-areas-engine.js?v=ws54"></script>
+  <script src="../js/builder/pages/interactivo-page.js?v=ws54"></script>
+  <script src="../js/builder/engines/validation-engine.js?v=ws5948"></script>
+  <script src="../js/builder/engines/publishing-engine.js?v=ws7604"></script>
+  <script src="../js/builder/runtime/runtime-serializer.js?v=ws6500"></script>
+  <script src="../js/builder/runtime/runtime-validator.js?v=ws6009"></script>
+  <script src="../js/builder/runtime/runtime-statistics.js?v=ws6009"></script>
+  <script src="../js/builder/runtime/runtime-pipeline.js?v=ws6009"></script>
+  <script src="../js/builder/runtime/runtime-compiler.js?v=ws6009"></script>
+  <script src="../js/builder/runtime/runtime-view.js?v=ws7100"></script>
+  <script src="../js/builder/runtime/media-renderer.js?v=ws6500"></script>
+  <script src="../js/builder/runtime/prototype-renderer.js?v=ws6302"></script>
+  <script src="../js/builder/runtime/experience-runtime.js?v=ws6500"></script>
+  <script src="../js/builder/runtime/prototype-runtime.js?v=ws6302"></script>
+  <script src="../js/boxies/app-shell-legacy.js?v=ws6002"></script>
+  <script src="../js/shared/showroom-public-url.js?v=ws50"></script>
+  <script src="../js/builder/ws-select.js?v=ws7898"></script>
+  <script src="../js/builder/shared/builder-dirty-state.js?v=ws7110"></script>
+  <script src="../js/builder/shared/builder-config.js?v=ws7603"></script>
+  <script src="../js/builder/shared/builder-dock-actions.js?v=ws7217"></script>
+  <script src="../js/builder/shared/builder-hero.js?v=ws7110"></script>
+  <script src="../js/builder/ai-project-builder.js?v=ws7334"></script>
+  <script src="../js/builder/platform-bridge.js?v=ws7605"></script>
+  <script src="../js/api/proyectos.js?v=ws7984"></script>
+
+  <!-- Quotation Builder (V7.1.10 — dock in-button feedback + hero frame + mock URL sync) -->
+  <script src="../js/shared/hero-renderer.js?v=ws7982"></script>
+  <script src="../js/shared/project-cover.js?v=ws7915"></script>
+  <script src="../js/builder/quotation/quotation-persist-audit.js?v=ws7984"></script>
+  <script src="../js/builder/quotation/quotation-runtime-bridge.js?v=ws7226"></script>
+  <script src="../js/builder/quotation/quotation-sidebar.js?v=ws7346"></script>
+  <script src="../js/builder/quotation/quotation-router.js?v=ws7331"></script>
+  <script src="../js/builder/quotation/quotation-config.js?v=ws7408"></script>
+  <script src="../js/builder/quotation/quotation-hero.js?v=ws7332"></script>
+  <script src="../js/builder/quotation/quotation-experiencia-bridge.js?v=ws7986"></script>
+  <script src="../js/builder/quotation/quotation-context-menu.js?v=ws7984"></script>
+  <script src="../js/builder/quotation/quotation-window-manager.js?v=ws7682"></script>
+  <script src="../js/builder/quotation/quotation-canvas-tools.js?v=ws7792"></script>
+  <script src="../js/builder/quotation/quotation-guides.js?v=ws7597"></script>
+  <script src="../js/builder/quotation/quotation-editor.js?v=ws7986"></script>
+  <script src="../js/builder/quotation/quotation-preview.js?v=ws7265"></script>
+  <script src="../js/builder/quotation/quotation-proposals-modal.js?v=ws7224"></script>
+  <script src="../js/builder/quotation/quotation-proposals-page.js?v=ws7975"></script>
+  <script src="../js/builder/quotation/quotation-runtime.js?v=ws7984"></script>
+  <script src="../js/builder/quotation/quotation-builder.js?v=ws7792"></script>
+
+  <!-- Showrooms list API -->
+  <script src="../js/boxies/showroom-scope.js?v=ws54"></script>
+  <script src="../js/boxies/experience-types.js?v=ws7201"></script>
+  <script src="../js/boxies/project-template-contract.js?v=ws7201"></script>
+  <script src="../js/api/projects.js?v=ws7200"></script>
+
+  <!-- BOXIES Core -->
+  <script src="../js/boxies/prefs.js?v=ws7006"></script>
+  <script src="../js/boxies/shell.js?v=ws7677"></script>
+  <script src="../js/boxies/pages.js?v=ws54"></script>
+  <script src="../js/boxies/router.js?v=ws7200"></script>
+  <script src="../js/boxies/auth-bridge.js?v=ws54"></script>
+  <script src="../js/boxies/services/system-monitor-service.js?v=ws54"></script>
+  <script src="../js/boxies/pages/hall-page.js?v=ws54"></script>
+  <script src="../js/boxies/pages/projects-page.js?v=ws7215"></script>
+  <script src="../js/boxies/pages/builder-page.js?v=ws7217"></script>
+  <script src="../js/boxies/pages/quotation-builder-page.js?v=ws7326"></script>
+  <script src="../js/boxies/pages/template-builder-page.js?v=ws7326"></script>
+  <script src="../js/boxies/pages/comparator-builder-page.js?v=ws7200"></script>
+  <script src="../js/boxies/pages/sistema-page.js?v=ws5940"></script>
+  <script src="../js/boxies/app.js?v=ws7200"></script>
+</body>
+</html>

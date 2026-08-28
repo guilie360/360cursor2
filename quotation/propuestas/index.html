@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es" class="theme-ready">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Propuestas</title>
+  <meta name="theme-color" content="#050505">
+  <!-- Legacy route: proposals now live in-page inside /quotation/. Redirect home. -->
+  <script>
+    (function () {
+      try {
+        var p = new URLSearchParams(window.location.search || '');
+        var slug = String(p.get('slug') || '').trim();
+        if (slug) {
+          window.location.replace('/' + encodeURIComponent(slug));
+          return;
+        }
+        var id = String(p.get('projectId') || p.get('proyectoId') || '').trim();
+        if (id) {
+          window.location.replace('/quotation/?projectId=' + encodeURIComponent(id));
+          return;
+        }
+        window.location.replace('/');
+      } catch (e) {
+        window.location.replace('/');
+      }
+    })();
+  </script>
+</head>
+<body class="qr-proposals-page"></body>
+</html>

@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/redirects.js');}catch(_e){}
 /* Auth redirect URLs — must be allowlisted in Supabase Auth settings */
 var AuthRedirects = (function () {
   function origin() {
@@ -6,8 +7,10 @@ var AuthRedirects = (function () {
 
   function withProyecto(path) {
     try {
-      var params = new URLSearchParams(window.location.search);
-      var proyecto = params.get('proyecto');
+      var proyecto =
+        typeof getProjectSlugFromUrl === 'function'
+          ? getProjectSlugFromUrl()
+          : new URLSearchParams(window.location.search).get('proyecto');
       if (!proyecto) return path;
       var join = path.indexOf('?') === -1 ? '?' : '&';
       return path + join + 'proyecto=' + encodeURIComponent(proyecto);
@@ -46,7 +49,8 @@ var AuthRedirects = (function () {
   }
 
   function oauthCallback() {
-    return origin() + '/index.html';
+    /* Single allowlisted callback for all showrooms (SaaS-safe). */
+    return origin() + '/auth/callback.html';
   }
 
   function terminos() {
@@ -58,16 +62,41 @@ var AuthRedirects = (function () {
   }
 
   function adminBuilder() {
-    var url = new URL('admin/ai-project-builder.html', window.location.href);
+    /* V5.3.2 — canonical product host is /boxies (UUID when known). */
     try {
-      var proyecto = new URLSearchParams(window.location.search).get('proyecto');
-      if (proyecto) url.searchParams.set('proyecto', proyecto);
-    } catch (e) {}
-    return url.href;
+      var project =
+        (typeof window !== 'undefined' && window.PROJECT_DATA) || null;
+      var id = project && project.id ? String(project.id) : '';
+      var slug =
+        (project && project.slug) ||
+        (typeof getProjectSlugFromUrl === 'function'
+          ? getProjectSlugFromUrl()
+          : new URLSearchParams(window.location.search).get('proyecto')) ||
+        '';
+      var url = new URL('/boxies/', window.location.origin);
+      if (id) {
+        url.searchParams.set('page', 'builder');
+        url.searchParams.set('projectId', id);
+        if (slug) {
+          url.searchParams.set('project', slug);
+          url.searchParams.set('proyecto', slug);
+        }
+      } else {
+        url.searchParams.set('page', 'projects');
+      }
+      return url.href;
+    } catch (e) {
+      return origin() + '/boxies/';
+    }
+  }
+
+  function adminDashboard() {
+    return origin() + '/boxies/';
   }
 
   function requiredAllowlist() {
     return [
+      origin() + '/auth/callback.html',
       origin() + '/auth/confirmar-email.html',
       origin() + '/auth/restablecer-contrasena.html',
       origin() + '/auth/ingresar.html',
@@ -89,8 +118,11 @@ var AuthRedirects = (function () {
     privacidad: privacidad,
     publicHome: publicHome,
     adminBuilder: adminBuilder,
+    adminDashboard: adminDashboard,
     oauthCallback: oauthCallback,
     requiredAllowlist: requiredAllowlist,
     withQueryParam: withQueryParam
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/redirects.js');}catch(_e){}

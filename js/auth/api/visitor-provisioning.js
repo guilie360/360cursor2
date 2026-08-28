@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/visitor-provisioning.js');}catch(_e){}
 /* Idempotent visitor + profile provisioning after OAuth or session restore */
 var VisitorProvisioningApi = (function () {
   function getProyectoSlug() {
@@ -127,3 +128,5 @@ var VisitorProvisioningApi = (function () {
     extractGoogleIdentity: extractGoogleIdentity
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/visitor-provisioning.js');}catch(_e){}

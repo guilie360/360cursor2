@@ -1,0 +1,13 @@
+﻿Static HTTP server status
+=========================
+Timestamp: 2026-07-17 18:53:09
+
+Agent-tied server on 8765 was killed (exit -1) when the background shell ended.
+Port 8765 is now only localhost (127.0.0.1) via system PID 4 — still returns 200 locally but NOT on 0.0.0.0.
+
+Detached PowerShell TcpListener (survives Cursor shell teardown):
+  PID: 14404
+  Bind: 0.0.0.0:8766
+  Local: http://127.0.0.1:8766/index.html
+  Phone: http://192.168.80.13:8766/index.html
+  Script: _static_server.ps1 (Start-Process -WindowStyle Hidden)

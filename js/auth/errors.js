@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/errors.js');}catch(_e){}
 /* Spanish auth error messages */
 var AuthErrors = (function () {
   var MAP = {
@@ -64,3 +65,5 @@ var AuthErrors = (function () {
 
   return { translate: translate, loginFailureMessage: loginFailureMessage, isInvalidCredentials: isInvalidCredentials };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/errors.js');}catch(_e){}

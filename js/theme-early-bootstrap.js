@@ -80,9 +80,14 @@
         buttonGlass: normalizePanelGlass(config.buttonGlass),
         borderGlass: normalizePanelGlass(config.borderGlass),
         shadowGlass: normalizeShadowGlass(config.shadowGlass),
-        heroSurface: normalizeHex(config.heroSurface || config.surface, config.surface),
+        heroSurface: normalizeHex(config.heroSurface || config.accent || config.surface, config.surface),
+        heroHoverColor: config.heroHoverColor || '',
         heroButtonGlass: normalizePanelGlass(config.heroButtonGlass || config.buttonGlass),
-        heroBorderGlass: normalizePanelGlass(config.heroBorderGlass || config.borderGlass)
+        heroBorderGlass: normalizePanelGlass(config.heroBorderGlass || config.borderGlass),
+        maskColor: normalizeHex(config.maskColor || preset.bg, preset.bg),
+        maskGlass: normalizePanelGlass(config.maskGlass || config.bgGlass || 'soft'),
+        maskBlur: normalizeMaskBlur(config.maskBlur || deriveMaskBlurFromGlass(config.maskGlass || config.bgGlass || 'soft')),
+        heroLayout: config.heroLayout === 'bottom-bar' ? 'bottom-bar' : 'centered'
       };
     }
 
@@ -97,6 +102,7 @@
       menuColor: normalizeHex(config.menuColor || config.panelColor || mixHex(bg, textMode === 'dark' ? '#000000' : '#ffffff', 14), bg),
       surface: surface,
       accent: accent,
+      hoverColor: config.hoverColor || config.hover || '',
       text: text,
       textMode: textMode,
       bgTextMode: config.bgTextMode === 'dark' ? 'dark' : 'light',
@@ -105,71 +111,143 @@
       bgGlass: normalizePanelGlass(config.bgGlass || config.panelGlass),
       buttonGlass: normalizePanelGlass(config.buttonGlass),
       borderGlass: normalizePanelGlass(config.borderGlass),
+      buttonBorderColor: config.buttonBorderColor || '',
+      buttonBorderWidth: config.buttonBorderWidth || 'medium',
+      buttonHoverBorderColor: config.buttonHoverBorderColor || '',
+      buttonHoverBorderWidth: config.buttonHoverBorderWidth || config.buttonBorderWidth || 'medium',
+      buttonHoverTextColor: config.buttonHoverTextColor || '',
+      buttonHoverGlass: normalizePanelGlass(config.buttonHoverGlass || 'solid'),
       shadowGlass: normalizeShadowGlass(config.shadowGlass),
-      heroSurface: normalizeHex(config.heroSurface || config.surface, surface),
+      heroSurface: normalizeHex(config.heroSurface || config.surface || config.accent, surface),
+      heroHoverColor: config.heroHoverColor || config.hoverColor || '',
       heroButtonGlass: normalizePanelGlass(config.heroButtonGlass || config.buttonGlass),
-      heroBorderGlass: normalizePanelGlass(config.heroBorderGlass || config.borderGlass)
+      heroBorderGlass: normalizePanelGlass(config.heroBorderGlass || config.borderGlass),
+      maskColor: normalizeHex(config.maskColor || config.bg, bg),
+      maskGlass: normalizePanelGlass(config.maskGlass || config.bgGlass || 'soft'),
+      maskBlur: normalizeMaskBlur(config.maskBlur || deriveMaskBlurFromGlass(config.maskGlass || config.bgGlass || 'soft')),
+      heroLayout: config.heroLayout === 'bottom-bar' ? 'bottom-bar' : 'centered'
     };
   }
 
-  function applyButtonGlass(root, level, button, hover) {
+  function applyButtonGlass(root, level, button, hover, hasExplicitHover, hoverTextColor, textFallback, hoverGlass) {
     level = normalizePanelGlass(level);
     var uiPreset = {
       solid: { surfaceOpacity: 100, blur: 0 },
       soft: { surfaceOpacity: 46, blur: 14 },
       glass: { surfaceOpacity: 12, blur: 20 }
     }[level] || { surfaceOpacity: 100, blur: 0 };
+    hoverGlass = normalizePanelGlass(hoverGlass || 'solid');
+    var hoverPreset = {
+      solid: { surfaceOpacity: 100, blur: 0 },
+      soft: { surfaceOpacity: 62, blur: 14 },
+      glass: { surfaceOpacity: 38, blur: 20 }
+    }[hoverGlass] || { surfaceOpacity: 100, blur: 0 };
     var btnBg = level === 'solid' || uiPreset.surfaceOpacity >= 100
       ? button
       : 'color-mix(in srgb, ' + button + ' ' + uiPreset.surfaceOpacity + '%, transparent)';
     root.setProperty('--btn-glass-surface', btnBg);
     root.setProperty('--btn-glass-blur', uiPreset.blur + 'px');
-    var btnHover = hover || button;
-    if (level === 'glass') {
-      btnHover = 'color-mix(in srgb, ' + button + ' ' + Math.min(uiPreset.surfaceOpacity + 14, 42) + '%, transparent)';
-    } else if (level === 'soft') {
-      btnHover = 'color-mix(in srgb, ' + button + ' ' + Math.min(uiPreset.surfaceOpacity + 22, 78) + '%, transparent)';
+    root.setProperty('--btn-hover-blur', hoverPreset.blur + 'px');
+    var hoverBase = hover || button;
+    var btnHover = hoverBase;
+    if (hoverGlass === 'glass') {
+      btnHover = 'color-mix(in srgb, ' + hoverBase + ' 38%, transparent)';
+    } else if (hoverGlass === 'soft') {
+      btnHover = 'color-mix(in srgb, ' + hoverBase + ' 62%, transparent)';
     }
     root.setProperty('--btn-glass-hover', btnHover);
+    root.setProperty('--hover', hover || button);
+    var hoverText = String(hoverTextColor || '').trim()
+      ? normalizeHex(hoverTextColor, textFallback || '#ffffff')
+      : (textFallback || '#ffffff');
+    root.setProperty('--btn-text-hover', hoverText);
     if (document.body) {
       document.body.setAttribute('data-button-glass', level);
+      document.body.setAttribute('data-button-hover-glass', hoverGlass);
     }
   }
 
-  function applyHeroButtonGlass(root, level, heroColor, accent, hover, textMode) {
+  function applyHeroButtonGlass(root, level, heroColor, accent, hover, textMode, heroHoverColor) {
+    /* Unificado: mismos tokens que botones generales */
     level = normalizePanelGlass(level);
-    var heroPreset = {
-      solid: { surfaceOpacity: 100, accentOpacity: 100, blur: 4 },
-      soft: { surfaceOpacity: 42, accentOpacity: 28, blur: 12 },
-      glass: { surfaceOpacity: 18, accentOpacity: 14, blur: 16 }
-    }[level] || { surfaceOpacity: 100, accentOpacity: 100, blur: 4 };
-    heroColor = heroColor || accent;
-    textMode = textMode === 'dark' ? 'dark' : 'light';
-    var hoverTint = textMode === 'dark' ? '#000000' : '#ffffff';
-    var heroHover = mixHex(heroColor, hoverTint, 14);
-    var heroBg = heroColor;
-    if (level === 'glass') {
-      heroBg = 'color-mix(in srgb, ' + heroColor + ' ' + heroPreset.surfaceOpacity + '%, transparent)';
-      heroHover = 'color-mix(in srgb, ' + heroColor + ' ' + Math.min(heroPreset.surfaceOpacity + 8, 36) + '%, transparent)';
+    var uiPreset = {
+      solid: { surfaceOpacity: 100, blur: 0 },
+      soft: { surfaceOpacity: 46, blur: 14 },
+      glass: { surfaceOpacity: 12, blur: 20 }
+    }[level] || { surfaceOpacity: 100, blur: 0 };
+    var button = heroColor || accent;
+    var hasExplicitHover = !!(String(heroHoverColor || hover || '').trim() && heroHoverColor);
+    var hoverBase = hasExplicitHover ? normalizeHex(heroHoverColor, button) : (hover || button);
+    var heroBg = level === 'solid' || uiPreset.surfaceOpacity >= 100
+      ? button
+      : 'color-mix(in srgb, ' + button + ' ' + uiPreset.surfaceOpacity + '%, transparent)';
+    var heroHover = hoverBase;
+    if (hasExplicitHover) {
+      if (level === 'glass') heroHover = 'color-mix(in srgb, ' + hoverBase + ' 72%, transparent)';
+      else if (level === 'soft') heroHover = 'color-mix(in srgb, ' + hoverBase + ' 88%, transparent)';
+    } else if (level === 'glass') {
+      heroHover = 'color-mix(in srgb, ' + button + ' ' + Math.min(uiPreset.surfaceOpacity + 14, 42) + '%, transparent)';
     } else if (level === 'soft') {
-      heroBg = 'color-mix(in srgb, ' + heroColor + ' ' + heroPreset.surfaceOpacity + '%, transparent)';
-      heroHover = 'color-mix(in srgb, ' + heroColor + ' ' + Math.min(heroPreset.surfaceOpacity + 14, 72) + '%, transparent)';
+      heroHover = 'color-mix(in srgb, ' + button + ' ' + Math.min(uiPreset.surfaceOpacity + 22, 78) + '%, transparent)';
     }
     root.setProperty('--hero-btn-bg', heroBg);
     root.setProperty('--hero-btn-bg-hover', heroHover);
-    root.setProperty('--hero-btn-blur', heroPreset.blur + 'px');
+    root.setProperty('--hero-btn-blur', uiPreset.blur + 'px');
   }
 
-  function applyHeroBorderGlass(root, level, bg, heroColor) {
+  function applyHeroBorderGlass(root, level, bg, heroColor, borderColor, borderWidth, hoverBorderColor, hoverBorderWidth) {
+    var color = borderColor || mixHex(bg, heroColor, 58);
+    var widthPx = borderWidth === 'low' ? '1px' : borderWidth === 'high' ? '3px' : '2px';
+    var hoverColor = hoverBorderColor || color;
+    var hoverWidthPx = hoverBorderWidth === 'low' ? '0.7px' : hoverBorderWidth === 'high' ? '2.1px' : '1.4px';
+    root.setProperty('--hero-btn-border', color);
+    root.setProperty('--btn-border', color);
+    root.setProperty('--btn-border-width', widthPx);
+    root.setProperty('--hero-btn-border-hover', hoverColor);
+    root.setProperty('--btn-border-hover', hoverColor);
+    root.setProperty('--btn-border-width-hover', hoverWidthPx);
+  }
+
+  function applyButtonBorderGlass(root, level, buttonBorder, borderColor, borderWidth, hoverBorderColor, hoverBorderWidth) {
     level = normalizePanelGlass(level);
-    var border = mixHex(bg, heroColor, 58);
-    var borderValue = border;
-    if (level === 'soft') {
-      borderValue = 'color-mix(in srgb, ' + border + ' 52%, transparent)';
-    } else if (level === 'glass') {
-      borderValue = 'color-mix(in srgb, ' + border + ' 28%, transparent)';
+    var color = borderColor || buttonBorder;
+    var widthPx = borderWidth === 'low' ? '1px' : borderWidth === 'high' ? '3px' : '2px';
+    if (!borderColor && level === 'soft') {
+      color = 'color-mix(in srgb, ' + buttonBorder + ' 52%, transparent)';
+    } else if (!borderColor && level === 'glass') {
+      color = 'color-mix(in srgb, ' + buttonBorder + ' 28%, transparent)';
     }
-    root.setProperty('--hero-btn-border', borderValue);
+    var hoverColor = hoverBorderColor || color;
+    var hoverWidthPx = hoverBorderWidth === 'low' ? '0.7px' : hoverBorderWidth === 'high' ? '2.1px' : '1.4px';
+    root.setProperty('--btn-border', color);
+    root.setProperty('--hero-btn-border', color);
+    root.setProperty('--btn-border-width', widthPx);
+    root.setProperty('--btn-border-hover', hoverColor);
+    root.setProperty('--hero-btn-border-hover', hoverColor);
+    root.setProperty('--btn-border-width-hover', hoverWidthPx);
+  }
+
+  function mixBorderGlassEarly(level, border) {
+    level = normalizePanelGlass(level);
+    if (level === 'soft') {
+      return 'color-mix(in srgb, ' + border + ' 52%, transparent)';
+    }
+    if (level === 'glass') {
+      return 'color-mix(in srgb, ' + border + ' 28%, transparent)';
+    }
+    return border;
+  }
+
+  function relativeLuminanceEarly(hex) {
+    function channel(v) {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    }
+    function read(hexValue, index) {
+      return parseInt(hexValue.slice(1 + index * 2, 3 + index * 2), 16);
+    }
+    hex = normalizeHex(hex, '#000000');
+    return 0.2126 * channel(read(hex, 0)) + 0.7152 * channel(read(hex, 1)) + 0.0722 * channel(read(hex, 2));
   }
 
   function applyMenuBorderGlass(root, level, border, text) {
@@ -183,20 +261,6 @@
     root.setProperty('--border', borderValue);
     root.setProperty('--glass-border', borderValue);
     root.setProperty('--glass-border-lit', 'color-mix(in srgb, ' + borderValue + ' 68%, ' + text + ')');
-  }
-
-  function applyButtonBorderGlass(root, level, border) {
-    level = normalizePanelGlass(level);
-    var borderValue = border;
-    if (level === 'soft') {
-      borderValue = 'color-mix(in srgb, ' + border + ' 52%, transparent)';
-    } else if (level === 'glass') {
-      borderValue = 'color-mix(in srgb, ' + border + ' 28%, transparent)';
-    }
-    root.setProperty('--btn-border', borderValue);
-    if (document.body) {
-      document.body.setAttribute('data-button-border-glass', level);
-    }
   }
 
   function applyBorderGlass(root, level, border, text) {
@@ -227,20 +291,50 @@
   }
 
   var BACKDROP_MASK_PRESETS = {
-    solid: { v94: 94, v90: 90, v75: 75, v55: 55, blur: 0 },
-    soft: { v94: 70, v90: 58, v75: 46, v55: 34, blur: 8 },
-    glass: { v94: 48, v90: 38, v75: 30, v55: 22, blur: 14 }
+    solid: { v94: 94, v90: 90, v75: 75, v55: 55 },
+    soft: { v94: 70, v90: 58, v75: 46, v55: 34 },
+    glass: { v94: 48, v90: 38, v75: 30, v55: 22 }
   };
 
-  function applyBackdropMaskEarly(root, level, bgColor) {
+  var MASK_BLUR_PRESETS = {
+    low: 6,
+    medium: 16,
+    high: 32
+  };
+
+  function normalizeMaskBlur(value) {
+    if (value === 'low' || value === 'high') return value;
+    return 'medium';
+  }
+
+  function deriveMaskBlurFromGlass(glass) {
+    glass = normalizePanelGlass(glass);
+    if (glass === 'glass') return 'high';
+    if (glass === 'soft') return 'medium';
+    return 'low';
+  }
+
+  function resolveMaskBlurPx(blurLevel) {
+    blurLevel = normalizeMaskBlur(blurLevel);
+    return MASK_BLUR_PRESETS[blurLevel] || MASK_BLUR_PRESETS.medium;
+  }
+
+  function applyBackdropMaskEarly(root, level, bgColor, blurLevel) {
     level = normalizePanelGlass(level);
+    blurLevel = normalizeMaskBlur(blurLevel || deriveMaskBlurFromGlass(level));
     var mask = BACKDROP_MASK_PRESETS[level] || BACKDROP_MASK_PRESETS.soft;
-    root.setProperty('--modal-backdrop', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v94 + '%, transparent)');
-    root.setProperty('--backdrop-94', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v94 + '%, transparent)');
+    var backdrop = 'color-mix(in srgb, ' + bgColor + ' ' + mask.v94 + '%, transparent)';
+    root.setProperty('--modal-backdrop', backdrop);
+    root.setProperty('--overlay-mask', backdrop);
+    root.setProperty('--backdrop-94', backdrop);
     root.setProperty('--backdrop-90', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v90 + '%, transparent)');
     root.setProperty('--backdrop-75', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v75 + '%, transparent)');
     root.setProperty('--backdrop-55', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v55 + '%, transparent)');
-    root.setProperty('--modal-backdrop-blur', mask.blur + 'px');
+    root.setProperty('--modal-backdrop-blur', resolveMaskBlurPx(blurLevel) + 'px');
+    if (document.body) {
+      document.body.setAttribute('data-mask-glass', level);
+      document.body.setAttribute('data-mask-blur', blurLevel);
+    }
   }
 
   function applyMenuPanelGlassEarly(root, level, panelColor) {
@@ -314,13 +408,20 @@
       : mixHex(theme.bg, theme.surface, 32);
     var button = theme.surface;
     var hoverTint = textMode === 'dark' ? '#000000' : '#ffffff';
-    var hover = mixHex(button, hoverTint, 14);
+    var hasExplicitHover = !!(String(theme.hoverColor || theme.hover || '').trim());
+    var hover = hasExplicitHover
+      ? normalizeHex(theme.hoverColor || theme.hover, button)
+      : mixHex(button, hoverTint, 14);
     var border = isCustom
       ? mixHex(theme.bg, panelTint, 24)
       : mixHex(theme.bg, theme.surface, 58);
     var glassSurface = isCustom ? theme.bg : theme.surface;
     var panelGlassLevel = theme.panelGlass || (theme.themeKey === 'custom' ? 'solid' : 'soft');
     var bgGlassLevel = theme.bgGlass || theme.panelGlass || (theme.themeKey === 'custom' ? 'soft' : 'soft');
+
+    var maskColor = normalizeHex(theme.maskColor || theme.bg, theme.bg);
+    var maskGlassLevel = theme.maskGlass || theme.bgGlass || 'soft';
+    var maskBlurLevel = theme.maskBlur || deriveMaskBlurFromGlass(maskGlassLevel);
 
     var pageBg = isCustom
       ? normalizeHex(theme.menuColor || theme.panelColor || panel, theme.bg)
@@ -345,7 +446,7 @@
     root.setProperty('--placeholder-border', border);
     if (isCustom) {
       applyMenuPanelGlassEarly(root, panelGlassLevel, panel);
-      applyBackdropMaskEarly(root, panelGlassLevel, panel);
+      applyBackdropMaskEarly(root, maskGlassLevel, maskColor, maskBlurLevel);
       applyBgGlassEarly(root, bgGlassLevel, theme.bg, true);
       applyContainerTextEarly(root, theme.bgTextMode);
     } else {
@@ -355,32 +456,64 @@
         panel,
         theme.surface
       );
-      applyBackdropMaskEarly(root, panelGlassLevel, panel);
+      applyBackdropMaskEarly(root, maskGlassLevel, maskColor, maskBlurLevel);
     }
     applyShadowGlass(root, theme.shadowGlass || 'soft');
-    applyButtonGlass(root, theme.buttonGlass || 'solid', button, hover);
+    applyButtonGlass(
+      root,
+      theme.buttonGlass || 'solid',
+      button,
+      hover,
+      hasExplicitHover,
+      theme.buttonHoverTextColor,
+      theme.text,
+      theme.buttonHoverGlass
+    );
     applyMenuBorderGlass(root, panelGlassLevel, border, theme.text);
     var buttonBorder = isCustom
       ? mixHex(button, theme.text, textMode === 'light' ? 22 : 18)
       : border;
-    applyButtonBorderGlass(root, theme.borderGlass || 'solid', buttonBorder);
+    var explicitBorder = theme.buttonBorderColor || '';
+    var explicitHoverBorder = theme.buttonHoverBorderColor || '';
+    applyButtonBorderGlass(
+      root,
+      theme.borderGlass || 'solid',
+      buttonBorder,
+      explicitBorder,
+      theme.buttonBorderWidth || 'medium',
+      explicitHoverBorder,
+      theme.buttonHoverBorderWidth || theme.buttonBorderWidth || 'medium'
+    );
     applyHeroButtonGlass(
       root,
-      theme.heroButtonGlass || theme.buttonGlass || 'solid',
-      theme.heroSurface || theme.surface,
+      theme.buttonGlass || 'solid',
+      button,
       theme.accent,
       hover,
-      textMode
+      textMode,
+      theme.hoverColor || theme.heroHoverColor
     );
     applyHeroBorderGlass(
       root,
-      theme.heroBorderGlass || theme.borderGlass || 'solid',
+      theme.borderGlass || 'solid',
       theme.bg,
-      theme.heroSurface || theme.surface
+      button,
+      explicitBorder || buttonBorder,
+      theme.buttonBorderWidth || 'medium',
+      explicitHoverBorder || explicitBorder || buttonBorder,
+      theme.buttonHoverBorderWidth || theme.buttonBorderWidth || 'medium'
     );
 
     document.documentElement.dataset.earlyTheme = theme.themeKey;
     document.documentElement.classList.add('theme-ready');
+
+    var cover = document.getElementById('projectCover');
+    if (cover) {
+      cover.setAttribute(
+        'data-hero-layout',
+        theme.heroLayout === 'bottom-bar' ? 'bottom-bar' : 'centered'
+      );
+    }
   }
 
   function persistProjectDefault(theme, proyectoId) {
@@ -391,22 +524,9 @@
     stored.projectId = proyectoId || stored.projectId || null;
     stored.themeKey = theme.themeKey || 'custom';
     if (theme.themeKey === 'custom') {
-      stored.customTheme = {
-        bg: theme.bg,
-        menuColor: normalizeHex(theme.menuColor || theme.panelColor || theme.bg, theme.bg),
-        surface: theme.surface,
-        accent: theme.accent,
-        textMode: theme.textMode,
-        visualDepth: theme.visualDepth || 'medium',
-        panelGlass: normalizePanelGlass(theme.panelGlass),
-        bgGlass: normalizePanelGlass(theme.bgGlass || theme.panelGlass),
-        buttonGlass: normalizePanelGlass(theme.buttonGlass),
-        borderGlass: normalizePanelGlass(theme.borderGlass),
-        shadowGlass: normalizeShadowGlass(theme.shadowGlass),
-        heroSurface: normalizeHex(theme.heroSurface || theme.surface, theme.surface),
-        heroButtonGlass: normalizePanelGlass(theme.heroButtonGlass || theme.buttonGlass),
-        heroBorderGlass: normalizePanelGlass(theme.heroBorderGlass || theme.borderGlass)
-      };
+      stored.customTheme = expandThemeConfig(theme);
+      delete stored.customTheme.themeKey;
+      delete stored.customTheme.text;
     } else {
       stored.customTheme = null;
     }
@@ -415,42 +535,47 @@
 
   function shouldSkipProjectDefault() {
     var stored = readJSON(STORAGE_KEY, {});
+    /* Migración: el azul cyan accidental no debe bloquear HALL */
+    var custom = stored.customTheme || {};
+    if (stored.userChosen &&
+        (String(custom.bg || '').toLowerCase() === '#0d2541' ||
+         String(custom.accent || '').toLowerCase() === '#02fbff')) {
+      stored.userChosen = false;
+      stored.projectDefault = true;
+      writeJSON(STORAGE_KEY, stored);
+      return false;
+    }
     return stored.userChosen === true;
   }
 
   function getProjectSlug() {
-    try {
-      var params = new URLSearchParams(window.location.search);
-      var slug = params.get('proyecto');
-      if (slug) return slug;
-    } catch (e) {}
-    return typeof DEFAULT_PROJECT_SLUG !== 'undefined' ? DEFAULT_PROJECT_SLUG : 'proyecto-demo';
+    if (typeof getProjectSlugFromUrl === 'function') return getProjectSlugFromUrl();
+    return null;
   }
 
   function normalizeProjectUrl() {
-    try {
-      var params = new URLSearchParams(window.location.search);
-      if (!params.get('proyecto') && typeof DEFAULT_PROJECT_SLUG !== 'undefined') {
-        params.set('proyecto', DEFAULT_PROJECT_SLUG);
-        var next = window.location.pathname + '?' + params.toString() + window.location.hash;
-        window.history.replaceState(null, '', next);
-      }
-    } catch (e) {}
+    /* Pretty paths (/demo) keep the browser URL; do not inject ?proyecto= */
   }
 
   function fetchProjectDefaultTheme() {
     if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
+      if (typeof BootDebug !== 'undefined') BootDebug.error('fetch theme: falta SUPABASE_URL/KEY');
       return Promise.resolve(null);
     }
 
     var slug = getProjectSlug();
+    if (!slug) {
+      if (typeof BootDebug !== 'undefined') BootDebug.log('fetch theme: sin slug');
+      return Promise.resolve(null);
+    }
+    if (typeof BootDebug !== 'undefined') BootDebug.log('fetch theme slug', slug);
     var select = encodeURIComponent('id,proyecto_config(project_default_theme)');
     var path =
       '/rest/v1/proyectos?select=' + select +
       '&publicado=eq.true&slug=eq.' + encodeURIComponent(slug) +
       '&limit=1';
 
-    return fetch(SUPABASE_URL + path, {
+    var req = fetch(SUPABASE_URL + path, {
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
@@ -458,19 +583,32 @@
       }
     })
       .then(function (response) {
+        if (typeof BootDebug !== 'undefined') BootDebug.log('fetch theme status', response.status);
         if (!response.ok) throw new Error('Theme fetch failed: ' + response.status);
         return response.json();
       })
       .then(function (rows) {
-        if (!rows || !rows[0]) return null;
+        if (!rows || !rows[0]) {
+          if (typeof BootDebug !== 'undefined') BootDebug.log('fetch theme: sin filas');
+          return null;
+        }
         var config = rows[0].proyecto_config;
         if (Array.isArray(config)) config = config[0];
-        if (!config || !config.project_default_theme) return null;
+        if (!config || !config.project_default_theme) {
+          if (typeof BootDebug !== 'undefined') BootDebug.log('fetch theme: sin project_default_theme');
+          return null;
+        }
+        if (typeof BootDebug !== 'undefined') BootDebug.log('fetch theme: OK');
         return {
           proyectoId: rows[0].id,
           theme: expandThemeConfig(config.project_default_theme)
         };
       });
+
+    if (typeof BootDebug !== 'undefined' && BootDebug.withTimeout) {
+      return BootDebug.withTimeout(req, 10000, 'fetchProjectDefaultTheme');
+    }
+    return req;
   }
 
   function applyLoadingShell() {
@@ -483,78 +621,92 @@
     document.documentElement.style.background = '#000000';
   }
 
+  function markReady(reason) {
+    document.documentElement.classList.add('theme-ready');
+    if (typeof BootDebug !== 'undefined') BootDebug.markThemeReady(reason);
+  }
+
   function bootstrapProjectTheme() {
-    normalizeProjectUrl();
-    applyLoadingShell();
+    console.log('[BOOT] bootstrapProjectTheme START');
+    if (typeof BootDebug !== 'undefined') BootDebug.log('bootstrapProjectTheme start');
+    try {
+      normalizeProjectUrl();
+      applyLoadingShell();
 
-    if (shouldSkipProjectDefault()) {
-      var stored = readJSON(STORAGE_KEY, {});
-      if (stored.customTheme) {
-        applyExpandedTheme(
-          expandThemeConfig({
-            themeKey: stored.themeKey || 'custom',
-            bg: stored.customTheme.bg,
-            menuColor: stored.customTheme.menuColor,
-            surface: stored.customTheme.surface,
-            accent: stored.customTheme.accent,
-            textMode: stored.customTheme.textMode,
-            visualDepth: stored.customTheme.visualDepth,
-            panelGlass: stored.customTheme.panelGlass,
-            bgGlass: stored.customTheme.bgGlass,
-            buttonGlass: stored.customTheme.buttonGlass,
-            borderGlass: stored.customTheme.borderGlass,
-            shadowGlass: stored.customTheme.shadowGlass,
-            heroSurface: stored.customTheme.heroSurface,
-            heroButtonGlass: stored.customTheme.heroButtonGlass,
-            heroBorderGlass: stored.customTheme.heroBorderGlass
-          })
-        );
-      }
-      document.documentElement.classList.add('theme-ready');
-      return;
-    }
-
-    function finishWithTheme(theme, proyectoId) {
-      if (theme) {
-        applyExpandedTheme(theme);
-        persistProjectDefault(theme, proyectoId);
-      }
-      document.documentElement.classList.add('theme-ready');
-    }
-
-    if (location.protocol === 'file:') {
       var offlineFallback =
         typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined'
           ? expandThemeConfig(PROJECT_DEFAULT_THEME_FALLBACK)
           : null;
-      finishWithTheme(offlineFallback, null);
-      return;
-    }
 
-    fetchProjectDefaultTheme()
-      .then(function (result) {
-        if (result && result.theme) {
-          finishWithTheme(result.theme, result.proyectoId);
-          return;
+      /* Primera pintura inmediata — no esperar red */
+      if (!shouldSkipProjectDefault() && offlineFallback) {
+        try {
+          applyExpandedTheme(offlineFallback);
+          if (typeof BootDebug !== 'undefined') BootDebug.log('fallback HALL aplicado (inmediato)');
+        } catch (paintErr) {
+          if (typeof BootDebug !== 'undefined') BootDebug.error('fallback HALL paint', paintErr);
+          markReady('fallback-paint-error');
         }
-        var fallback =
-          typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined'
-            ? expandThemeConfig(PROJECT_DEFAULT_THEME_FALLBACK)
-            : null;
-        finishWithTheme(fallback, null);
-      })
-      .catch(function (err) {
-        console.warn('[ThemeEarly]', err);
-        var fallback =
-          typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined'
-            ? expandThemeConfig(PROJECT_DEFAULT_THEME_FALLBACK)
-            : null;
-        finishWithTheme(fallback, null);
-      });
+      }
 
-    window.setTimeout(function () {
-      document.documentElement.classList.add('theme-ready');
-    }, 3000);
+      if (shouldSkipProjectDefault()) {
+        var stored = readJSON(STORAGE_KEY, {});
+        if (stored.customTheme) {
+          try {
+            applyExpandedTheme(
+              expandThemeConfig(Object.assign({ themeKey: stored.themeKey || 'custom' }, stored.customTheme))
+            );
+          } catch (e) {
+            if (typeof BootDebug !== 'undefined') BootDebug.error('userChosen theme paint', e);
+          }
+        }
+        markReady('userChosen-skip');
+        console.log('[BOOT] bootstrapProjectTheme END');
+        return;
+      }
+
+      function finishWithTheme(theme, proyectoId) {
+        try {
+          if (theme) {
+            applyExpandedTheme(theme);
+            persistProjectDefault(theme, proyectoId);
+          }
+        } catch (e) {
+          if (typeof BootDebug !== 'undefined') BootDebug.error('finishWithTheme paint', e);
+        }
+        markReady('finishWithTheme');
+      }
+
+      if (location.protocol === 'file:') {
+        finishWithTheme(offlineFallback, null);
+        console.log('[BOOT] bootstrapProjectTheme END');
+        return;
+      }
+
+      fetchProjectDefaultTheme()
+        .then(function (result) {
+          if (result && result.theme) {
+            finishWithTheme(result.theme, result.proyectoId);
+            return;
+          }
+          finishWithTheme(offlineFallback, null);
+        })
+        .catch(function (err) {
+          if (typeof BootDebug !== 'undefined') BootDebug.error('fetch theme', err);
+          else console.warn('[ThemeEarly]', err);
+          finishWithTheme(offlineFallback, null);
+        });
+
+      window.setTimeout(function () {
+        if (!document.documentElement.classList.contains('theme-ready')) {
+          markReady('timeout-800ms');
+        }
+      }, 800);
+    } catch (fatal) {
+      if (typeof BootDebug !== 'undefined') BootDebug.error('bootstrapProjectTheme fatal', fatal);
+      markReady('bootstrap-fatal');
+    }
+    console.log('[BOOT] bootstrapProjectTheme END');
   }
 
   window.__applyProjectThemeEarly = function (rawConfig, proyectoId) {

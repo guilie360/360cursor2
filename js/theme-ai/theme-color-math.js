@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-color-math.js');}catch(_e){}
 /* Utilidades cromáticas: solo variaciones de luminosidad (hue fijo) */
 var ThemeColorMath = (function () {
   function normalizeHex(hex) {
@@ -138,11 +139,117 @@ var ThemeColorMath = (function () {
     };
   }
 
+  function contrastRatio(hexA, hexB) {
+    var l1 = relativeLuminance(hexA);
+    var l2 = relativeLuminance(hexB);
+    var lighter = Math.max(l1, l2);
+    var darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  function contrastLevel(hexA, hexB) {
+    var ratio = contrastRatio(hexA, hexB);
+    if (ratio >= 7) return 'AAA';
+    if (ratio >= 4.5) return 'AA';
+    if (ratio >= 3) return 'AA-large';
+    return 'fail';
+  }
+
+  function pickBestContrast(candidates, bgHex, minRatio) {
+    if (!candidates || !candidates.length) return null;
+    var sorted = candidates.slice().sort(function (a, b) {
+      return contrastRatio(b, bgHex) - contrastRatio(a, bgHex);
+    });
+    for (var i = 0; i < sorted.length; i++) {
+      if (contrastRatio(sorted[i], bgHex) >= minRatio) return normalizeHex(sorted[i]);
+    }
+    return normalizeHex(sorted[0]);
+  }
+
+  function ensureContrast(fgHex, bgHex, minRatio, baseFamilyHex) {
+    var fg = normalizeHex(fgHex);
+    if (contrastRatio(fg, bgHex) >= minRatio) return fg;
+    var base = normalizeHex(baseFamilyHex || fg);
+    var deltas = [8, 12, 16, 20, -8, -12, -16, -20, 24, -24, 28, -28];
+    for (var i = 0; i < deltas.length; i++) {
+      var candidate = adjustLightness(base, deltas[i]);
+      if (contrastRatio(candidate, bgHex) >= minRatio) return candidate;
+    }
+    return fg;
+  }
+
+  function hueFamilyKey(hex) {
+    var hsl = hexToHsl(hex);
+    if (hsl.s < 8) {
+      var band = Math.round(hsl.l / 8);
+      return 'neutral-' + band;
+    }
+    var hueBucket = Math.round(hsl.h / 18);
+    var satBand = hsl.s >= 45 ? 'vivid' : (hsl.s >= 22 ? 'rich' : 'soft');
+    return 'hue-' + hueBucket + '-' + satBand;
+  }
+
+  function familyDisplayName(key, sampleHex) {
+    if (key.indexOf('neutral') === 0) {
+      var l = hexToHsl(sampleHex).l;
+      if (l >= 78) return 'Blanco / Claro';
+      if (l >= 55) return 'Gris claro';
+      if (l >= 35) return 'Gris medio';
+      return 'Oscuro / Profundo';
+    }
+    var h = hexToHsl(sampleHex).h;
+    if (h < 20 || h >= 340) return 'Rojo';
+    if (h < 45) return 'Naranja';
+    if (h < 70) return 'Amarillo / Dorado';
+    if (h < 160) return 'Verde';
+    if (h < 200) return 'Cian / Turquesa';
+    if (h < 260) return 'Azul';
+    if (h < 310) return 'Violeta';
+    return 'Magenta';
+  }
+
+  function sortByLightness(hexList) {
+    return hexList.slice().sort(function (a, b) {
+      return hexToHsl(a).l - hexToHsl(b).l;
+    });
+  }
+
+  function pickFamilyDepth(baseHex, steps) {
+    steps = steps || 0;
+    return adjustLightness(baseHex, steps * 6);
+  }
+
+  function pickDepthFromMembers(members, index) {
+    if (!members || !members.length) return null;
+    var sorted = members.slice().sort(function (a, b) {
+      return hexToHsl(a.hex).l - hexToHsl(b.hex).l;
+    });
+    var idx = Math.max(0, Math.min(sorted.length - 1, index));
+    return normalizeHex(sorted[idx].hex);
+  }
+
+  function isWarmHue(h) {
+    h = ((h % 360) + 360) % 360;
+    return h < 70 || h >= 330;
+  }
+
+  function semanticHueKind(hex) {
+    var h = hexToHsl(hex).h;
+    if (hexToHsl(hex).s < 12) return null;
+    h = ((h % 360) + 360) % 360;
+    if (h >= 75 && h < 165) return 'success';
+    if (h >= 35 && h < 75) return 'warning';
+    if (h < 25 || h >= 330) return 'danger';
+    if (h >= 195 && h < 240) return 'info';
+    return null;
+  }
+
   return {
     normalizeHex: normalizeHex,
     hexToRgb: hexToRgb,
     rgbToHex: rgbToHex,
     hexToHsl: hexToHsl,
+    hslToHex: hslToHex,
     adjustLightness: adjustLightness,
     relativeLuminance: relativeLuminance,
     saturation: saturation,
@@ -150,6 +257,19 @@ var ThemeColorMath = (function () {
     colorDistance: colorDistance,
     pickTextOnBg: pickTextOnBg,
     pickTextSecondaryOnBg: pickTextSecondaryOnBg,
-    deriveVariants: deriveVariants
+    deriveVariants: deriveVariants,
+    contrastRatio: contrastRatio,
+    contrastLevel: contrastLevel,
+    pickBestContrast: pickBestContrast,
+    ensureContrast: ensureContrast,
+    hueFamilyKey: hueFamilyKey,
+    familyDisplayName: familyDisplayName,
+    sortByLightness: sortByLightness,
+    pickFamilyDepth: pickFamilyDepth,
+    pickDepthFromMembers: pickDepthFromMembers,
+    isWarmHue: isWarmHue,
+    semanticHueKind: semanticHueKind
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-color-math.js');}catch(_e){}

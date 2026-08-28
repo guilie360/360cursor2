@@ -1,0 +1,297 @@
+/* Platform bridge — lets builder engines use PlatformAuth instead of Admin CMS APIs */
+var PlatformBuilderBridge = (function () {
+  var constructoraId = null;
+  var profile = null;
+
+  function getClient() {
+    return PlatformAuth.getClient();
+  }
+
+  function unwrap(result, fallbackMessage) {
+    if (result.error) {
+      throw new Error(result.error.message || fallbackMessage || 'Error de API');
+    }
+    return result.data;
+  }
+
+    async function resolveConstructoraId() {
+    var sessionProfile = typeof VisitorSession !== 'undefined' ? VisitorSession.getProfile() : null;
+    if (sessionProfile && sessionProfile.constructora_id) {
+      return sessionProfile.constructora_id;
+    }
+
+    var projectId = null;
+    var slug = null;
+    try {
+      var params = new URLSearchParams(window.location.search);
+      projectId = params.get('projectId') || params.get('proyectoId');
+      slug = params.get('proyecto') || params.get('project');
+      if (projectId && !/^[0-9a-f-]{36}$/i.test(projectId)) projectId = null;
+      if (slug && /^[0-9a-f-]{36}$/i.test(slug)) {
+        projectId = projectId || slug;
+        slug = null;
+      }
+    } catch (e) {}
+
+    if (projectId) {
+      var byId = await getClient()
+        .from('proyectos')
+        .select('constructora_id')
+        .eq('id', projectId)
+        .maybeSingle();
+      if (byId.data && byId.data.constructora_id) {
+        return byId.data.constructora_id;
+      }
+    }
+
+    if (slug) {
+      var bySlug = await getClient()
+        .from('proyectos')
+        .select('constructora_id')
+        .eq('slug', slug)
+        .limit(2);
+      if (bySlug.error) throw new Error(bySlug.error.message || 'Error resolviendo constructora');
+      var slugRows = bySlug.data || [];
+      if (slugRows.length === 1 && slugRows[0].constructora_id) {
+        return slugRows[0].constructora_id;
+      }
+    }
+
+    if (sessionProfile && sessionProfile.id) {
+      var byVisitor = await getClient()
+        .from('visitantes')
+        .select('constructora_id')
+        .eq('auth_user_id', sessionProfile.auth_user_id || sessionProfile.id)
+        .maybeSingle();
+      if (byVisitor.data && byVisitor.data.constructora_id) {
+        return byVisitor.data.constructora_id;
+      }
+    }
+
+    return null;
+  }
+
+  async function init() {
+    profile = typeof VisitorSession !== 'undefined' ? VisitorSession.getProfile() : null;
+    constructoraId = await resolveConstructoraId();
+    installShims({ requireProyectosApi: true });
+    return { profile: profile, constructoraId: constructoraId };
+  }
+
+  function installShims(opts) {
+    opts = opts || {};
+    /* Always install AdminApi first — engines/ProyectosApi depend on it. */
+    window.AdminApi = {
+      getClient: getClient,
+      unwrap: unwrap,
+      assertActiveProfile: function () { return profile; }
+    };
+
+    window.AdminState = {
+      getProfile: function () { return profile; },
+      getConstructoraId: function () { return constructoraId; },
+      isAdmin: function () {
+        return typeof PlatformRoles !== 'undefined' &&
+          PlatformRoles.isPlatformAdmin(profile || (typeof VisitorSession !== 'undefined' ? VisitorSession.getProfile() : null));
+      },
+      setActiveProjectId: function (id) {
+        try {
+          if (id) sessionStorage.setItem('360preventa_active_project', id);
+          else sessionStorage.removeItem('360preventa_active_project');
+        } catch (e) {}
+      },
+      getActiveProjectId: function () {
+        try {
+          return sessionStorage.getItem('360preventa_active_project');
+        } catch (e) {
+          return null;
+        }
+      }
+    };
+
+    if (typeof StorageApi === 'undefined') {
+      window.StorageApi = createStorageApi();
+    }
+    if (typeof HeroApi === 'undefined') {
+      window.HeroApi = createHeroApi();
+    }
+
+    if (opts.requireProyectosApi && typeof ProyectosApi === 'undefined') {
+      throw new Error(
+        'ProyectosApi canónica no está cargada. Incluye js/api/proyectos.js después del bridge.'
+      );
+    }
+  }
+
+  /** Ensure AdminApi exists before Guardar/Publish (e.g. Quotation mount). */
+  function ensureShims() {
+    if (typeof AdminApi === 'undefined' || !AdminApi.getClient) {
+      installShims({ requireProyectosApi: false });
+    }
+    return typeof AdminApi !== 'undefined' && !!AdminApi.getClient;
+  }
+
+  function createStorageApi() {
+    var BUCKET = 'proyectos-media';
+
+    function getPublicUrl(path) {
+      return getClient().storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+    }
+
+    return {
+      /* Hard rule: media binaries go to Bunny only. Supabase holds text/meta + legacy public URLs. */
+      upload: async function () {
+        throw new Error(
+          'StorageApi deshabilitado: las imágenes/videos se suben solo a Bunny (BunnyMediaApi).'
+        );
+      },
+      getPublicUrl: getPublicUrl
+    };
+  }
+
+  function createHeroApi() {
+    var CONFIG_SELECT =
+      'proyecto_id, titulo_hero, texto_hero, boton_hero_1, boton_hero_2, ' +
+      'show_whatsapp_float, show_share_float, whatsapp_float_link, whatsapp_float_message, share_float_url, ' +
+      'logo_url, show_hero_logo, logo_style, video_hero_url, imagen_hero_url, color_fondo, color_accento, updated_at';
+
+    return {
+      upsert: async function (proyectoId, payload) {
+        /* V5.9.76 — Identity (proyectos.nombre / slug) is Config-only via ProyectosApi.updateIdentity.
+           Hero upsert must never overwrite showroom identity. */
+        var tituloHero = AdminUI.normalizeOptionalText(
+          payload.titulo_hero != null ? payload.titulo_hero : payload.nombre_proyecto
+        );
+
+        var data = {
+          proyecto_id: proyectoId,
+          titulo_hero: tituloHero,
+          texto_hero: AdminUI.normalizeOptionalText(payload.texto_hero),
+          boton_hero_1: AdminUI.normalizeOptionalText(payload.boton_hero_1) || 'Iniciar',
+          boton_hero_2: AdminUI.normalizeOptionalText(payload.boton_hero_2) || 'Explorar',
+          whatsapp_float_link: AdminUI.normalizeOptionalText(payload.whatsapp_float_link),
+          whatsapp_float_message: AdminUI.normalizeOptionalText(payload.whatsapp_float_message),
+          share_float_url: AdminUI.normalizeOptionalText(payload.share_float_url),
+          show_whatsapp_float: payload.show_whatsapp_float !== false,
+          show_share_float: payload.show_share_float !== false,
+          show_hero_logo: payload.show_hero_logo !== false,
+          logo_style: payload.logo_style === 'avatar' ? 'avatar' : 'flat',
+          logo_url: payload.logo_url === null
+            ? null
+            : AdminUI.normalizeOptionalText(payload.logo_url),
+          video_hero_url: AdminUI.normalizeOptionalText(payload.video_hero_url),
+          imagen_hero_url: AdminUI.normalizeOptionalText(payload.imagen_hero_url),
+          color_fondo: AdminUI.normalizeHexColor(payload.color_fondo, '#0A0A0A'),
+          color_accento: AdminUI.normalizeHexColor(payload.color_accento, '#FF3B30')
+        };
+        if (payload.show_hero_logo === false) {
+          data.show_hero_logo = false;
+        }
+        if (payload.project_default_theme) {
+          data.project_default_theme = payload.project_default_theme;
+        }
+
+        var updated = await getClient()
+          .from('proyecto_config')
+          .update(data)
+          .eq('proyecto_id', proyectoId)
+          .select(CONFIG_SELECT)
+          .maybeSingle();
+        if (updated.error) throw new Error(updated.error.message || 'Error guardando hero');
+        if (updated.data) return updated.data;
+        var inserted = await getClient()
+          .from('proyecto_config')
+          .insert(data)
+          .select(CONFIG_SELECT)
+          .maybeSingle();
+        if (inserted.error) {
+          if (/duplicate|unique/i.test(inserted.error.message || '')) {
+            var retry = await getClient()
+              .from('proyecto_config')
+              .update(data)
+              .eq('proyecto_id', proyectoId)
+              .select(CONFIG_SELECT)
+              .maybeSingle();
+            return unwrap(retry, 'Error guardando hero');
+          }
+          throw new Error(inserted.error.message || 'Error guardando hero');
+        }
+        return unwrap(inserted, 'Error guardando hero');
+      }
+    };
+  }
+
+  function showroomUrl(slug) {
+    var resolved = slug || null;
+    if (!resolved) {
+      try {
+        resolved = new URLSearchParams(window.location.search).get('proyecto');
+      } catch (e) {}
+    }
+    if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
+      return ShowroomPublicUrl.href(resolved);
+    }
+    if (resolved) {
+      return new URL('/' + encodeURIComponent(resolved), window.location.origin).href;
+    }
+    return new URL('/', window.location.origin).href;
+  }
+
+  /**
+   * Quotation visitor URL.
+   * Prefer public /{slug} (same as client). Fallback: Runtime by projectId.
+   */
+  function quotationUrl(projectIdOrOpts, slug) {
+    var id = null;
+    var s = slug || null;
+    if (projectIdOrOpts && typeof projectIdOrOpts === 'object') {
+      id = projectIdOrOpts.projectId || projectIdOrOpts.id || null;
+      s = projectIdOrOpts.slug || s;
+    } else {
+      id = projectIdOrOpts;
+    }
+    if (s) {
+      if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
+        return ShowroomPublicUrl.href(s);
+      }
+      try {
+        return new URL('/' + encodeURIComponent(s), window.location.origin).href;
+      } catch (e0) {
+        return '/' + encodeURIComponent(s);
+      }
+    }
+    id = String(id || '').trim();
+    if (!id) return null;
+    if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
+      return QuotationRuntime.href(id);
+    }
+    try {
+      var url = new URL('/quotation/', window.location.origin);
+      url.searchParams.set('projectId', id);
+      url.searchParams.set('experience_type', 'quotation');
+      return url.href;
+    } catch (e) {
+      return '/quotation/?projectId=' + encodeURIComponent(id) +
+        '&experience_type=quotation';
+    }
+  }
+
+  return {
+    init: init,
+    ensureShims: ensureShims,
+    showroomUrl: showroomUrl,
+    quotationUrl: quotationUrl,
+    getClient: getClient,
+    resolveConstructoraId: resolveConstructoraId
+  };
+})();
+
+/* Soft boot: expose AdminApi as soon as the bridge script loads so Quotation
+   Guardar cannot race PlatformBuilderBridge.init(). Profile/constructora fill on init(). */
+try {
+  if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.ensureShims) {
+    PlatformBuilderBridge.ensureShims();
+  }
+} catch (eBootShim) {
+  console.error('[PlatformBuilderBridge] soft AdminApi shim failed', eBootShim);
+}
