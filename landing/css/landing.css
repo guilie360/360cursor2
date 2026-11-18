@@ -122,13 +122,9 @@ body:has(.page-transit.on) .chat-float{
  .chat-float:hover{color:#fff}
  .menu-panel a:hover{color:var(--bronze);padding-left:12px}
  .menu-panel a:hover span{transform:translateX(-4px)}
- .final-contact:hover,.final-quote:hover{color:#fff}
- .final-contact:hover::after,.final-quote:hover::after{transform-origin:left;animation:ul .6s var(--ease)}
- .final-quote:hover span{transform:translate(2px,-2px)}
 }
 
 .menu-panel a:active{color:var(--bronze)}
-.final-contact:active,.final-quote:active{opacity:.7}
 @media(max-width:640px){
  .quote-float{right:18px;bottom:18px;gap:10px}
  .quote-float-label{font-size:10px;letter-spacing:.18em}
