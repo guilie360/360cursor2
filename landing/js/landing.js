@@ -142,7 +142,6 @@ if(fine){
   });
   document.documentElement.classList.add('has-cur');
   $$('.showroom').forEach(a=>a.dataset.cursor='EXPLORAR');
-  const cta=$('.final-contact');if(cta)cta.dataset.cursor='HABLEMOS';
   const c=document.createElement('div');c.className='cur';const lb=document.createElement('span');c.appendChild(lb);
   const d=document.createElement('div');d.className='cur-dot';
   document.body.append(c,d);
