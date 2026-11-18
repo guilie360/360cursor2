@@ -36,9 +36,9 @@
   var commissionCardValue = document.getElementById('internoCommissionCardValue');
   var live = document.getElementById('hunterLiveCommission');
 
-  if (modo === 'interno') {
-    if (back) {
-      back.classList.remove('portal-hidden');
+  if (back) {
+    back.classList.remove('portal-hidden');
+    if (modo === 'interno') {
       back.setAttribute('aria-label', 'Volver al panel');
       back.title = 'Volver al panel';
       back.onclick = function (e) {
@@ -46,14 +46,18 @@
         e.stopPropagation();
         location.href = '/panel_gestion/';
       };
+    } else {
+      back.setAttribute('aria-label', 'Volver a la demo');
+      back.title = 'Volver a la landing · Demo';
+      back.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        location.href = '/#demo';
+      };
     }
-    if (commissionBtn) commissionBtn.classList.remove('portal-hidden');
-  } else if (back) {
-    back.classList.add('portal-hidden');
-    back.onclick = function (e) {
-      e.preventDefault();
-      location.href = '/';
-    };
+  }
+  if (modo === 'interno' && commissionBtn) {
+    commissionBtn.classList.remove('portal-hidden');
   }
 
   function syncCommission() {

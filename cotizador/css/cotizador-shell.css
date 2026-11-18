@@ -12,14 +12,15 @@ body.cotizador-app #globalFullscreenBtn{
   display:none!important;
 }
 
-/* Público: sin flecha de panel ni comisión */
-body.cotizador-app.modo-publico .portal-back,
+/* Público: sin comisión de equipo; sí flecha para volver a la landing (#demo) */
 body.cotizador-app.modo-publico .interno-commission-btn,
 body.cotizador-app.modo-publico .interno-commission-card{
   display:none!important;
 }
 
-/* Interno: flecha del panel abajo izquierda */
+/* Flecha abajo izquierda: público → landing#demo | interno → panel */
+body.cotizador-app.modo-publico .portal-back,
+body.cotizador-app.modo-publico .portal-back.portal-hidden,
 body.cotizador-app.modo-interno .portal-back,
 body.cotizador-app.modo-interno .portal-back.portal-hidden{
   display:flex!important;
