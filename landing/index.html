@@ -1,167 +1,104 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>360Preventa</title>
-  <meta name="description" content="Showroom Digital 360° para preventa inmobiliaria.">
-  <meta name="theme-color" content="#050505">
-  <meta property="og:title" content="360Preventa">
-  <meta property="og:description" content="Showroom Digital 360° para preventa inmobiliaria.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://360preventa.com/">
-  <link rel="icon" type="image/png" href="/assets/brand/360preventa-mark.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/landing/css/landing.css?v=10">
-  <link rel="stylesheet" href="/css/platform/product-assistant.css?v=2">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0b">
+<title>360Preventa — Experiencias digitales para comercializar proyectos inmobiliarios</title>
+<meta name="description" content="Presenta y comercializa proyectos inmobiliarios antes de que estén terminados mediante una experiencia digital interactiva, accesible y lista para compartir.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Italiana&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/landing/css/landing.css">
 </head>
 <body>
-  <div class="lp-ambient" aria-hidden="true"></div>
-
-  <header class="lp-top">
-    <button type="button" class="lp-menu-btn" id="lpMenuBtn" aria-label="Abrir menú" aria-expanded="false" aria-controls="lpMenuPanel">
-      <span class="lp-menu-btn__lines" aria-hidden="true"></span>
+<header class="topbar">
+  <a class="header-logo" href="#inicio" aria-label="360Preventa"><img src="/landing/assets/logo.png" alt="360Preventa"></a>
+  <div class="header-actions">
+    <a class="quote-btn mag" href="/cotizador/index.html?modo=publico" aria-label="Abrir cotizador" title="Cotizar">
+      <span class="quote-btn-icon" aria-hidden="true">$</span>
+      <span class="quote-btn-label">Cotizar</span>
+    </a>
+    <button class="menu-toggle mag" id="menuToggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="menuPanel"><span></span><span></span></button>
+    <button class="fullscreen-toggle mag" id="fullscreenToggle" aria-label="Activar pantalla completa" title="Pantalla completa">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/></svg>
     </button>
-  </header>
-
-  <div class="lp-menu" id="lpMenuPanel" hidden>
-    <nav class="lp-menu__panel" aria-label="Secciones">
-      <a href="#servicio" data-lp-nav>Servicio</a>
-      <button type="button" class="lp-menu__action" id="lpPricesOpen" data-lp-prices>Precios</button>
-      <a href="#demos" data-lp-nav>Demos</a>
-      <button type="button" class="lp-menu__action" id="lpContactOpen" data-lp-contact>Contacto</button>
-      <a href="/login?v=ws5936">Login</a>
-    </nav>
   </div>
-  <div class="lp-menu__backdrop" id="lpMenuBackdrop" hidden></div>
-
-  <!-- Precios modal (not in scroll narrative) -->
-  <div class="lp-modal" id="lpPricesModal" hidden aria-hidden="true">
-    <div class="lp-modal__backdrop" data-lp-prices-close></div>
-    <div class="lp-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="lpPricesTitle">
-      <button type="button" class="lp-modal__close" data-lp-prices-close aria-label="Cerrar">×</button>
-      <p class="lp-kicker" id="lpPricesTitle">Precios</p>
-      <h2 class="lp-modal__title">Planes</h2>
-      <div class="lp-pricing">
-        <article class="lp-plan">
-          <h3 class="lp-plan__name">Starter</h3>
-          <p class="lp-plan__price">—</p>
-          <p class="lp-plan__note">Placeholder</p>
-        </article>
-        <article class="lp-plan lp-plan--featured">
-          <h3 class="lp-plan__name">Professional</h3>
-          <p class="lp-plan__price">—</p>
-          <p class="lp-plan__note">Placeholder</p>
-        </article>
-        <article class="lp-plan">
-          <h3 class="lp-plan__name">Enterprise</h3>
-          <p class="lp-plan__price">—</p>
-          <p class="lp-plan__note">Placeholder</p>
-        </article>
+</header>
+<div class="menu-overlay" id="menuOverlay"></div>
+<nav class="menu-panel" id="menuPanel">
+  <div class="menu-caption">360PREVENTA / NAVEGACIÓN</div>
+  <a href="#servicio">Servicio <span>01</span></a>
+  <a href="/cotizador/index.html?modo=publico">Cotizar <span>02</span></a>
+  <a href="#contacto">Contacto <span>03</span></a>
+  <a href="#demo">Demo <span>04</span></a>
+  <a href="/panel_gestion/">Iniciar sesión <span>05</span></a>
+</nav>
+<main>
+<section class="intro" id="inicio">
+  <div class="intro-content">
+    <img class="intro-logo" src="/landing/assets/logo.png" alt="Logo 360Preventa">
+    <h1>360PREVENTA</h1>
+    <div class="intro-subtitle">Real estate experience</div>
+  </div>
+  <div class="scroll-hint">Desliza para descubrir</div>
+</section>
+<section class="experience" id="servicio">
+  <div class="experience-sticky">
+    <div class="progress" id="progress"><span class="active"></span><span></span><span></span><span></span><span></span></div>
+    <div class="sequence">
+      <article class="message"><div class="message-number">01 / EL POTENCIAL</div><h2>El valor de un inmueble está en lo que puede llegar a ser.</h2><p>Apartamentos, estudios, colivings y edificios con potencial por desarrollar.</p><div class="message-line"></div></article>
+      <article class="message"><div class="message-number">02 / LA PERCEPCIÓN</div><h2>El potencial no siempre se entiende.</h2><p>Mientras el proyecto no esté terminado, compradores, socios e inversionistas tienen que imaginar el resultado.</p><div class="message-line"></div></article>
+      <article class="message"><div class="message-number">03 / EL SHOWROOM</div><h2>Un showroom virtual anticipa el resultado.</h2><p>El inmueble terminado, diseñado y amoblado, representado antes de ejecutarlo.</p><div class="message-line"></div></article>
+      <article class="message"><div class="message-number">04 / EL ACCESO</div><h2>Todo el proyecto en un solo enlace.</h2><p>Cada espacio se explora desde cualquier dispositivo y se comparte por WhatsApp, redes o correo.</p><div class="message-line"></div></article>
+      <article class="message"><div class="message-number">05 / LA EVALUACIÓN</div><h2>Evaluar antes de que se haga realidad.</h2><p>Quien debe decidir puede explorar el proyecto a su ritmo, sin una presentación presencial ni esperar hasta la entrega final.</p><div class="message-line"></div></article>
+    </div>
+    <div class="experience-label">360PREVENTA — UNA NUEVA FORMA DE PRESENTAR</div>
+  </div>
+</section>
+<section class="final" id="demo">
+  <div class="final-bg"></div>
+  <div class="final-content">
+    <div class="final-copy">
+      <div class="final-eyebrow">EXPLORA LA EXPERIENCIA</div>
+      <h2>Una nueva forma de experimentar un inmueble.</h2>
+      <p class="final-description">Selecciona un showroom y descubre cómo funciona.</p>
+      <div class="final-actions">
+        <a class="final-quote mag" href="/cotizador/index.html?modo=publico">COTIZAR MI SHOWROOM <span aria-hidden="true">$</span></a>
+        <a class="final-contact mag" id="contacto" href="https://wa.me/57XXXXXXXXXX" target="_blank" rel="noopener">HABLAR SOBRE MI PROYECTO <span aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+    <div class="showroom-side">
+      <div class="showrooms" id="demos">
+        <!-- Sustituye cada URL por la dirección real de tu showroom -->
+        <a class="showroom" href="DEMO_EXTERIORES_URL" aria-label="Explorar showroom de apartamento">
+          <span class="showroom-index">01</span><strong>APARTAMENTO</strong><span class="showroom-arrow" aria-hidden="true">↗</span>
+        </a>
+        <a class="showroom" href="DEMO_INTERIORES_URL" aria-label="Explorar showroom de estudio">
+          <span class="showroom-index">02</span><strong>ESTUDIO</strong><span class="showroom-arrow" aria-hidden="true">↗</span>
+        </a>
+        <a class="showroom" href="DEMO_COMPLETO_URL" aria-label="Explorar showroom de coliving">
+          <span class="showroom-index">03</span><strong>COLIVING</strong><span class="showroom-arrow" aria-hidden="true">↗</span>
+        </a>
       </div>
     </div>
   </div>
-
-  <main class="lp-story">
-    <section class="lp-hero lp-scene" id="inicio" data-lp-light="hero" aria-label="360Preventa">
-      <div class="lp-hero__inner lp-scene__content">
-        <div class="lp-hero__mark" data-lp-stage="1">
-          <img
-            class="lp-hero__logo"
-            src="/assets/brand/360preventa-mark.png"
-            width="168"
-            height="192"
-            alt="360Preventa"
-          >
-        </div>
-        <h1 class="lp-hero__headline" data-lp-stage="2">Showroom Digital 360°</h1>
-        <p class="lp-hero__sub" data-lp-stage="3">para preventa inmobiliaria.</p>
-      </div>
-      <div class="lp-hero__scroll" aria-hidden="true"></div>
-    </section>
-
-    <section class="lp-section lp-chapter lp-scene" id="mensaje" data-lp-light="mensaje">
-      <div class="lp-section__inner lp-scene__content">
-        <p class="lp-statement lp-statement--solo" data-lp-stage="1">
-          Plataforma diseñada para constructoras que buscan una experiencia de preventa moderna, inmersiva y fácil de compartir.
-        </p>
-      </div>
-    </section>
-
-    <section class="lp-section lp-chapter lp-scene" id="servicio" data-lp-light="servicio">
-      <div class="lp-section__inner lp-scene__content">
-        <p class="lp-kicker" data-lp-stage="1">Servicio</p>
-        <p class="lp-statement" data-lp-stage="2">
-          360Preventa permite administrar proyectos inmobiliarios y publicarlos como experiencias web listas para compartir.
-        </p>
-        <ul class="lp-features" data-lp-stage="3">
-          <li class="lp-feature">
-            <span class="lp-feature__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8"/><path d="M12 18v2"/></svg>
-            </span>
-            <div class="lp-feature__copy">
-              <h3 class="lp-feature__title">Experiencias Web</h3>
-              <p class="lp-feature__desc">Publica un proyecto listo para compartir.</p>
-            </div>
-          </li>
-          <li class="lp-feature">
-            <span class="lp-feature__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18"/><path d="M12 3a14 14 0 0 0 0 18"/></svg>
-            </span>
-            <div class="lp-feature__copy">
-              <h3 class="lp-feature__title">Tours 360</h3>
-              <p class="lp-feature__desc">Recorridos inmersivos desde cualquier dispositivo.</p>
-            </div>
-          </li>
-          <li class="lp-feature">
-            <span class="lp-feature__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/></svg>
-            </span>
-            <div class="lp-feature__copy">
-              <h3 class="lp-feature__title">Administración</h3>
-              <p class="lp-feature__desc">Gestiona el contenido desde un solo lugar.</p>
-            </div>
-          </li>
-          <li class="lp-feature">
-            <span class="lp-feature__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 19h14"/></svg>
-            </span>
-            <div class="lp-feature__copy">
-              <h3 class="lp-feature__title">Publicación</h3>
-              <p class="lp-feature__desc">Actualiza y publica cambios sin depender del desarrollador.</p>
-            </div>
-          </li>
-        </ul>
-      </div>
-    </section>
-
-    <section class="lp-section lp-chapter lp-scene" id="demos" data-lp-light="demos">
-      <div class="lp-section__inner lp-section__inner--wide lp-scene__content">
-        <p class="lp-kicker" data-lp-stage="1">Demos</p>
-        <h2 class="lp-section__title lp-section__title--demos" data-lp-stage="2">Showrooms públicos</h2>
-        <p class="lp-section__lede" data-lp-stage="2">
-          Explora una selección de showrooms interactivos creados con 360Preventa.
-        </p>
-        <div class="lp-projects" id="lpProjects" data-lp-stage="3" aria-live="polite">
-          <p class="lp-projects__loading">Cargando…</p>
-        </div>
-      </div>
-    </section>
-
-    <footer class="lp-footer lp-scene" data-lp-light="footer">
-      <div class="lp-footer__inner lp-scene__content" data-lp-stage="1">
-        <span class="lp-footer__brand">360Preventa</span>
-        <span class="lp-footer__copy">© <span id="lpYear"></span></span>
-      </div>
-    </footer>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="/js/shared/config.js"></script>
-  <script src="/js/shared/showroom-public-url.js?v=ws50"></script>
-  <script src="/js/platform/product-assistant.js?v=2"></script>
-  <script src="/landing/js/landing.js?v=ws56"></script>
+  <div class="final-footer"><span>360PREVENTA © 2026</span></div>
+</section>
+<div class="demo-page" id="demoPage" aria-hidden="true">
+  <div class="demo-page-inner">
+    <div class="demo-page-eyebrow">360PREVENTA · SHOWROOM VIRTUAL</div>
+    <h1 id="demoPageTitle">APARTAMENTO</h1>
+  </div>
+  <div class="demo-page-actions">
+    <button class="demo-back" id="demoBack" type="button" aria-label="Volver a los demos" title="Volver a los demos">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+    <a class="demo-explore" id="demoExplore" href="#" target="_blank" rel="noopener">EXPLORAR <span aria-hidden="true">↗</span></a>
+  </div>
+</div>
+</main>
+<script src="/landing/js/landing.js"></script>
 </body>
 </html>

@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>360Preventa — Cotizador</title>
+  <style>
+    :root { --bg:#0b0b0b; --ink:#f1eee8; --muted:#b2a797; --line:#40382d; --gold:#c5a675; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100svh; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,sans-serif; display:grid; place-items:center; padding:24px; }
+    .card { width:min(520px,100%); border:1px solid var(--line); padding:28px; background:#151515; }
+    h1 { font:28px Georgia,serif; font-weight:400; margin:0 0 8px; }
+    p { color:var(--muted); margin:0 0 18px; }
+    .meta { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold); margin-bottom:14px; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; }
+    a,button { appearance:none; border:1px solid var(--line); background:transparent; color:inherit; padding:10px 14px; font:11px/1 system-ui,sans-serif; letter-spacing:.08em; text-transform:uppercase; text-decoration:none; cursor:pointer; }
+    a.primary,button.primary { background:var(--gold); color:#111; border-color:var(--gold); }
+    .solo-interno { display:none; }
+    body.modo-interno .solo-interno { display:flex; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="meta" id="modoLabel">Cotizador</div>
+    <h1>Cotizador único</h1>
+    <p>Aquí vivirá el cotizador despiezado. Misma fuente para panel y landing; el modo solo cambia accesos y comisión.</p>
+    <div class="actions">
+      <a class="solo-interno" id="btnVolverPanel" href="../panel_gestion/index.html">Volver al panel</a>
+      <a class="solo-interno" id="btnComision" href="#comision">Ver comisión</a>
+      <a href="../landing/index.html">Ir a landing</a>
+    </div>
+  </main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const modo = (params.get('modo') || 'publico').toLowerCase() === 'interno' ? 'interno' : 'publico';
+    document.body.classList.add('modo-' + modo);
+    document.getElementById('modoLabel').textContent = modo === 'interno'
+      ? 'Modo interno · Panel de gestión'
+      : 'Modo público · Landing';
+  </script>
+</body>
+</html>
