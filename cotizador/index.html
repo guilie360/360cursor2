@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/panel_gestion/css/base.css">
 <link rel="stylesheet" href="/panel_gestion/css/patches.css">
-<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=7">
+<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=8">
 </head>
 <body data-app="cotizador" class="cotizador-app">
 <!-- Solo modo interno: flecha volver abajo-izquierda (estilo panel) -->
@@ -249,6 +249,22 @@
     </div>
     <div class="field"><label for="otherName">Nombre del otro espacio (si aplica)</label><input id="otherName" type="text" placeholder="Ej. sala de juegos"></div>
     <div class="note">En co-living, introduce el número de dormitorios adicionales al principal. El dormitorio principal cuesta 250 € y cada dormitorio adicional 140 €. No existe un límite comercial predeterminado para la cantidad.</div>
+    <div class="actions"><button class="btn primary" data-next="step6">Continuar</button></div>
+   </div>
+  </details>
+  <details class="step clean-similar-accordion manual-clean-similar" id="step6">
+   <summary><div class="step-title"><span class="step-num">05</span><b>Añadir otro showroom similar</b></div><span class="clean-discount">−50 %</span></summary>
+   <div class="step-content multi-property-body clean-similar-body">
+    <p class="accordion-intro">Si tienes otras tipologías de inmueble en el mismo edificio, agrégalas aquí.</p>
+    <label class="choice clean-similar-toggle"><input type="checkbox" id="addSimilar"><span><b>Incluir segundo showroom</b></span></label>
+    <div id="similarFields" class="similar-fields-grid hidden" aria-hidden="true">
+     <div class="field similar-type-field"><label for="similarType">Tipo de inmueble del segundo showroom</label><select id="similarType" class="similar-property-type"><option value="Apartamento">Apartamento</option><option value="Apartestudio">Apartestudio</option><option value="Co-living">Co-living</option></select></div>
+     <div class="field"><label for="similarArea">Superficie del segundo inmueble (m²)</label><input id="similarArea" type="number" min="1" step="1" value="100"></div>
+     <div class="field"><label for="similarFloors">Plantas 3D adicionales</label><input id="similarFloors" type="number" min="0" max="30" step="1" value="0"></div>
+     <div class="similar-info-card"><b>1 planta 3D incluida</b><small>Incluida para el segundo showroom. Si necesitas más, puedes añadir plantas adicionales.</small></div>
+     <div class="similar-info-card"><b>Recursos compartidos</b><small>Los recursos adicionales contratados se aplican a ambos inmuebles, sin coste extra.</small></div>
+    </div>
+    <div class="similar-price-summary" id="manualSimilarSummary" hidden aria-hidden="true"><span>Segundo showroom · 50 % de descuento · 1 planta 3D incluida · recursos compartidos</span><strong id="manualSimilarPrice">0 €</strong></div>
     <div class="actions"><button class="btn primary" data-next="step5">Continuar</button></div>
    </div>
   </details>
@@ -293,22 +309,6 @@
   <div class="actions"><button class="btn primary" data-next="step7">Continuar</button></div>
  </div>
 </details>
-  <details class="step clean-similar-accordion manual-clean-similar" id="step6">
-   <summary><div class="step-title"><span class="step-num">07</span><b>Añadir otro showroom similar</b></div><span class="clean-discount">−50 %</span></summary>
-   <div class="step-content multi-property-body clean-similar-body">
-    <p class="accordion-intro">Si tienes otras tipologías de inmueble en el mismo edificio, agrégalas aquí.</p>
-    <label class="choice clean-similar-toggle"><input type="checkbox" id="addSimilar"><span><b>Incluir segundo showroom</b></span></label>
-    <div id="similarFields" class="similar-fields-grid hidden" aria-hidden="true">
-     <div class="field similar-type-field"><label for="similarType">Tipo de inmueble del segundo showroom</label><select id="similarType" class="similar-property-type"><option value="Apartamento">Apartamento</option><option value="Apartestudio">Apartestudio</option><option value="Co-living">Co-living</option></select></div>
-     <div class="field"><label for="similarArea">Superficie del segundo inmueble (m²)</label><input id="similarArea" type="number" min="1" step="1" value="100"></div>
-     <div class="field"><label for="similarFloors">Plantas 3D adicionales</label><input id="similarFloors" type="number" min="0" max="30" step="1" value="0"></div>
-     <div class="similar-info-card"><b>1 planta 3D incluida</b><small>Incluida para el segundo showroom. Si necesitas más, puedes añadir plantas adicionales.</small></div>
-     <div class="similar-info-card"><b>Recursos compartidos</b><small>Los recursos adicionales contratados se aplican a ambos inmuebles, sin coste extra.</small></div>
-    </div>
-    <div class="similar-price-summary" id="manualSimilarSummary" hidden aria-hidden="true"><span>Segundo showroom · 50 % de descuento · 1 planta 3D incluida · recursos compartidos</span><strong id="manualSimilarPrice">0 €</strong></div>
-    <div class="actions"><button class="btn primary" data-next="step5">Continuar</button></div>
-   </div>
-  </details>
   <details class="step" id="step7">
    <summary><div class="step-title"><span class="step-num">07</span><b>Presupuesto final</b></div><span class="step-meta" id="totalMeta">Desglose actualizado</span></summary>
    <div class="step-content">
@@ -440,7 +440,7 @@
 <input id="loginPassword" class="portal-hidden" hidden>
 <div id="loginError" class="portal-hidden" hidden></div>
 
-<script src="/panel_gestion/js/app.js?v=cotizar-scroll-1"></script>
+<script src="/panel_gestion/js/app.js?v=cotizar-scroll-2"></script>
 <script src="/panel_gestion/js/visual-layer.js"></script>
 <script src="/panel_gestion/js/lightbox.js"></script>
 <script src="/panel_gestion/js/path-chooser-flip.js"></script>

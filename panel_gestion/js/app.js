@@ -80,25 +80,36 @@ function updateKeepingScroll(){const y=window.scrollY;update();requestAnimationF
 const fromManual=e=>!!(e.target&&e.target.closest&&e.target.closest('#manualConfigurator'));
 document.addEventListener('click',e=>{const btn=e.target.closest('#manualFloorsMinus,#manualFloorsPlus');if(!btn)return;const input=$('floors');if(!input)return;const current=Math.max(0,Math.floor(Number(input.value)||0));input.value=String(Math.max(0,Math.min(30,current+(btn.id==='manualFloorsPlus'?1:-1))));input.dispatchEvent(new Event('input',{bubbles:true}));});
 document.addEventListener('input',e=>{if(fromManual(e))updateKeepingScroll();});document.addEventListener('change',e=>{if(fromManual(e))updateKeepingScroll();});
+function quoteStepList(fromEl){
+ const root=fromEl?.closest('#manualConfigurator, #packageDetails');
+ if(!root)return[];
+ return[...root.querySelectorAll('details.step, details.package-accordion')];
+}
 function revealNextStep(next,current){
  if(!next)return;
- if(current)current.open=false;
+ const steps=quoteStepList(current||next);
+ steps.forEach(d=>{if(d!==next)d.open=false;});
  next.open=true;
+ const anchor=current&&steps.includes(current)?current:next;
  const align=()=>{
   const bar=document.querySelector('.topbar');
-  const offset=(bar?bar.getBoundingClientRect().height:0)+12;
-  const top=next.getBoundingClientRect().top+window.scrollY-offset;
+  const offset=(bar?bar.getBoundingClientRect().height:0)+8;
+  const top=anchor.getBoundingClientRect().top+window.scrollY-offset;
   window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
  };
  requestAnimationFrame(()=>{
   requestAnimationFrame(()=>{
    align();
-   setTimeout(align,140);
+   setTimeout(align,200);
   });
  });
 }
-document.querySelectorAll('[data-next]').forEach(b=>b.addEventListener('click',()=>{
- revealNextStep($(b.dataset.next),b.closest('details'));
+document.querySelectorAll('#manualConfigurator [data-next]').forEach(b=>b.addEventListener('click',()=>{
+ const current=b.closest('details.step');
+ const steps=quoteStepList(current);
+ const idx=steps.indexOf(current);
+ const next=idx>=0?steps[idx+1]:$(b.dataset.next);
+ revealNextStep(next,current);
 }));
 $('addSimilar').addEventListener('change',update);
 $('confirmOpen').addEventListener('click',showManualPackageOffer);
@@ -805,8 +816,11 @@ document.addEventListener('click',function(e){
  const button=e.target.closest('#packageDetails [data-package-next]');
  if(!button)return;
  const current=button.closest('details.package-accordion');
- const next=document.getElementById(button.dataset.packageNext);
- if(!current||!next||!$('packageDetails').contains(next))return;
+ if(!current||!$('packageDetails')?.contains(current))return;
+ const steps=quoteStepList(current);
+ const idx=steps.indexOf(current);
+ const next=idx>=0?steps[idx+1]:document.getElementById(button.dataset.packageNext);
+ if(!next)return;
  revealNextStep(next,current);
 });
 
