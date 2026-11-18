@@ -11,33 +11,61 @@ body.cotizador-app #paymentsGateBackdrop,
 body.cotizador-app #globalFullscreenBtn{
   display:none!important;
 }
-body.cotizador-app .portal-back{
-  display:none!important; /* la navegación pública usa historial / home */
-}
-body.cotizador-app.modo-interno .portal-back{
+
+/* Público: sin flecha de panel ni comisión */
+body.cotizador-app.modo-publico .portal-back,
+body.cotizador-app.modo-publico .interno-commission-btn,
+body.cotizador-app.modo-publico .interno-commission-card{
   display:none!important;
 }
 
-.interno-bar{
-  position:sticky;top:0;z-index:40;
-  display:none;
-  align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-  padding:10px 18px;border-bottom:1px solid #40382d;background:#0b0b0bf2;backdrop-filter:blur(10px);
-  font:11px/1.2 Manrope,Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;
+/* Interno: misma flecha del panel (abajo izquierda) */
+body.cotizador-app.modo-interno .portal-back{
+  display:flex!important;
 }
-/* Solo modo equipo */
-body.cotizador-app.modo-interno .interno-bar{
+body.cotizador-app.modo-interno .portal-back.portal-hidden{
+  /* forzar visible en cotizador interno aunque el motor lo marque hidden */
+  display:flex!important;
+}
+
+/* Botón comisión — abajo derecha, estilo pill/tarjeta */
+.interno-commission-btn{
+  position:fixed;right:22px;bottom:20px;z-index:100;
+  display:none;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;
+  min-width:132px;padding:11px 14px;border:1px solid rgba(205,178,138,.62);border-radius:14px;
+  background:linear-gradient(145deg,rgba(34,32,29,.97),rgba(15,15,15,.97));
+  color:#f1eee8;cursor:pointer;text-align:left;
+  box-shadow:0 10px 28px -10px rgba(0,0,0,.95);
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+body.cotizador-app.modo-interno .interno-commission-btn{
   display:flex;
 }
-body.cotizador-app.modo-publico .interno-bar,
-.interno-bar[hidden]{
-  display:none!important;
+body.cotizador-app.modo-interno .interno-commission-btn.portal-hidden{
+  display:flex!important;
 }
-.interno-bar a{color:#e2c898;text-decoration:none;border:1px solid #40382d;padding:8px 12px}
-.interno-bar a:hover{border-color:#c5a675}
-.interno-meta{color:#b2a797}
-.interno-commission{color:#b2a797}
-.interno-commission strong{color:#e2c898;font-weight:600;margin-left:6px}
+.interno-commission-btn small{
+  font:8px/1 Manrope,Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#cdb28a;font-weight:700;
+}
+.interno-commission-btn strong{
+  font:20px/1 Italiana,Georgia,serif;font-weight:400;color:#e7d3b5;
+}
+.interno-commission-btn:hover{
+  transform:translateY(-2px);border-color:rgba(231,211,181,.9);
+  box-shadow:0 16px 32px -12px rgba(0,0,0,.95);
+}
+
+/* Mini popup comisión — mismo lenguaje visual que manual-upsell */
+.interno-commission-card{
+  right:22px;bottom:84px;z-index:110;
+  width:min(310px,calc(100vw - 32px));
+}
+.interno-commission-hint{
+  display:block;margin-top:4px;font-size:11px;line-height:1.45;color:#a7a198;
+}
+body.cotizador-app.modo-interno .interno-commission-card:not(.hidden){
+  display:flex;
+}
 
 /* Público: ocultar acciones solo de equipo en el modal final */
 body.cotizador-app.modo-publico #quoteToProject,
@@ -47,7 +75,12 @@ body.cotizador-app.modo-publico #shareFormats{
 
 body.cotizador-app main{
   padding-top:12px;
+  padding-bottom:96px;
 }
-body.cotizador-app.modo-interno{
-  padding-top:0;
+
+@media(max-width:600px){
+  .interno-commission-btn{right:12px;bottom:12px;min-width:118px;padding:10px 12px}
+  .interno-commission-btn strong{font-size:18px}
+  .interno-commission-card{right:12px;bottom:76px}
+  body.cotizador-app.modo-interno .portal-back{left:12px;bottom:12px}
 }

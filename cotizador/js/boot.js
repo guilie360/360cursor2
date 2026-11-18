@@ -7,14 +7,6 @@
   document.body.classList.add('modo-' + modo);
   document.body.classList.remove('portal-mode');
 
-  var bar = document.getElementById('internoBar');
-  if (bar) {
-    var showTeam = modo === 'interno';
-    bar.hidden = !showTeam;
-    bar.toggleAttribute('hidden', !showTeam);
-    bar.style.display = showTeam ? '' : 'none';
-  }
-
   function startQuote() {
     try {
       if (typeof openEmbeddedQuote === 'function') {
@@ -36,24 +28,82 @@
     window.scrollTo(0, 0);
   }
 
-  // Volver: público → web; interno → panel
   var back = document.getElementById('portalBack');
-  if (back) {
+  var commissionBtn = document.getElementById('internoCommissionBtn');
+  var commissionCard = document.getElementById('internoCommissionCard');
+  var commissionClose = document.getElementById('internoCommissionClose');
+  var commissionLabel = document.getElementById('internoCommission');
+  var commissionCardValue = document.getElementById('internoCommissionCardValue');
+  var live = document.getElementById('hunterLiveCommission');
+
+  if (modo === 'interno') {
+    if (back) {
+      back.classList.remove('portal-hidden');
+      back.setAttribute('aria-label', 'Volver al panel');
+      back.title = 'Volver al panel';
+      back.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        location.href = '/panel_gestion/';
+      };
+    }
+    if (commissionBtn) commissionBtn.classList.remove('portal-hidden');
+  } else if (back) {
+    back.classList.add('portal-hidden');
     back.onclick = function (e) {
       e.preventDefault();
-      if (modo === 'interno') location.href = '/panel_gestion/';
-      else location.href = '/';
+      location.href = '/';
     };
   }
 
-  // Espejo de comisión estimada en la barra interna
-  var live = document.getElementById('hunterLiveCommission');
-  var mirror = document.getElementById('internoCommission');
-  if (live && mirror && typeof MutationObserver !== 'undefined') {
-    var sync = function () { mirror.textContent = live.textContent || '0 €'; };
-    sync();
-    new MutationObserver(sync).observe(live, { childList: true, characterData: true, subtree: true });
+  function syncCommission() {
+    var text = (live && live.textContent) ? live.textContent.trim() : '0 €';
+    if (!text) text = '0 €';
+    if (commissionLabel) commissionLabel.textContent = text;
+    if (commissionCardValue) {
+      commissionCardValue.innerHTML = text + ' <small>por este presupuesto</small>';
+    }
+  }
+
+  if (live && typeof MutationObserver !== 'undefined') {
+    syncCommission();
+    new MutationObserver(syncCommission).observe(live, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+  } else {
+    syncCommission();
+    setInterval(syncCommission, 800);
+  }
+
+  function openCommissionCard() {
+    if (!commissionCard) return;
+    commissionCard.classList.remove('hidden');
+    if (commissionBtn) commissionBtn.setAttribute('aria-expanded', 'true');
+    syncCommission();
+  }
+  function closeCommissionCard() {
+    if (!commissionCard) return;
+    commissionCard.classList.add('hidden');
+    if (commissionBtn) commissionBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  if (modo === 'interno' && commissionBtn && commissionCard) {
+    commissionBtn.addEventListener('click', function () {
+      if (commissionCard.classList.contains('hidden')) openCommissionCard();
+      else closeCommissionCard();
+    });
+    if (commissionClose) commissionClose.addEventListener('click', closeCommissionCard);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeCommissionCard();
+    });
   }
 
   startQuote();
+  // Tras abrir el motor, reafirmar controles internos (openEmbeddedQuote puede ocultar portalBack).
+  if (modo === 'interno' && back) {
+    back.classList.remove('portal-hidden');
+  }
+  syncCommission();
 })();
