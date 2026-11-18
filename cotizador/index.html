@@ -10,17 +10,32 @@
 <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/panel_gestion/css/base.css">
 <link rel="stylesheet" href="/panel_gestion/css/patches.css">
-<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=2">
+<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=3">
 </head>
 <body data-app="cotizador" class="cotizador-app">
-<!-- Footer solo modo interno: flecha volver (estilo panel) + comisión en vivo -->
+<!-- Solo modo interno: flecha volver abajo-izquierda (estilo panel) -->
 <button class="portal-back portal-hidden" id="portalBack" type="button" aria-label="Volver al panel" title="Volver al panel">
  <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
 </button>
-<button class="interno-commission-btn portal-hidden" id="internoCommissionBtn" type="button" aria-expanded="false" aria-controls="internoCommissionCard">
+
+<header class="topbar"><div class="topinner">
+ <div class="brand">
+  <img class="brand-logo" alt="Logo 360Preventa" src="/panel_gestion/assets/logo.png">
+  <span class="brand-copy">360Preventa<small>Configurador de showroom</small></span>
+ </div>
+ <div class="topright">
+ <div class="pricebox"><span>Presupuesto estimado</span><strong id="stickyPrice">0 €</strong></div>
+ <button class="interno-commission-btn portal-hidden" id="internoCommissionBtn" type="button" aria-expanded="false" aria-controls="internoCommissionCard">
   <small>Comisión</small>
   <strong id="internoCommission">0 €</strong>
-</button>
+ </button>
+ <button class="btn reset-header" id="headerReset" type="button" aria-label="Reiniciar configuración" title="Reiniciar configuración">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8.3"/><path d="M3 3v5.3h5.3"/></svg>
+ </button>
+ <button class="btn" id="fullscreenBtn" type="button">Pantalla completa</button>
+</div>
+
+</div></header>
 <aside class="manual-upsell interno-commission-card hidden" id="internoCommissionCard" aria-label="Comisión estimada del proyecto">
   <div class="manual-upsell-copy">
     <span class="manual-upsell-kicker">MODO EQUIPO · HUNTER</span>
@@ -31,21 +46,6 @@
   <a class="manual-upsell-link" href="/panel_gestion/?abrir=hunter">Abrir Hunter <span aria-hidden="true">→</span></a>
   <button type="button" class="manual-upsell-close" id="internoCommissionClose" aria-label="Cerrar">×</button>
 </aside>
-
-<header class="topbar"><div class="topinner">
- <div class="brand">
-  <img class="brand-logo" alt="Logo 360Preventa" src="/panel_gestion/assets/logo.png">
-  <span class="brand-copy">360Preventa<small>Configurador de showroom</small></span>
- </div>
- <div class="topright">
- <div class="pricebox"><span>Presupuesto estimado</span><strong id="stickyPrice">0 €</strong></div>
- <button class="btn reset-header" id="headerReset" type="button" aria-label="Reiniciar configuración" title="Reiniciar configuración">
-  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8.3"/><path d="M3 3v5.3h5.3"/></svg>
- </button>
- <button class="btn" id="fullscreenBtn" type="button">Pantalla completa</button>
-</div>
-
-</div></header>
 <main>
  <h1>Elige tu configuración</h1>
  <p class="intro chooser-intro">Showroom interactivo inmobiliario</p>
@@ -447,6 +447,6 @@
 <script src="/panel_gestion/js/path-chooser-flip.js"></script>
 <script src="/panel_gestion/js/accordion-tones.js"></script>
 <script src="/panel_gestion/js/path-chooser-actions.js"></script>
-<script src="/cotizador/js/boot.js?v=2"></script>
+<script src="/cotizador/js/boot.js?v=3"></script>
 </body>
 </html>

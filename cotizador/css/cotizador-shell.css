@@ -19,28 +19,23 @@ body.cotizador-app.modo-publico .interno-commission-card{
   display:none!important;
 }
 
-/* Interno: misma flecha del panel (abajo izquierda) */
-body.cotizador-app.modo-interno .portal-back{
-  display:flex!important;
-}
+/* Interno: flecha del panel abajo izquierda */
+body.cotizador-app.modo-interno .portal-back,
 body.cotizador-app.modo-interno .portal-back.portal-hidden{
-  /* forzar visible en cotizador interno aunque el motor lo marque hidden */
   display:flex!important;
 }
 
-/* Botón comisión — abajo derecha, estilo pill/tarjeta */
+/* Comisión en el header, junto al presupuesto (no abajo) */
 .interno-commission-btn{
-  position:fixed;right:22px;bottom:20px;z-index:100;
-  display:none;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;
-  min-width:132px;padding:11px 14px;border:1px solid rgba(205,178,138,.62);border-radius:14px;
-  background:linear-gradient(145deg,rgba(34,32,29,.97),rgba(15,15,15,.97));
-  color:#f1eee8;cursor:pointer;text-align:left;
-  box-shadow:0 10px 28px -10px rgba(0,0,0,.95);
-  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+  position:relative;right:auto;bottom:auto;z-index:5;
+  display:none;flex-direction:column;align-items:flex-end;justify-content:center;gap:2px;
+  min-width:0;padding:6px 12px;border:1px solid rgba(205,178,138,.45);border-radius:12px;
+  background:rgba(20,18,16,.92);
+  color:#f1eee8;cursor:pointer;text-align:right;
+  box-shadow:none;
+  transition:border-color .18s ease,background .18s ease,transform .18s ease;
 }
-body.cotizador-app.modo-interno .interno-commission-btn{
-  display:flex;
-}
+body.cotizador-app.modo-interno .interno-commission-btn,
 body.cotizador-app.modo-interno .interno-commission-btn.portal-hidden{
   display:flex!important;
 }
@@ -48,16 +43,22 @@ body.cotizador-app.modo-interno .interno-commission-btn.portal-hidden{
   font:8px/1 Manrope,Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#cdb28a;font-weight:700;
 }
 .interno-commission-btn strong{
-  font:20px/1 Italiana,Georgia,serif;font-weight:400;color:#e7d3b5;
+  font:22px/1 Italiana,Georgia,serif;font-weight:400;color:#e7d3b5;
 }
 .interno-commission-btn:hover{
-  transform:translateY(-2px);border-color:rgba(231,211,181,.9);
-  box-shadow:0 16px 32px -12px rgba(0,0,0,.95);
+  transform:translateY(-1px);border-color:rgba(231,211,181,.9);
+  background:rgba(32,28,24,.96);
+}
+body.cotizador-app.modo-interno .topright{
+  align-items:center;gap:12px;
+}
+body.cotizador-app.modo-interno .pricebox{
+  padding-right:4px;
 }
 
-/* Mini popup comisión — mismo lenguaje visual que manual-upsell */
+/* Mini popup comisión anclado arriba-derecha, bajo el header */
 .interno-commission-card{
-  right:22px;bottom:84px;z-index:110;
+  position:fixed;top:72px;right:22px;bottom:auto;left:auto;z-index:120;
   width:min(310px,calc(100vw - 32px));
 }
 .interno-commission-hint{
@@ -78,9 +79,10 @@ body.cotizador-app main{
   padding-bottom:96px;
 }
 
-@media(max-width:600px){
-  .interno-commission-btn{right:12px;bottom:12px;min-width:118px;padding:10px 12px}
+@media(max-width:760px){
+  body.cotizador-app.modo-interno .topright{gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .interno-commission-btn{padding:5px 10px}
   .interno-commission-btn strong{font-size:18px}
-  .interno-commission-card{right:12px;bottom:76px}
+  .interno-commission-card{top:auto;bottom:84px;right:12px}
   body.cotizador-app.modo-interno .portal-back{left:12px;bottom:12px}
 }
