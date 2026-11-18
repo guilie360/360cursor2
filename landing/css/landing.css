@@ -12,19 +12,27 @@ button{font:inherit}
 .header-logo img{width:100%;height:100%;object-fit:contain}
 .header-actions{display:flex;align-items:center;gap:9px;pointer-events:auto}
 .mag{transition:transform .35s var(--ease)}
-.quote-btn{
-  display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px 0 8px;
-  border:1px solid rgba(197,166,117,.55);border-radius:999px;
-  background:linear-gradient(180deg,rgba(197,166,117,.22),rgba(197,166,117,.08));
-  color:#e2c898;text-decoration:none;cursor:pointer;
-  box-shadow:0 0 0 1px rgba(197,166,117,.08),0 8px 24px rgba(0,0,0,.28);
-  transition:color .2s,border-color .2s,background .2s,box-shadow .25s,transform .35s var(--ease)
+/* Cotizar: flotante abajo-derecha, sin competir con el menú */
+.quote-float{
+  position:fixed;z-index:45;right:max(22px,4vw);bottom:max(22px,3.5vh);
+  display:inline-flex;align-items:center;gap:14px;
+  padding:0;border:0;background:transparent;color:var(--white);
+  text-decoration:none;cursor:pointer;pointer-events:auto;
+  transition:opacity .35s var(--ease),transform .35s var(--ease),color .25s;
 }
-.quote-btn-icon{
-  width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
-  background:#c5a675;color:#111;font:700 13px/1 'DM Sans',Arial,sans-serif
+.quote-float-label{
+  font:400 11px/1 var(--sans);letter-spacing:.22em;text-transform:uppercase;color:rgba(214,210,204,.88);
+  transition:color .25s;
 }
-.quote-btn-label{font:500 10px/1 'DM Sans',Arial,sans-serif;letter-spacing:.16em;text-transform:uppercase}
+.quote-float-mark{
+  width:36px;height:1px;background:var(--bronze);
+  transform-origin:right center;transition:transform .45s var(--ease),background .25s;
+}
+body:has(.menu-panel.open) .quote-float,
+body.demo-open .quote-float,
+body:has(.page-transit.on) .quote-float{
+  opacity:0;visibility:hidden;pointer-events:none;
+}
 .fullscreen-toggle{width:34px;height:34px;border:0;background:transparent;color:#96928c;display:grid;place-items:center;cursor:pointer;transition:color .2s,opacity .2s,transform .35s var(--ease)}
 .fullscreen-toggle svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.15;stroke-linecap:square;transition:transform .35s var(--ease)}
 .menu-toggle{width:44px;height:44px;border:0;background:transparent;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;cursor:pointer;z-index:52}
@@ -95,7 +103,9 @@ button{font:inherit}
  .fullscreen-toggle:hover svg{transform:rotate(90deg)}
  .menu-toggle:not(.active):hover span:first-child{transform:translateY(-2px)}
  .menu-toggle:not(.active):hover span:last-child{transform:translateY(2px)}
- .quote-btn:hover{color:#f0ddb4;border-color:rgba(226,200,152,.9);background:linear-gradient(180deg,rgba(197,166,117,.34),rgba(197,166,117,.14));box-shadow:0 0 0 1px rgba(197,166,117,.18),0 10px 28px rgba(0,0,0,.35)}
+ .quote-float:hover{color:#fff}
+ .quote-float:hover .quote-float-label{color:#fff}
+ .quote-float:hover .quote-float-mark{transform:scaleX(1.35);background:#d6d2cc}
  .menu-panel a:hover{color:var(--bronze);padding-left:12px}
  .menu-panel a:hover span{transform:translateX(-4px)}
  .final-contact:hover,.final-quote:hover{color:#fff}
@@ -106,10 +116,9 @@ button{font:inherit}
 .menu-panel a:active{color:var(--bronze)}
 .final-contact:active,.final-quote:active{opacity:.7}
 @media(max-width:640px){
- .quote-btn{padding:0;width:34px;justify-content:center}
- .quote-btn-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
- .quote-btn-icon{width:34px;height:34px;font-size:15px;background:transparent;color:#e2c898;border:1px solid rgba(197,166,117,.55);border-radius:999px}
- .quote-btn{border-color:transparent;background:transparent;box-shadow:none}
+ .quote-float{right:18px;bottom:18px;gap:10px}
+ .quote-float-label{font-size:10px;letter-spacing:.18em}
+ .quote-float-mark{width:28px}
 }
 
 @keyframes appear{from{opacity:0;transform:translateY(18px)}}

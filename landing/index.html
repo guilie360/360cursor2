@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Italiana&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/landing/css/landing.css?v=nav2">
+<link rel="stylesheet" href="/landing/css/landing.css?v=quote3">
 </head>
 <body>
 <div class="page-transit" id="pageTransit" aria-hidden="true">
@@ -19,16 +19,16 @@
 <header class="topbar">
   <a class="header-logo" href="#inicio" aria-label="360Preventa"><img src="/landing/assets/logo.png" alt="360Preventa"></a>
   <div class="header-actions">
-    <a class="quote-btn mag" href="/cotizar" aria-label="Abrir cotizador" title="Cotizar">
-      <span class="quote-btn-icon" aria-hidden="true">$</span>
-      <span class="quote-btn-label">Cotizar</span>
-    </a>
     <button class="menu-toggle mag" id="menuToggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="menuPanel"><span></span><span></span></button>
     <button class="fullscreen-toggle mag" id="fullscreenToggle" aria-label="Activar pantalla completa" title="Pantalla completa">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/></svg>
     </button>
   </div>
 </header>
+<a class="quote-float mag" href="/cotizar" aria-label="Abrir cotizador" data-cursor="COTIZAR">
+  <span class="quote-float-label">Cotizar</span>
+  <span class="quote-float-mark" aria-hidden="true"></span>
+</a>
 <div class="menu-overlay" id="menuOverlay"></div>
 <nav class="menu-panel" id="menuPanel">
   <div class="menu-caption">360PREVENTA / NAVEGACIÓN</div>
@@ -102,6 +102,6 @@
   </div>
 </div>
 </main>
-<script src="/landing/js/landing.js?v=nav2"></script>
+<script src="/landing/js/landing.js?v=quote3"></script>
 </body>
 </html>
