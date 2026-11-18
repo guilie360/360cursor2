@@ -51,6 +51,11 @@ body.cotizador-app .chooser-intro{
   margin-bottom:18px;
   opacity:.75;
 }
+/* Continuar: deja espacio bajo el header sticky al anclar el siguiente paso */
+body.cotizador-app .step,
+body.cotizador-app .package-accordion{
+  scroll-margin-top:84px;
+}
 body.cotizador-app #loginScreen,
 body.cotizador-app #portal,
 body.cotizador-app #hunter,

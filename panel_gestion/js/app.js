@@ -80,7 +80,26 @@ function updateKeepingScroll(){const y=window.scrollY;update();requestAnimationF
 const fromManual=e=>!!(e.target&&e.target.closest&&e.target.closest('#manualConfigurator'));
 document.addEventListener('click',e=>{const btn=e.target.closest('#manualFloorsMinus,#manualFloorsPlus');if(!btn)return;const input=$('floors');if(!input)return;const current=Math.max(0,Math.floor(Number(input.value)||0));input.value=String(Math.max(0,Math.min(30,current+(btn.id==='manualFloorsPlus'?1:-1))));input.dispatchEvent(new Event('input',{bubbles:true}));});
 document.addEventListener('input',e=>{if(fromManual(e))updateKeepingScroll();});document.addEventListener('change',e=>{if(fromManual(e))updateKeepingScroll();});
-document.querySelectorAll('[data-next]').forEach(b=>b.addEventListener('click',()=>{const next=$(b.dataset.next);const y=window.scrollY;next.open=true;b.closest('details').open=false;requestAnimationFrame(()=>window.scrollTo(0,y));}));
+function revealNextStep(next,current){
+ if(!next)return;
+ if(current)current.open=false;
+ next.open=true;
+ const align=()=>{
+  const bar=document.querySelector('.topbar');
+  const offset=(bar?bar.getBoundingClientRect().height:0)+12;
+  const top=next.getBoundingClientRect().top+window.scrollY-offset;
+  window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+ };
+ requestAnimationFrame(()=>{
+  requestAnimationFrame(()=>{
+   align();
+   setTimeout(align,140);
+  });
+ });
+}
+document.querySelectorAll('[data-next]').forEach(b=>b.addEventListener('click',()=>{
+ revealNextStep($(b.dataset.next),b.closest('details'));
+}));
 $('addSimilar').addEventListener('change',update);
 $('confirmOpen').addEventListener('click',showManualPackageOffer);
 $('copyQuote').addEventListener('click',async()=>{const q=current();const text=['PRESUPUESTO SHOWROOM 360PREVENTA', 'Tipología: '+document.querySelector('input[name="type"]:checked').value,'Superficie: '+q.area+' m²','Plantas: '+q.floors,'Subtotal primer inmueble: '+money(q.primary),...(q.hasSimilar?['Segundo showroom: '+q.simType+' · '+q.simArea+' m²','Tipo de inmueble: '+q.simType,'1 planta 3D incluida','Recursos adicionales compartidos','Descuento: 50 % ('+money(q.discount)+')','Importe segundo showroom: '+money(q.similarBase-q.discount)]:[]),'TOTAL: '+money(q.total)].join('\\n');try{await navigator.clipboard.writeText(text);$('copyStatus').textContent='Presupuesto copiado.'}catch(e){$('copyStatus').textContent=text}});
@@ -788,10 +807,7 @@ document.addEventListener('click',function(e){
  const current=button.closest('details.package-accordion');
  const next=document.getElementById(button.dataset.packageNext);
  if(!current||!next||!$('packageDetails').contains(next))return;
- const y=window.scrollY;
- current.open=false;
- next.open=true;
- requestAnimationFrame(()=>window.scrollTo(0,y));
+ revealNextStep(next,current);
 });
 
 function updatePackagePrice(){
