@@ -345,3 +345,24 @@ html.has-cur,html.has-cur *{cursor:none!important}
 body.demo-open{overflow:hidden}
 /* Mantener el cursor personalizado por encima de las pantallas de demo */
 .cur,.cur-dot{z-index:2101!important}
+
+/* Transición de sección: logo breve, sin scrub del scroll-story */
+.page-transit{
+  position:fixed;inset:0;z-index:5000;display:grid;place-items:center;
+  background:#0b0b0b;opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .28s var(--ease),visibility .28s;
+}
+.page-transit.on{
+  opacity:1;visibility:visible;pointer-events:auto;
+}
+.page-transit-logo{
+  width:clamp(72px,12vw,110px);height:auto;object-fit:contain;
+  opacity:0;transform:scale(.92);
+  transition:opacity .35s var(--ease),transform .45s var(--ease);
+}
+.page-transit.on .page-transit-logo{
+  opacity:1;transform:none;
+}
+@media(prefers-reduced-motion:reduce){
+  .page-transit,.page-transit-logo{transition:none}
+}

@@ -51,6 +51,79 @@ function render(){
 }
 addEventListener('scroll',read,{passive:true});addEventListener('resize',read);read();
 
+/* Salto de sección sin scrub visual del scroll-story */
+if('scrollRestoration' in history) history.scrollRestoration='manual';
+function snapScrollState(){
+  read();
+  cur.intro=tgt.intro;
+  cur.exp=tgt.exp;
+  if(raf){cancelAnimationFrame(raf);raf=0;}
+  render();
+}
+function sectionTop(el){
+  if(!el) return 0;
+  const y=el.getBoundingClientRect().top+scrollY;
+  return Math.max(0, Math.round(y));
+}
+function prepareFinalAtJump(){
+  const finEl=$('.final');
+  if(finEl) finEl.classList.add('in');
+}
+const transit=$('#pageTransit');
+let transitBusy=false;
+function showTransit(){
+  if(!transit) return;
+  transit.classList.add('on');
+  transit.setAttribute('aria-hidden','false');
+}
+function hideTransit(){
+  if(!transit) return;
+  transit.classList.remove('on');
+  transit.setAttribute('aria-hidden','true');
+}
+function goToSection(id,{updateHash=true,fromLoad=false}={}){
+  const el=document.getElementById(id);
+  if(!el) return;
+  if(transitBusy && !fromLoad) return;
+  transitBusy=true;
+  showTransit();
+  const run=()=>{
+    prepareFinalAtJump();
+    const top=sectionTop(el);
+    scrollTo({top,left:0,behavior:'instant'});
+    // Algunos navegadores corrigen el ancla después; forzar posición y estado.
+    document.documentElement.scrollTop=top;
+    document.body.scrollTop=top;
+    snapScrollState();
+    if(updateHash){
+      const next='#'+id;
+      if(location.hash!==next) history.replaceState(null,'',next);
+    }
+    requestAnimationFrame(()=>{
+      snapScrollState();
+      const done=()=>{
+        hideTransit();
+        transitBusy=false;
+      };
+      if(reduce) done();
+      else setTimeout(done, fromLoad ? 220 : 280);
+    });
+  };
+  // Dejar que el overlay pinte un frame antes del salto.
+  requestAnimationFrame(()=>setTimeout(run, fromLoad ? 40 : 90));
+}
+function bootHashJump(){
+  const raw=(location.hash||'').replace(/^#/,'');
+  if(!raw) return;
+  // #demo-apartamento etc. se manejan aparte; llevar a #demo primero.
+  const id=raw.startsWith('demo-') ? 'demo' : raw;
+  if(!document.getElementById(id)) return;
+  // Evitar el scroll nativo del ancla antes de nuestro salto.
+  scrollTo({top:0,left:0,behavior:'instant'});
+  snapScrollState();
+  goToSection(id,{updateHash:true,fromLoad:true});
+}
+
 /* Entrada de la sección final */
 const fin=$('.final');
 const fh=$('.final-copy h2');
@@ -99,8 +172,21 @@ const mt=$('#menuToggle'),mp=$('#menuPanel'),mo=$('#menuOverlay');
 function setMenu(o){mp.classList.toggle('open',o);mo.classList.toggle('open',o);mt.classList.toggle('active',o);mt.setAttribute('aria-expanded',o);mt.setAttribute('aria-label',o?'Cerrar menú':'Abrir menú');document.body.style.overflow=o?'hidden':''}
 mt.addEventListener('click',()=>setMenu(!mp.classList.contains('open')));
 mo.addEventListener('click',()=>setMenu(false));
-mp.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>setMenu(false)));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false)});
+/* Menú / anclas internas: transición con logo (sin scrub del scroll) */
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  const href=a.getAttribute('href')||'';
+  const id=href.slice(1);
+  if(!id || id.startsWith('demo-')) return;
+  if(!document.getElementById(id)) return;
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    setMenu(false);
+    goToSection(id,{updateHash:true});
+  });
+});
+if(document.readyState==='complete') bootHashJump();
+else addEventListener('load',bootHashJump);
 /* Páginas estáticas de tipologías: apartamento, estudio y coliving */
 const demoPage=$('#demoPage'),demoPageTitle=$('#demoPageTitle'),demoExplore=$('#demoExplore'),demoBack=$('#demoBack');
 let demoReturnY=0;
