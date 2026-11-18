@@ -1144,6 +1144,19 @@ function initHunterProfile(){
  }
 }
 
+function openEmbeddedQuote(){
+ $('manualUpsell').classList.add('hidden');
+ $('manualConfigurator').classList.add('hidden');
+ $('packageChooser').classList.add('hidden');
+ $('pathChooser').classList.remove('hidden');
+ $('stickyPrice').textContent=money(0);
+ $('hunterLiveCommission').textContent=money(0);
+ $('portal').classList.add('portal-hidden');
+ document.body.classList.remove('portal-mode');
+ $('portalBack').classList.remove('portal-hidden');
+ window.scrollTo(0,0);
+}
+
 function portalOpenPage(key){
  if(key==='payments' && !window.boxiesPaymentsUnlocked){
   $('paymentsGateBackdrop').classList.remove('portal-hidden');
@@ -1152,17 +1165,8 @@ function portalOpenPage(key){
   return;
  }
  if(key==='quote'){
-  $('manualUpsell').classList.add('hidden');
-  // Cada entrada desde el Panel de gestión inicia una cotización nueva, sin importe previo.
-  $('manualConfigurator').classList.add('hidden');
-  $('packageChooser').classList.add('hidden');
-  $('pathChooser').classList.remove('hidden');
-  $('stickyPrice').textContent=money(0);
-  $('hunterLiveCommission').textContent=money(0);
-  $('portal').classList.add('portal-hidden');
-  document.body.classList.remove('portal-mode');
-  $('portalBack').classList.remove('portal-hidden');
-  window.scrollTo(0,0);
+  // Una sola app de cotizador: el panel entra en modo interno.
+  window.location.href='/cotizador/index.html?modo=interno';
   return;
  }
  const p=portalPages[key];if(!p)return;
@@ -1433,3 +1437,19 @@ globalFullscreenBtn.addEventListener('click',async()=>{
 });
 document.addEventListener('fullscreenchange',syncGlobalFullscreenControl);
 syncGlobalFullscreenControl();
+
+/* Deep-links desde /cotizador/?modo=interno (fuente única; motor aún embebido aquí). */
+(function bootCotizadorBridge(){
+  try{
+    var abrir=new URLSearchParams(location.search).get('abrir');
+    if(!abrir)return;
+    if(abrir==='cotizar'){
+      openEmbeddedQuote();
+    }else if(abrir==='hunter'){
+      document.body.classList.add('hunter-mode');
+      $('hunter').style.display='block';
+      try{initHunterProfile();updateHunter();}catch(e){}
+      window.scrollTo(0,0);
+    }
+  }catch(e){}
+})();

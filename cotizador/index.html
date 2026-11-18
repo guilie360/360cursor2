@@ -4,39 +4,61 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>360Preventa — Cotizador</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root { --bg:#0b0b0b; --ink:#f1eee8; --muted:#b2a797; --line:#40382d; --gold:#c5a675; }
-    * { box-sizing: border-box; }
-    body { margin:0; min-height:100svh; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,sans-serif; display:grid; place-items:center; padding:24px; }
-    .card { width:min(520px,100%); border:1px solid var(--line); padding:28px; background:#151515; }
-    h1 { font:28px Georgia,serif; font-weight:400; margin:0 0 8px; }
-    p { color:var(--muted); margin:0 0 18px; }
-    .meta { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold); margin-bottom:14px; }
-    .actions { display:flex; flex-wrap:wrap; gap:10px; }
-    a,button { appearance:none; border:1px solid var(--line); background:transparent; color:inherit; padding:10px 14px; font:11px/1 system-ui,sans-serif; letter-spacing:.08em; text-transform:uppercase; text-decoration:none; cursor:pointer; }
-    a.primary,button.primary { background:var(--gold); color:#111; border-color:var(--gold); }
-    .solo-interno { display:none; }
-    body.modo-interno .solo-interno { display:flex; }
+    :root{--bg:#0b0b0b;--ink:#f1eee8;--muted:#b2a797;--line:#40382d;--gold:#c5a675;--panel:#151515}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100svh;background:var(--bg);color:var(--ink);font:15px/1.5 Manrope,Arial,sans-serif;display:grid;place-items:center;padding:24px}
+    .card{width:min(560px,100%);border:1px solid var(--line);padding:28px;background:var(--panel)}
+    .meta{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+    h1{font:34px/1.1 Italiana,Georgia,serif;font-weight:400;margin:0 0 10px}
+    p{color:var(--muted);margin:0 0 18px}
+    .note{border-left:2px solid var(--gold);background:#111;padding:12px 14px;color:#bbb;font-size:12px;margin:0 0 20px}
+    .actions{display:flex;flex-wrap:wrap;gap:10px}
+    a,button{appearance:none;border:1px solid var(--line);background:transparent;color:inherit;padding:11px 14px;font:11px/1 Manrope,Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;cursor:pointer}
+    a.primary,button.primary{background:var(--gold);color:#111;border-color:var(--gold)}
+    .solo-interno{display:none}
+    body.modo-interno .solo-interno{display:inline-flex}
+    body.modo-publico .solo-publico{display:inline-flex}
+    .solo-publico{display:none}
+    .stamp{margin-top:22px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6f6a62}
   </style>
 </head>
 <body>
   <main class="card">
     <div class="meta" id="modoLabel">Cotizador</div>
-    <h1>Cotizador único</h1>
-    <p>Aquí vivirá el cotizador despiezado. Misma fuente para panel y landing; el modo solo cambia accesos y comisión.</p>
-    <div class="actions">
-      <a class="solo-interno" id="btnVolverPanel" href="../panel_gestion/index.html">Volver al panel</a>
-      <a class="solo-interno" id="btnComision" href="#comision">Ver comisión</a>
-      <a href="../landing/index.html">Ir a landing</a>
+    <h1 id="title">Cotizador 360Preventa</h1>
+    <p id="lead">Una sola fuente. La landing y el panel abren el mismo cotizador; solo cambia el modo.</p>
+    <div class="note" id="note">
+      Motor de precios: próximamente unificado aquí. Hoy el modo interno puede abrir el flujo del panel sin duplicar lógica de negocio a futuro.
     </div>
+    <div class="actions">
+      <a class="solo-interno" href="/panel_gestion/">Volver al panel</a>
+      <a class="solo-interno primary" id="btnAbrirInterno" href="/panel_gestion/?abrir=cotizar">Continuar cotización</a>
+      <a class="solo-interno" href="/panel_gestion/?abrir=hunter">Ver comisión</a>
+      <a class="solo-publico primary" href="/">Volver a la web</a>
+      <a class="solo-publico" href="/panel_gestion/">Soy del equipo</a>
+    </div>
+    <div class="stamp" id="stamp">fuente única · deploy auto</div>
   </main>
   <script>
-    const params = new URLSearchParams(location.search);
-    const modo = (params.get('modo') || 'publico').toLowerCase() === 'interno' ? 'interno' : 'publico';
-    document.body.classList.add('modo-' + modo);
-    document.getElementById('modoLabel').textContent = modo === 'interno'
-      ? 'Modo interno · Panel de gestión'
-      : 'Modo público · Landing';
+    (function () {
+      var params = new URLSearchParams(location.search);
+      var modo = (params.get('modo') || 'publico').toLowerCase() === 'interno' ? 'interno' : 'publico';
+      document.body.classList.add('modo-' + modo);
+      document.getElementById('modoLabel').textContent = modo === 'interno'
+        ? 'Modo interno · Panel de gestión'
+        : 'Modo público · Landing';
+      document.getElementById('title').textContent = modo === 'interno'
+        ? 'Cotizador interno'
+        : 'Cotizador público';
+      document.getElementById('lead').textContent = modo === 'interno'
+        ? 'Acceso desde el panel: puedes volver y revisar comisión del agente. Misma base que el cotizador público.'
+        : 'Acceso desde la landing: cotización libre para la audiencia, sin herramientas internas del equipo.';
+      document.getElementById('stamp').textContent = 'fuente única · ' + modo + ' · ' + new Date().toISOString().slice(0, 10);
+    })();
   </script>
 </body>
 </html>
