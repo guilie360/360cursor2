@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/panel_gestion/css/base.css">
 <link rel="stylesheet" href="/panel_gestion/css/patches.css">
-<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=4">
+<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=5">
 </head>
 <body data-app="cotizador" class="cotizador-app">
 <!-- Solo modo interno: flecha volver abajo-izquierda (estilo panel) -->
@@ -24,15 +24,15 @@
   <span class="brand-copy">360Preventa<small>Configurador de showroom</small></span>
  </div>
  <div class="topright">
- <div class="pricebox"><span>Presupuesto estimado</span><strong id="stickyPrice">0 €</strong></div>
+ <div class="pricebox"><strong id="stickyPrice">0 €</strong></div>
  <button class="interno-commission-btn portal-hidden" id="internoCommissionBtn" type="button" aria-expanded="false" aria-controls="internoCommissionCard">
   <small>Comisión</small>
   <strong id="internoCommission">0 €</strong>
  </button>
- <button class="btn reset-header" id="headerReset" type="button" aria-label="Reiniciar configuración" title="Reiniciar configuración">
+ <button class="btn reset-header" id="headerReset" type="button" aria-label="Reiniciar configuración" title="Reiniciar">
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8.3"/><path d="M3 3v5.3h5.3"/></svg>
  </button>
- <button class="btn" id="fullscreenBtn" type="button">Pantalla completa</button>
+ <button class="btn" id="fullscreenBtn" type="button" hidden aria-hidden="true">Pantalla completa</button>
 </div>
 
 </div></header>
@@ -50,7 +50,31 @@
  <h1>Elige tu configuración</h1>
  <p class="intro chooser-intro">Showroom interactivo inmobiliario</p>
  <section id="pathChooser" class="path-chooser path-chooser-visual">
- 
+ <div class="flip-card" data-flip="manual">
+  <div class="flip-inner">
+   <div class="visual-choice visual-manual flip-front" role="button" tabindex="0" aria-expanded="false" aria-label="Ver showroom personalizado">
+  <span class="visual-copy">
+   <strong class="visual-title">Showroom<br>personalizado</strong>
+   <span class="visual-subtitle">Personaliza cada detalle según las necesidades de tu proyecto.</span>
+   <span class="visual-price"><em class="visual-from">Desde</em>490 €</span>
+   <span class="visual-saving visual-note">Precio base + espacios seleccionados</span>
+  </span>
+  
+  <span class="manual-feature-strip" aria-label="Opciones configurables">
+   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 15h24v10H4zM8 15V9h16v6M9 25v3m14-3v3"/></svg><small>Interiores</small></span>
+   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 3 12 7-12 7L4 10zM4 16l12 7 12-7M4 22l12 7 12-7"/></svg><small>Plantas 3D</small></span>
+   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 3 13 7-13 7L3 10zM3 17l13 7 13-7"/></svg><small>Recursos</small></span>
+   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 8h24M4 16h24M4 24h24"/><circle cx="11" cy="8" r="3"/><circle cx="21" cy="16" r="3"/><circle cx="14" cy="24" r="3"/></svg><small>A tu medida</small></span>
+  </span>
+  <span class="visual-cta visual-cta-bottom">VER OPCIÓN</span>
+ </div>
+   <div class="visual-choice visual-manual flip-back">
+    <button class="flip-return" type="button" aria-label="Volver al frente de la tarjeta">← Volver</button>
+    <img class="visual-art visual-art-layers" src="/panel_gestion/assets/art-layers.webp" alt="Documento con símbolo más para comenzar desde cero">
+    <button class="flip-cta flip-cta-light" id="manualPath" type="button">Personalizar mi showroom</button>
+   </div>
+  </div>
+ </div>
  <div class="flip-card" data-flip="package">
   <div class="flip-inner">
    <div class="visual-choice visual-package flip-front" role="button" tabindex="0" aria-expanded="false" aria-label="Ver Showroom Completo">
@@ -74,31 +98,6 @@
     <button class="flip-return" type="button" aria-label="Volver al frente de la tarjeta">← Volver</button>
     <img class="visual-art visual-art-home" src="/panel_gestion/assets/art-home.webp" alt="Showroom completo con planta 3D, recorrido 360 grados, renders, vídeo, PDF y enlace">
     <button class="flip-cta flip-cta-gold" id="packagePath" type="button">Elegir showroom completo</button>
-   </div>
-  </div>
- </div>
- <div class="flip-card" data-flip="manual">
-  <div class="flip-inner">
-   <div class="visual-choice visual-manual flip-front" role="button" tabindex="0" aria-expanded="false" aria-label="Ver showroom personalizado">
-  <span class="visual-copy">
-   <strong class="visual-title">Showroom<br>personalizado</strong>
-   <span class="visual-subtitle">Personaliza cada detalle según las necesidades de tu proyecto.</span>
-   <span class="visual-price"><em class="visual-from">Desde</em>490 €</span>
-   <span class="visual-saving visual-note">Precio base + espacios seleccionados</span>
-  </span>
-  
-  <span class="manual-feature-strip" aria-label="Opciones configurables">
-   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 15h24v10H4zM8 15V9h16v6M9 25v3m14-3v3"/></svg><small>Interiores</small></span>
-   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 3 12 7-12 7L4 10zM4 16l12 7 12-7M4 22l12 7 12-7"/></svg><small>Plantas 3D</small></span>
-   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 3 13 7-13 7L3 10zM3 17l13 7 13-7"/></svg><small>Recursos</small></span>
-   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 8h24M4 16h24M4 24h24"/><circle cx="11" cy="8" r="3"/><circle cx="21" cy="16" r="3"/><circle cx="14" cy="24" r="3"/></svg><small>A tu medida</small></span>
-  </span>
-  <span class="visual-cta visual-cta-bottom">VER OPCIÓN</span>
- </div>
-   <div class="visual-choice visual-manual flip-back">
-    <button class="flip-return" type="button" aria-label="Volver al frente de la tarjeta">← Volver</button>
-    <img class="visual-art visual-art-layers" src="/panel_gestion/assets/art-layers.webp" alt="Documento con símbolo más para comenzar desde cero">
-    <button class="flip-cta flip-cta-light" id="manualPath" type="button">Personalizar mi showroom</button>
    </div>
   </div>
  </div>
