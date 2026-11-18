@@ -1,64 +1,444 @@
-﻿<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>360Preventa — Cotizador</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root{--bg:#0b0b0b;--ink:#f1eee8;--muted:#b2a797;--line:#40382d;--gold:#c5a675;--panel:#151515}
-    *{box-sizing:border-box}
-    body{margin:0;min-height:100svh;background:var(--bg);color:var(--ink);font:15px/1.5 Manrope,Arial,sans-serif;display:grid;place-items:center;padding:24px}
-    .card{width:min(560px,100%);border:1px solid var(--line);padding:28px;background:var(--panel)}
-    .meta{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
-    h1{font:34px/1.1 Italiana,Georgia,serif;font-weight:400;margin:0 0 10px}
-    p{color:var(--muted);margin:0 0 18px}
-    .note{border-left:2px solid var(--gold);background:#111;padding:12px 14px;color:#bbb;font-size:12px;margin:0 0 20px}
-    .actions{display:flex;flex-wrap:wrap;gap:10px}
-    a,button{appearance:none;border:1px solid var(--line);background:transparent;color:inherit;padding:11px 14px;font:11px/1 Manrope,Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;cursor:pointer}
-    a.primary,button.primary{background:var(--gold);color:#111;border-color:var(--gold)}
-    .solo-interno{display:none}
-    body.modo-interno .solo-interno{display:inline-flex}
-    body.modo-publico .solo-publico{display:inline-flex}
-    .solo-publico{display:none}
-    .stamp{margin-top:22px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6f6a62}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>360Preventa — Cotizar showroom</title>
+<meta name="description" content="Configura y cotiza tu showroom digital 360Preventa. Acceso público sin registro.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Italiana&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/panel_gestion/css/base.css">
+<link rel="stylesheet" href="/panel_gestion/css/patches.css">
+<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css">
 </head>
-<body>
-  <main class="card">
-    <div class="meta" id="modoLabel">Cotizador</div>
-    <h1 id="title">Cotizador 360Preventa</h1>
-    <p id="lead">Una sola fuente. La landing y el panel abren el mismo cotizador; solo cambia el modo.</p>
-    <div class="note" id="note">
-      Motor de precios: próximamente unificado aquí. Hoy el modo interno puede abrir el flujo del panel sin duplicar lógica de negocio a futuro.
+<body data-app="cotizador" class="cotizador-app">
+<div id="internoBar" class="interno-bar" hidden>
+  <a class="interno-back" href="/panel_gestion/">← Volver al panel</a>
+  <span class="interno-meta">Modo equipo · mismo cotizador</span>
+  <div class="interno-commission">Comisión est. <strong id="internoCommission">0 €</strong></div>
+  <a class="interno-comision" href="/panel_gestion/?abrir=hunter">Abrir Hunter</a>
+</div>
+
+<button class="portal-back portal-hidden" id="portalBack" type="button" aria-label="Volver" title="Volver">
+ <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+</button>
+
+<header class="topbar"><div class="topinner">
+ <div class="brand">
+  <img class="brand-logo" alt="Logo 360Preventa" src="/panel_gestion/assets/logo.png">
+  <span class="brand-copy">360Preventa<small>Configurador de showroom</small></span>
+ </div>
+ <div class="topright">
+ <div class="pricebox"><span>Presupuesto estimado</span><strong id="stickyPrice">0 €</strong></div>
+ <button class="btn reset-header" id="headerReset" type="button" aria-label="Reiniciar configuración" title="Reiniciar configuración">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8.3"/><path d="M3 3v5.3h5.3"/></svg>
+ </button>
+ <button class="btn" id="fullscreenBtn" type="button">Pantalla completa</button>
+</div>
+
+</div></header>
+<main>
+ <h1>Elige tu configuración</h1>
+ <p class="intro chooser-intro">Showroom interactivo inmobiliario</p>
+ <section id="pathChooser" class="path-chooser path-chooser-visual">
+ 
+ <div class="flip-card" data-flip="package">
+  <div class="flip-inner">
+   <div class="visual-choice visual-package flip-front" role="button" tabindex="0" aria-expanded="false" aria-label="Ver Showroom Completo">
+  <span class="visual-copy">
+   <strong class="visual-title">Showroom<br>Completo</strong>
+   <span class="visual-subtitle">Una solución integral para presentar y comercializar tu inmueble.</span>
+   <span class="visual-price">1.970 €</span>
+   <span class="visual-saving"><s id="pathSeparatePrice">2.740 €</s><b id="pathSaving">Ahorras 770 €</b></span>
+  </span>
+  
+  <span class="included-strip" aria-label="Contenido incluido">
+   <span><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11"/><path d="M5 16h4m14 0h4M16 5v4m0 14v4"/></svg><small>Tour 360°</small></span>
+   <span><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="4" y="5" width="24" height="22" rx="2"/><circle cx="11" cy="12" r="2"/><path d="m5 24 8-8 5 5 4-4 5 5"/></svg><small>Renders</small></span>
+   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m11 6 16 10-16 10z"/></svg><small>Vídeo 15 s</small></span>
+   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 3h11l7 7v19H8z"/><path d="M19 3v8h7M12 17h10M12 22h10"/></svg><small>Brochure PDF</small></span>
+   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M13 19 9 23a5 5 0 0 1-7-7l6-6a5 5 0 0 1 7 0m4 3 4-4a5 5 0 0 1 7 7l-6 6a5 5 0 0 1-7 0"/></svg><small>Link y ficha</small></span>
+  </span>
+  <span class="visual-cta visual-cta-bottom">VER OPCIÓN</span>
+ </div>
+   <div class="visual-choice visual-package flip-back">
+    <button class="flip-return" type="button" aria-label="Volver al frente de la tarjeta">← Volver</button>
+    <img class="visual-art visual-art-home" src="/panel_gestion/assets/art-home.webp" alt="Showroom completo con planta 3D, recorrido 360 grados, renders, vídeo, PDF y enlace">
+    <button class="flip-cta flip-cta-gold" id="packagePath" type="button">Elegir showroom completo</button>
+   </div>
+  </div>
+ </div>
+ <div class="flip-card" data-flip="manual">
+  <div class="flip-inner">
+   <div class="visual-choice visual-manual flip-front" role="button" tabindex="0" aria-expanded="false" aria-label="Ver showroom personalizado">
+  <span class="visual-copy">
+   <strong class="visual-title">Showroom<br>personalizado</strong>
+   <span class="visual-subtitle">Personaliza cada detalle según las necesidades de tu proyecto.</span>
+   <span class="visual-price"><em class="visual-from">Desde</em>490 €</span>
+   <span class="visual-saving visual-note">Precio base + espacios seleccionados</span>
+  </span>
+  
+  <span class="manual-feature-strip" aria-label="Opciones configurables">
+   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 15h24v10H4zM8 15V9h16v6M9 25v3m14-3v3"/></svg><small>Interiores</small></span>
+   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 3 12 7-12 7L4 10zM4 16l12 7 12-7M4 22l12 7 12-7"/></svg><small>Plantas 3D</small></span>
+   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 3 13 7-13 7L3 10zM3 17l13 7 13-7"/></svg><small>Recursos</small></span>
+   <span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 8h24M4 16h24M4 24h24"/><circle cx="11" cy="8" r="3"/><circle cx="21" cy="16" r="3"/><circle cx="14" cy="24" r="3"/></svg><small>A tu medida</small></span>
+  </span>
+  <span class="visual-cta visual-cta-bottom">VER OPCIÓN</span>
+ </div>
+   <div class="visual-choice visual-manual flip-back">
+    <button class="flip-return" type="button" aria-label="Volver al frente de la tarjeta">← Volver</button>
+    <img class="visual-art visual-art-layers" src="/panel_gestion/assets/art-layers.webp" alt="Documento con símbolo más para comenzar desde cero">
+    <button class="flip-cta flip-cta-light" id="manualPath" type="button">Personalizar mi showroom</button>
+   </div>
+  </div>
+ </div>
+ </section>
+
+<section id="packageChooser" class="package-chooser hidden">
+ <div class="package-top"><div><div class="eyebrow">Paquetes especiales 360Preventa</div><h2>Elige tu showroom completo</h2><p>Selecciona una tipología para consultar lo que incluye, su valor individual y el ahorro del paquete.</p></div><button class="btn" id="backToPaths" type="button">← Volver</button></div>
+ <div class="package-types">
+  <button class="package-type active" data-package="apartment" type="button"><span>A</span><b>Apartamento</b><small>Vivienda independiente</small></button>
+  <button class="package-type" data-package="studio" type="button"><span>E</span><b>Apartestudio</b><small>Espacio compacto integrado</small></button>
+  <button class="package-type" data-package="coliving" type="button"><span>C</span><b>Co-living</b><small>Habitaciones y zonas comunes</small></button>
+ </div>
+ <div id="packageDetails" class="package-details" aria-live="polite"></div>
+ <div class="actions final-quote-actions"><button class="btn final-quote-back" id="packageBack" type="button">VOLVER</button><button class="btn primary final-quote-download" id="packageSelect" type="button">DESCARGAR COTIZACIÓN</button></div>
+ <p id="packageSelectedNote" class="desc package-selected-note" aria-live="polite"></p>
+</section>
+<section class="config-shell hidden" id="manualConfigurator">
+
+ <div class="manual-floating-stack" id="manualFloatingStack">
+ <section class="manual-live-quote" id="manualLiveQuote" aria-live="polite" aria-label="Resumen dinámico de tu showroom">
+  <div class="manual-live-top">
+   <div><span class="manual-live-kicker">TU SHOWROOM EN CONSTRUCCIÓN</span><h3>Tu selección actual</h3></div>
+   <div class="manual-live-total"><small>PRESUPUESTO ACTUAL</small><strong id="manualLiveTotal">490 €</strong></div>
+  </div>
+  <div class="manual-live-progress"><span id="manualLiveProgress"></span></div>
+  <div class="manual-live-bottom">
+   <div class="manual-live-summary" id="manualLiveSummary">Base del showroom · hasta 100 m²</div>
+   <div class="manual-live-counts" id="manualLiveCounts">Base incluida</div>
+  </div>
+ </section>
+ <aside class="manual-upsell hidden" id="manualUpsell" aria-label="Oferta de Showroom Completo">
+  <div class="manual-upsell-copy">
+   <span class="manual-upsell-kicker">UNA OPCIÓN MÁS COMPLETA</span>
+   <strong>Showroom Completo</strong>
+   <span class="manual-upsell-price">1.970 € <small>precio especial</small></span>
+  </div>
+  <button type="button" class="manual-upsell-link" id="manualUpsellGo">Ver paquete <span aria-hidden="true">→</span></button>
+  <button type="button" class="manual-upsell-close" id="manualUpsellClose" aria-label="Ocultar sugerencia">×</button>
+ </aside>
+ </div>
+  <div class="shell-head manual-shell-head"><div><div class="eyebrow">Configuración guiada</div><h2>Tu proyecto</h2><p>Completa cada apartado en orden. Puedes volver a abrir cualquier paso para editarlo.</p></div><button class="btn" id="manualBackToStart" type="button">← Volver</button></div>
+  <div class="package-details manual-details" id="manualDetails">
+   <div class="package-detail-head simple-package-head">
+    <div>
+     <div class="eyebrow">SHOWROOM PERSONALIZADO · A TU MEDIDA</div>
+     <h3>Showroom Personalizado</h3>
     </div>
-    <div class="actions">
-      <a class="solo-interno" href="/panel_gestion/">Volver al panel</a>
-      <a class="solo-interno primary" id="btnAbrirInterno" href="/panel_gestion/?abrir=cotizar">Continuar cotización</a>
-      <a class="solo-interno" href="/panel_gestion/?abrir=hunter">Ver comisión</a>
-      <a class="solo-publico primary" href="/">Volver a la web</a>
-      <a class="solo-publico" href="/panel_gestion/">Soy del equipo</a>
+    <div class="package-detail-price">
+     <small>PRESUPUESTO ACTUAL</small>
+     <strong id="manualHeadTotal">490 €</strong>
+     <small>100 m² incluidos · +7 €/m² adicional</small>
     </div>
-    <div class="stamp" id="stamp">fuente única · deploy auto</div>
-  </main>
-  <script>
-    (function () {
-      var params = new URLSearchParams(location.search);
-      var modo = (params.get('modo') || 'publico').toLowerCase() === 'interno' ? 'interno' : 'publico';
-      document.body.classList.add('modo-' + modo);
-      document.getElementById('modoLabel').textContent = modo === 'interno'
-        ? 'Modo interno · Panel de gestión'
-        : 'Modo público · Landing';
-      document.getElementById('title').textContent = modo === 'interno'
-        ? 'Cotizador interno'
-        : 'Cotizador público';
-      document.getElementById('lead').textContent = modo === 'interno'
-        ? 'Acceso desde el panel: puedes volver y revisar comisión del agente. Misma base que el cotizador público.'
-        : 'Acceso desde la landing: cotización libre para la audiencia, sin herramientas internas del equipo.';
-      document.getElementById('stamp').textContent = 'fuente única · ' + modo + ' · ' + new Date().toISOString().slice(0, 10);
-    })();
-  </script>
+   </div>
+   <div class="package-accordion-list manual-step-list">
+  <details class="step" id="baseStep">
+   <summary><div class="step-title"><span class="step-num">00</span><b>Base del showroom</b></div><span class="step-meta">Incluida</span></summary>
+   <div class="step-content" style="padding-top:0">
+   <div id="manualBaseContent"></div>
+   <div class="price-line total-line"><span>Precio base hasta 100 m²</span><strong>490 €</strong></div>
+   <p class="desc" style="margin-top:10px">Incluye 1 planta 3D interactiva del inmueble. Las plantas adicionales del mismo inmueble cuestan 220 € cada una. Los espacios interiores y recursos opcionales se cotizan aparte y se explican en los siguientes pasos.</p>
+   <div class="actions"><button class="btn primary" data-next="step1">Continuar</button></div>
+  </div>
+  </details>
+  <details class="step" id="step1">
+   <summary><div class="step-title"><span class="step-num">01</span><b>Tipo de inmueble</b></div><span class="step-meta" id="typeMeta">Selecciona una tipología</span></summary>
+   <div class="step-content"><p class="desc">Esta selección identifica el tipo de proyecto. No genera un coste adicional por sí sola.</p>
+    <div class="grid three">
+     <div class="choice"><input type="radio" name="type" id="typeApartment" value="Apartamento" checked><label for="typeApartment"><b>Apartamento</b><small>Vivienda independiente.</small></label></div>
+     <div class="choice"><input type="radio" name="type" id="typeStudio" value="Apartestudio"><label for="typeStudio"><b>Apartestudio</b><small>Vivienda compacta de un solo ambiente o distribución reducida.</small></label></div>
+     <div class="choice"><input type="radio" name="type" id="typeColiving" value="Co-living"><label for="typeColiving"><b>Co-living</b><small>Vivienda compartida con habitaciones individuales y zonas comunes.</small></label></div>
+    </div>
+
+    <div class="actions"><button class="btn primary" data-next="step2">Continuar</button></div>
+   </div>
+  </details>
+  <details class="step manual-surface-step" id="step2">
+   <summary><div class="step-title"><span class="step-num">03</span><b>Superficie del inmueble</b></div><span class="step-meta" id="areaMeta">100 m² incluidos</span></summary>
+   <div class="step-content area-accordion-content">
+    <div>
+     <p class="accordion-intro">Indica manualmente la superficie construida total: suma los m² reales de todas las plantas del inmueble.</p>
+    </div>
+    <div class="area-panel-control">
+     <div class="area-input-wrap"><input id="area" type="number" min="1" step="1" value="100" aria-label="Superficie total en metros cuadrados"><span>m²</span></div>
+     <small>Hasta 100 m² incluidos · Cada m² adicional: 7 €.</small>
+     <span id="areaCost" hidden>0 €</span>
+    </div>
+    <div class="actions"><button class="btn primary" data-next="step3">Continuar</button></div>
+   </div>
+  </details>
+  <details class="step clean-floor-accordion manual-clean-floor" id="step3">
+   <summary>
+    <div class="step-title"><span class="step-num">04</span><b>Plantas 3D adicionales</b></div>
+    <span class="step-meta" id="floorMeta">0 plantas 3D · 0 €</span>
+   </summary>
+   <div class="step-content multi-property-body clean-floor-body plant-config-body">
+    <p class="accordion-intro">Configura cuántas plantas del inmueble necesitan representación 3D. La superficie de todas las plantas debe estar incluida en el apartado anterior.</p>
+    <div class="plant-config-grid plant-config-personalized">
+     <div class="plant-selector-card plant-selector-wide">
+      <label for="floors">¿Cuántas plantas 3D necesitas?</label>
+      <small>220 € por planta · Showroom Personalizado no incluye plantas 3D</small>
+      <div class="clean-stepper">
+       <button type="button" id="manualFloorsMinus" aria-label="Quitar una planta">−</button>
+       <input id="floors" type="number" min="0" max="30" step="1" value="0" aria-label="Número de plantas 3D">
+       <button type="button" id="manualFloorsPlus" aria-label="Añadir una planta">＋</button>
+      </div>
+     </div>
+    </div>
+    <div class="plant-summary-card">
+     <h4>Resumen de plantas</h4>
+     <div class="plant-summary-line"><span>Plantas incluidas</span><strong>0</strong></div>
+     <div class="plant-summary-line"><span>Plantas contratadas</span><strong id="manualRequestedPlantCount">0</strong></div>
+     <div class="plant-summary-total"><span>Total de plantas 3D</span><strong id="manualTotalPlantCount">0</strong></div>
+     <div class="plant-summary-cost"><span>Coste adicional</span><strong id="floorCost">0 €</strong></div>
+     <span id="floorFormula" hidden>0 plantas × 220 €</span>
+     <span id="manualTotalAreaLabel" hidden>100 m²</span>
+    </div>
+    <div class="actions"><button class="btn primary" data-next="step4">Continuar</button></div>
+   </div>
+  </details>
+  <details class="step" id="step4">
+   <summary><div class="step-title"><span class="step-num">04</span><b>Espacios interiores</b></div><span class="step-meta" id="spacesMeta">Selecciona los espacios</span></summary>
+   <div class="step-content"><p class="desc">Selecciona los espacios que requieren modelado y visualización 3D. Los dormitorios adicionales se agregan con cantidad abierta, especialmente para proyectos de co-living.</p>
+    <div class="eyebrow" style="margin:18px 0 10px">Espacios principales · 250 € cada uno</div>
+    <div class="grid">
+     <div class="choice"><input type="checkbox" class="mainspace" id="living" data-name="Sala comedor"><label for="living"><b>Sala comedor</b><small>Espacio integrado · 250 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="mainspace" id="kitchen" data-name="Cocina"><label for="kitchen"><b>Cocina</b><small>250 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="mainspace" id="terrace" data-name="Terraza / balcón"><label for="terrace"><b>Terraza / balcón</b><small>250 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="mainspace" id="rooftop" data-name="Azotea"><label for="rooftop"><b>Azotea</b><small>250 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="mainspace" id="master" data-name="Dormitorio principal"><label for="master"><b>Dormitorio principal</b><small>250 €</small></label></div>
+    </div>
+    <div class="eyebrow" style="margin:20px 0 10px">Dormitorio principal: 250 € · cada dormitorio adicional: 140 €</div>
+    <div class="row"><div class="field"><label for="extraBedrooms">Cantidad de dormitorios adicionales</label><input id="extraBedrooms" type="number" min="0" max="300" step="1" value="0"></div><div class="field"><label>Coste total de dormitorios</label><input id="bedroomCost" value="0 €" readonly></div></div>
+    <div class="eyebrow" style="margin:20px 0 10px">Zonas complementarias · 140 € cada una</div>
+    <div class="grid">
+     <div class="choice"><input type="checkbox" class="secondary" id="bath1" data-name="Baño principal"><label for="bath1"><b>Baño principal</b><small>140 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="secondary" id="bath2" data-name="Baño secundario"><label for="bath2"><b>Baño secundario</b><small>140 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="secondary" id="closet" data-name="Vestidor principal"><label for="closet"><b>Vestidor principal</b><small>140 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="secondary" id="laundry" data-name="Lavandería"><label for="laundry"><b>Lavandería</b><small>140 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="secondary" id="office" data-name="Estudio / despacho"><label for="office"><b>Estudio / despacho</b><small>140 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="secondary" id="hall" data-name="Pasillo / distribuidor"><label for="hall"><b>Pasillo / distribuidor</b><small>140 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="secondary" id="tvCinema" data-name="Sala de TV / cine"><label for="tvCinema"><b>Sala de TV / cine</b><small>140 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="secondary" id="gameRoom" data-name="Sala de juegos"><label for="gameRoom"><b>Sala de juegos</b><small>140 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="secondary" id="barVinoteca" data-name="Bar / vinoteca"><label for="barVinoteca"><b>Bar / vinoteca</b><small>140 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="secondary" id="wineCellar" data-name="Bodega"><label for="wineCellar"><b>Bodega</b><small>140 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="secondary" id="library" data-name="Biblioteca"><label for="library"><b>Biblioteca</b><small>140 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="secondary" id="privateGym" data-name="Gimnasio privado"><label for="privateGym"><b>Gimnasio privado</b><small>140 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="secondary" id="saunaJacuzzi" data-name="Sauna / jacuzzi"><label for="saunaJacuzzi"><b>Sauna / jacuzzi</b><small>140 €</small></label></div>
+     <div class="choice"><input type="checkbox" class="secondary" id="otherSpace" data-name="Otro espacio"><label for="otherSpace"><b>Otro espacio</b><small>140 €</small></label></div>
+    </div>
+    <div class="field"><label for="otherName">Nombre del otro espacio (si aplica)</label><input id="otherName" type="text" placeholder="Ej. sala de juegos"></div>
+    <div class="note">En co-living, introduce el número de dormitorios adicionales al principal. El dormitorio principal cuesta 250 € y cada dormitorio adicional 140 €. No existe un límite comercial predeterminado para la cantidad.</div>
+    <div class="actions"><button class="btn primary" data-next="step5">Continuar</button></div>
+   </div>
+  </details>
+  <details class="step" id="step5">
+ <summary><div class="step-title"><span class="step-num">06</span><b>Recursos adicionales</b></div><span class="step-meta" id="addonsMeta">Opcionales · cotización personalizada</span></summary>
+ <div class="step-content">
+  <p class="desc">Selecciona los recursos que necesitas. Cada opción se suma automáticamente al presupuesto.</p>
+  <div class="grid package-resource-grid manual-resource-grid">
+   <div class="choice package-resource-card">
+    <input type="checkbox" class="addon" id="manualReelAds" data-cost="250">
+    <label for="manualReelAds"><b>Reel Ads</b><small>Vídeo vertical breve para redes y promoción digital · 250 €</small></label>
+   </div>
+   <div class="choice package-resource-card">
+    <input type="checkbox" class="addon" id="manualVerticalImages" data-cost="220">
+    <label for="manualVerticalImages"><b>Imágenes verticales</b><small>Pack de imágenes optimizadas para redes y comunicación comercial · 220 €</small></label>
+   </div>
+   <div class="choice package-resource-card">
+    <input type="checkbox" class="addon" id="cinematicVideo" data-cost="350">
+    <label for="cinematicVideo"><b>Vídeo cinematográfico</b><small>Vídeo horizontal 16:9 para presentaciones presenciales y pantallas grandes, con narrativa visual y edición · 350 €</small></label>
+   </div>
+   <div class="choice package-resource-card">
+    <input type="checkbox" class="addon" id="commercialSheet" data-cost="220">
+    <label for="commercialSheet"><b>Ficha comercial individual</b><small>Ficha de una vivienda con imágenes, plano, superficie y datos clave · 220 €</small></label>
+   </div>
+   <div class="choice package-resource-card">
+    <input type="checkbox" class="addon" id="unitCatalog" data-cost="200">
+    <label for="unitCatalog"><b>Catálogo de unidades</b><small>Documento digital con varias viviendas, sus planos y características · 200 €</small></label>
+   </div>
+   <div class="choice package-resource-card package-coming-soon">
+    <input type="checkbox" id="manualLeadForm" disabled>
+    <label for="manualLeadForm"><b>Formulario de captación de interesados</b><small>Formulario integrado para recopilar datos de posibles clientes.</small></label>
+   </div>
+   <div class="choice package-resource-card package-coming-soon">
+    <input type="checkbox" id="manualCrmIntegration" disabled>
+    <label for="manualCrmIntegration"><b>Integración con CRM</b><small>Conecta los contactos con una herramienta para gestionar seguimiento y oportunidades.</small></label>
+   </div>
+   <div class="choice package-resource-card package-coming-soon">
+    <input type="checkbox" id="manualLandingPage" disabled>
+    <label for="manualLandingPage"><b>Landing page personalizada</b><small>Página web exclusiva para presentar el proyecto, sus viviendas y vías de contacto.</small></label>
+   </div>
+  </div>
+  <div class="actions"><button class="btn primary" data-next="step7">Continuar</button></div>
+ </div>
+</details>
+  <details class="step clean-similar-accordion manual-clean-similar" id="step6">
+   <summary><div class="step-title"><span class="step-num">07</span><b>Añadir otro showroom similar</b></div><span class="clean-discount">−50 %</span></summary>
+   <div class="step-content multi-property-body clean-similar-body">
+    <p class="accordion-intro">Si tienes otras tipologías de inmueble en el mismo edificio, agrégalas aquí.</p>
+    <label class="choice clean-similar-toggle"><input type="checkbox" id="addSimilar"><span><b>Incluir segundo showroom</b></span></label>
+    <div id="similarFields" class="similar-fields-grid hidden" aria-hidden="true">
+     <div class="field similar-type-field"><label for="similarType">Tipo de inmueble del segundo showroom</label><select id="similarType" class="similar-property-type"><option value="Apartamento">Apartamento</option><option value="Apartestudio">Apartestudio</option><option value="Co-living">Co-living</option></select></div>
+     <div class="field"><label for="similarArea">Superficie del segundo inmueble (m²)</label><input id="similarArea" type="number" min="1" step="1" value="100"></div>
+     <div class="field"><label for="similarFloors">Plantas 3D adicionales</label><input id="similarFloors" type="number" min="0" max="30" step="1" value="0"></div>
+     <div class="similar-info-card"><b>1 planta 3D incluida</b><small>Incluida para el segundo showroom. Si necesitas más, puedes añadir plantas adicionales.</small></div>
+     <div class="similar-info-card"><b>Recursos compartidos</b><small>Los recursos adicionales contratados se aplican a ambos inmuebles, sin coste extra.</small></div>
+    </div>
+    <div class="similar-price-summary" id="manualSimilarSummary" hidden aria-hidden="true"><span>Segundo showroom · 50 % de descuento · 1 planta 3D incluida · recursos compartidos</span><strong id="manualSimilarPrice">0 €</strong></div>
+    <div class="actions"><button class="btn primary" data-next="step5">Continuar</button></div>
+   </div>
+  </details>
+  <details class="step" id="step7">
+   <summary><div class="step-title"><span class="step-num">07</span><b>Presupuesto final</b></div><span class="step-meta" id="totalMeta">Desglose actualizado</span></summary>
+   <div class="step-content">
+    <div class="breakdown"><h3>Desglose del proyecto</h3><div id="quoteRows"></div><div class="price-line total-line"><span>Total estimado</span><strong id="grandTotal">490 €</strong></div><p class="desc" id="discountExplanation" style="margin:12px 0 0"></p></div>
+    
+    <div class="actions final-quote-actions"><button class="btn final-quote-back" id="manualBackBottom" type="button">VOLVER</button><button class="btn primary final-quote-download" id="confirmOpen" type="button">DESCARGAR COTIZACIÓN</button><button class="btn" id="copyQuote" type="button" hidden style="display:none">Copiar presupuesto</button><button class="btn" id="reset" type="button" hidden style="display:none">Reiniciar</button></div><p class="muted" id="copyStatus" aria-live="polite"></p>
+   </div>
+  </details>
+   </div>
+  </div>
+ </section>
+</main>
+
+<div class="order-modal hidden" id="manualOfferModal" role="dialog" aria-modal="true" aria-labelledby="manualOfferTitle">
+ <div class="order-dialog manual-offer-dialog">
+  <button class="manual-offer-close" id="manualOfferClose" type="button" aria-label="Cerrar">×</button>
+  <div class="eyebrow">Antes de finalizar tu cotización</div>
+  <div class="manual-offer-badge">OPCIÓN MÁS COMPLETA</div>
+  <h2 id="manualOfferTitle">Antes de descargar, compara esta opción</h2>
+  <p class="desc">Tu configuración personalizada puede salirte más cara que contratar el Showroom Completo, que reúne más prestaciones en un solo paquete.</p>
+  <div class="manual-offer-comparison">
+   <div class="manual-offer-price-card">
+    <small>TU CONFIGURACIÓN PERSONALIZADA</small>
+    <strong id="manualOfferCustomPrice">—</strong>
+    <span>Con los espacios y servicios que has seleccionado</span>
+   </div>
+   <div class="manual-offer-vs">O</div>
+   <div class="manual-offer-price-card recommended">
+    <small>SHOWROOM COMPLETO</small>
+    <strong id="manualOfferPackagePrice">—</strong>
+    <span id="manualOfferPackageScope">Precio para la superficie y plantas de tu inmueble</span>
+   </div>
+  </div>
+  <div class="manual-offer-saving" id="manualOfferSaving">
+   <span>AHORRO CON SHOWROOM COMPLETO</span>
+   <strong id="manualOfferSavingAmount">—</strong>
+  </div>
+  <div class="manual-offer-includes">
+   <b>Por ese precio tienes:</b>
+   <div><span>✓</span> Todos los espacios interiores, sin límite de habitaciones</div>
+   <div><span>✓</span> 1 planta 3D interactiva incluida</div>
+   <div><span>✓</span> Reel Ads promocional e imágenes verticales</div>
+   <div><span>✓</span> Base digital completa del showroom</div>
+  </div>
+  <p class="manual-offer-footnote">El precio se ajusta si superas los 100 m² o necesitas plantas 3D adicionales. Los servicios opcionales no incluidos en el paquete se mantienen como extras.</p>
+  <div class="manual-offer-actions">
+   <button class="btn" id="manualOfferContinue" type="button">CONTINUAR CON MI CONFIGURACIÓN</button>
+   <button class="btn primary" id="manualOfferChoosePackage" type="button">QUIERO EL SHOWROOM COMPLETO</button>
+  </div>
+ </div>
+</div>
+
+<div class="order-modal hidden" id="orderModal" role="dialog" aria-modal="true" aria-labelledby="orderTitle">
+ <div class="order-dialog">
+  <div class="eyebrow">Cotización 360Preventa · Showroom</div><h2 id="orderTitle">Resumen de configuración</h2>
+  <p class="desc">Ingresa tu nombre para identificar esta cotización.</p>
+  <div class="field name-field"><label for="customerName">Nombre de la persona</label><input id="customerName" type="text" placeholder="Escribe tu nombre" autocomplete="name" required></div>
+  <div class="field email-field"><label for="customerEmail">Correo electrónico</label><input id="customerEmail" type="email" placeholder="tu@correo.com" autocomplete="email" required></div>
+  <div id="exportCustomerName" class="export-customer-name"></div>
+  <div id="orderSummary" class="order-details"></div>
+  <div class="price-line total-line"><span>Total estimado</span><strong id="orderTotal">—</strong></div>
+  <div class="actions summary-actions">
+   <button class="btn" id="modalClose" type="button">Volver a editar</button>
+   <button class="btn primary" id="downloadPdf" type="button">Descargar PDF</button>
+  </div>
+  <div id="shareFormats" class="share-formats hidden" aria-label="Formato para compartir" style="display:none">
+   <button class="btn" id="downloadImage" type="button" tabindex="-1">Descargar imagen</button>
+   <button class="btn" id="shareQuote" type="button" tabindex="-1">Compartir</button>
+   <button class="btn" id="quoteToProject" type="button" tabindex="-1">Crear proyecto</button>
+   <button class="btn" id="sharePdf" type="button" tabindex="-1">PDF</button>
+   <button class="btn" id="shareImage" type="button" tabindex="-1">Imagen</button>
+  </div>
+  <p class="desc" id="confirmStatus" aria-live="polite"></p>
+ </div>
+</div>
+
+
+<div class="showroom-lightbox" id="showroomLightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Imagen completa del showroom">
+ <button type="button" class="showroom-lightbox-close" id="showroomLightboxClose" aria-label="Cerrar imagen ampliada">× <span> CERRAR</span></button>
+ <div class="showroom-lightbox-stage">
+  <img id="showroomLightboxImage" alt="Showroom inmobiliario interactivo en portátil, tablet y celular, con tour 360, planta 3D, imágenes, vídeo Ads, brochure y ficha del inmueble">
+ </div>
+</div>
+
+<!-- Stubs: shared app.js expects these nodes from the panel shell -->
+<div id="loginScreen" class="portal-hidden" hidden></div>
+<div id="portal" class="portal-hidden" hidden></div>
+<div id="portalHome" class="portal-hidden" hidden></div>
+<div id="portalSubpage" class="portal-hidden" hidden></div>
+<div id="hunter" class="portal-hidden" hidden></div>
+<div id="teamChatFloat" class="portal-hidden" hidden></div>
+<div id="teamChatPopup" class="portal-hidden" hidden></div>
+<div id="paymentsGateBackdrop" class="portal-hidden" hidden></div>
+<div id="globalFullscreenBtn" class="portal-hidden" hidden></div>
+<form id="loginForm" class="portal-hidden" hidden></form>
+<form id="paymentsGateForm" class="portal-hidden" hidden><input id="paymentsDynamicKey"><div id="paymentsGateError"></div></form>
+<button id="requestPaymentsKey" type="button" class="portal-hidden" hidden></button>
+<button id="googleLogin" type="button" class="portal-hidden" hidden></button>
+<button id="logoutBtn" type="button" class="portal-hidden" hidden></button>
+<button id="portalHunterOpen" type="button" class="portal-hidden" hidden></button>
+<span id="hunterLiveCommission" hidden>0 €</span>
+<span id="chatUnreadBadge" class="portal-hidden" hidden>0</span>
+<div id="teamChatMessages" class="portal-hidden" hidden></div>
+<textarea id="teamChatInput" class="portal-hidden" hidden></textarea>
+<form id="teamChatForm" class="portal-hidden" hidden></form>
+<button id="chatTeamTab" type="button" class="portal-hidden" hidden></button>
+<button id="chatDirectTab" type="button" class="portal-hidden" hidden></button>
+<div id="chatRecipientPanel" class="portal-hidden" hidden></div>
+<div id="chatMemberList" class="portal-hidden" hidden></div>
+<button id="teamChatPopupClose" type="button" class="portal-hidden" hidden></button>
+<span id="teamChatUnread" class="portal-hidden" hidden>0</span>
+<div id="chatPopupTitle" class="portal-hidden" hidden></div>
+<button id="hunterBack" type="button" class="portal-hidden" hidden></button>
+<button id="hunterLogoutBtn" type="button" class="portal-hidden" hidden></button>
+<input id="hunterAverage" type="hidden" value="700">
+<input id="sales" type="hidden" value="0">
+<div id="individualInputs" class="portal-hidden" hidden></div>
+<div id="milestones" class="portal-hidden" hidden></div>
+<strong id="hunterTotal" class="portal-hidden" hidden></strong>
+<b id="hunterCommission" class="portal-hidden" hidden></b>
+<b id="hunterBonus" class="portal-hidden" hidden></b>
+<div id="hunterGoalFooter" class="portal-hidden" hidden></div>
+<span id="hunterGoalCaption" class="portal-hidden" hidden></span>
+<div id="hunterGoalTrack" class="portal-hidden" hidden></div>
+<span id="hunterGoalFill" class="portal-hidden" hidden></span>
+<span id="hunterGoalBonus" class="portal-hidden" hidden></span>
+<input id="rememberLogin" type="checkbox" class="portal-hidden" hidden>
+<input id="loginEmail" class="portal-hidden" hidden>
+<input id="loginPassword" class="portal-hidden" hidden>
+<div id="loginError" class="portal-hidden" hidden></div>
+
+<script src="/panel_gestion/js/app.js"></script>
+<script src="/panel_gestion/js/visual-layer.js"></script>
+<script src="/panel_gestion/js/lightbox.js"></script>
+<script src="/panel_gestion/js/path-chooser-flip.js"></script>
+<script src="/panel_gestion/js/accordion-tones.js"></script>
+<script src="/panel_gestion/js/path-chooser-actions.js"></script>
+<script src="/cotizador/js/boot.js"></script>
 </body>
 </html>

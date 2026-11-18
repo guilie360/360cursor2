@@ -154,8 +154,8 @@ function updateHunter(){
    {label:'10 o más proyectos',amount:320,condition:n>=10,achieved:n>=10}
  ].map(goal=>`<div class="hunter-goal${goal.condition?' active':''}"><small>${goal.label}</small><strong>${money(goal.amount)}</strong><em>${goal.achieved?'Tramo alcanzado':'Bono de este tramo'}</em></div>`).join('');
 }
-$('sales').addEventListener('input',()=>{renderHunterPrices();updateHunter()});
-$('hunterAverage').addEventListener('input',updateHunter);
+if($('sales'))$('sales').addEventListener('input',()=>{renderHunterPrices();updateHunter()});
+if($('hunterAverage'))$('hunterAverage').addEventListener('input',updateHunter);
 document.querySelectorAll('input[name="hunterPriceMode"]').forEach(x=>x.addEventListener('change',updateHunter));
 $('portalHunterOpen').addEventListener('click',()=>{
  document.body.classList.add('hunter-mode');
@@ -1165,8 +1165,8 @@ function portalOpenPage(key){
   return;
  }
  if(key==='quote'){
-  // Una sola app de cotizador: el panel entra en modo interno.
-  window.location.href='/cotizador/index.html?modo=interno';
+  // Misma app pública /cotizar, con capa de equipo.
+  window.location.href='/cotizar?modo=interno';
   return;
  }
  const p=portalPages[key];if(!p)return;
