@@ -12,9 +12,13 @@ button{font:inherit}
 .header-logo img{width:100%;height:100%;object-fit:contain}
 .header-actions{display:flex;align-items:center;gap:9px;pointer-events:auto}
 .mag{transition:transform .35s var(--ease)}
-/* Cotizar: flotante abajo-derecha, sin competir con el menú */
-.quote-float{
+/* Acciones flotantes: chat + cotizar, abajo-derecha */
+.float-actions{
   position:fixed;z-index:45;right:max(22px,4vw);bottom:max(22px,3.5vh);
+  display:flex;flex-direction:column;align-items:flex-end;gap:12px;
+  pointer-events:none;
+}
+.quote-float{
   display:inline-flex;align-items:center;gap:14px;
   padding:0;border:0;background:transparent;color:var(--white);
   text-decoration:none;cursor:pointer;pointer-events:auto;
@@ -28,24 +32,21 @@ button{font:inherit}
   width:36px;height:1px;background:var(--bronze);
   transform-origin:right center;transition:transform .45s var(--ease),background .25s;
 }
-/* Chat WhatsApp: flotante abajo-izquierda, icono mínimo */
 .chat-float{
-  position:fixed;z-index:45;left:max(22px,4vw);bottom:max(22px,3.5vh);
   width:44px;height:44px;display:grid;place-items:center;
-  border:0;background:transparent;color:rgba(214,210,204,.88);
+  margin-right:-4px;
+  border:1px solid rgba(214,210,204,.28);border-radius:999px;
+  background:rgba(10,10,10,.35);color:rgba(214,210,204,.92);
   cursor:pointer;pointer-events:auto;
-  transition:opacity .35s var(--ease),transform .35s var(--ease),color .25s;
+  transition:opacity .35s var(--ease),transform .35s var(--ease),color .25s,border-color .25s,background .25s;
 }
 .chat-float svg{
-  width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.25;
+  width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.35;
   stroke-linecap:round;stroke-linejoin:round;
 }
-body:has(.menu-panel.open) .quote-float,
-body.demo-open .quote-float,
-body:has(.page-transit.on) .quote-float,
-body:has(.menu-panel.open) .chat-float,
-body.demo-open .chat-float,
-body:has(.page-transit.on) .chat-float{
+body:has(.menu-panel.open) .float-actions,
+body.demo-open .float-actions,
+body:has(.page-transit.on) .float-actions{
   opacity:0;visibility:hidden;pointer-events:none;
 }
 .fullscreen-toggle{width:34px;height:34px;border:0;background:transparent;color:#96928c;display:grid;place-items:center;cursor:pointer;transition:color .2s,opacity .2s,transform .35s var(--ease)}
@@ -119,18 +120,19 @@ body:has(.page-transit.on) .chat-float{
  .quote-float:hover{color:#fff}
  .quote-float:hover .quote-float-label{color:#fff}
  .quote-float:hover .quote-float-mark{transform:scaleX(1.35);background:#d6d2cc}
- .chat-float:hover{color:#fff}
+ .chat-float:hover{color:#fff;border-color:rgba(214,210,204,.7);background:rgba(255,255,255,.06)}
  .menu-panel a:hover{color:var(--bronze);padding-left:12px}
  .menu-panel a:hover span{transform:translateX(-4px)}
 }
 
 .menu-panel a:active{color:var(--bronze)}
 @media(max-width:640px){
- .quote-float{right:18px;bottom:18px;gap:10px}
+ .float-actions{right:18px;bottom:18px;gap:10px}
+ .quote-float{gap:10px}
  .quote-float-label{font-size:10px;letter-spacing:.18em}
  .quote-float-mark{width:28px}
- .chat-float{left:18px;bottom:18px;width:40px;height:40px}
- .chat-float svg{width:20px;height:20px}
+ .chat-float{width:40px;height:40px;margin-right:-2px}
+ .chat-float svg{width:18px;height:18px}
 }
 
 @keyframes appear{from{opacity:0;transform:translateY(18px)}}
@@ -269,7 +271,7 @@ body:has(.page-transit.on) .chat-float{
 .showroom-arrow{display:block;color:var(--bronze);font-size:16px;transition:transform .35s var(--ease)}
 .showroom small{display:none}
 .final-footer{
-  position:absolute;bottom:24px;left:calc(8vw + 48px);width:calc(84vw - 48px);
+  position:absolute;bottom:24px;left:8vw;width:84vw;
   display:flex;justify-content:flex-start;gap:15px;text-align:left;
   color:rgba(255,255,255,.38);font-size:8px;letter-spacing:1.8px;
   pointer-events:none;
