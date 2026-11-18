@@ -8,7 +8,12 @@
   document.body.classList.remove('portal-mode');
 
   var bar = document.getElementById('internoBar');
-  if (bar) bar.hidden = modo !== 'interno';
+  if (bar) {
+    var showTeam = modo === 'interno';
+    bar.hidden = !showTeam;
+    bar.toggleAttribute('hidden', !showTeam);
+    bar.style.display = showTeam ? '' : 'none';
+  }
 
   function startQuote() {
     try {

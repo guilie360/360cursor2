@@ -20,9 +20,18 @@ body.cotizador-app.modo-interno .portal-back{
 
 .interno-bar{
   position:sticky;top:0;z-index:40;
-  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  display:none;
+  align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
   padding:10px 18px;border-bottom:1px solid #40382d;background:#0b0b0bf2;backdrop-filter:blur(10px);
   font:11px/1.2 Manrope,Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;
+}
+/* Solo modo equipo */
+body.cotizador-app.modo-interno .interno-bar{
+  display:flex;
+}
+body.cotizador-app.modo-publico .interno-bar,
+.interno-bar[hidden]{
+  display:none!important;
 }
 .interno-bar a{color:#e2c898;text-decoration:none;border:1px solid #40382d;padding:8px 12px}
 .interno-bar a:hover{border-color:#c5a675}
