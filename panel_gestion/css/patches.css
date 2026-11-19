@@ -436,25 +436,24 @@ body.hunter-mode .portal{min-height:0}
 
 /* ===== patch ===== */
 
-/* Reverso: ilustración contenida + botones negros; en móvil no invade Volver/CTA */
+/* Reverso: ilustración grande + CTA; Volver/CTA siempre por encima */
 #pathChooser .flip-back{gap:14px!important;padding:46px 22px 26px!important}
-#pathChooser .flip-back .visual-art{flex:0 1 auto!important;width:min(100%,420px)!important;height:auto!important;min-height:0!important;max-height:min(32vw,300px)!important;object-fit:contain!important;margin:0 auto!important}
+#pathChooser .flip-back .visual-art{flex:1 1 auto!important;width:100%!important;max-width:520px!important;height:auto!important;min-height:280px!important;max-height:min(38vw,360px)!important;object-fit:contain!important;margin:0 auto!important;position:relative!important;z-index:1!important}
 #pathChooser .flip-cta,#pathChooser .flip-cta-gold,#pathChooser .flip-cta-light{background:#060606!important;color:#e8e1d6!important;
  border:1px solid rgba(255,255,255,.16)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)!important;flex:0 0 auto}
 #pathChooser .flip-cta:hover,#pathChooser .flip-cta-gold:hover,#pathChooser .flip-cta-light:hover{background:#121212!important;border-color:rgba(232,225,214,.42)!important;
  box-shadow:0 12px 26px -14px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.07)!important;transform:translateY(-2px)}
 #pathChooser .flip-return{z-index:5!important}
 #pathChooser .flip-back>.flip-cta{z-index:5!important}
-#pathChooser .flip-back .visual-art{position:relative!important;z-index:1!important}
 @media(max-width:850px){
- #pathChooser .flip-card.flipped{min-height:380px!important}
- #pathChooser .flip-card.flipped .flip-back{min-height:380px!important;justify-content:flex-start!important;padding:52px 16px 96px!important}
- #pathChooser .flip-back .visual-art{max-height:min(42vw,210px)!important;width:min(92%,300px)!important;min-height:0!important}
+ #pathChooser .flip-card.flipped{min-height:min(520px,72vh)!important}
+ #pathChooser .flip-card.flipped .flip-back{min-height:min(520px,72vh)!important;justify-content:center!important;align-items:center!important;padding:44px 12px 100px!important}
+ #pathChooser .flip-back .visual-art{width:100%!important;max-width:100%!important;min-height:260px!important;max-height:calc(min(520px,72vh) - 150px)!important}
 }
 @media(max-width:520px){
- #pathChooser .flip-card.flipped,#pathChooser .flip-card.flipped .flip-back{min-height:360px!important}
- #pathChooser .flip-back{padding:48px 14px 90px!important}
- #pathChooser .flip-back .visual-art{max-height:min(40vw,180px)!important;width:min(88%,260px)!important;min-height:0!important}
+ #pathChooser .flip-card.flipped,#pathChooser .flip-card.flipped .flip-back{min-height:min(480px,70vh)!important}
+ #pathChooser .flip-back{padding:42px 10px 94px!important}
+ #pathChooser .flip-back .visual-art{min-height:240px!important;max-height:calc(min(480px,70vh) - 140px)!important;width:100%!important}
 }
 
 /* ===== patch ===== */
