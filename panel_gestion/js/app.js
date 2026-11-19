@@ -1448,7 +1448,7 @@ $('loginScreen').classList.remove('portal-hidden');$('portal').classList.add('po
 
 
 const globalFullscreenBtn=document.getElementById('globalFullscreenBtn');
-const fullscreenExpandIcon='<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3"/>';
+const fullscreenExpandIcon='<path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/>';
 const fullscreenShrinkIcon='<path d="M8 3v5H3M16 3v5h5M21 16h-5v5M3 16h5v5"/>';
 function syncGlobalFullscreenControl(){
  const active=!!document.fullscreenElement;

@@ -234,24 +234,37 @@ a.portal-card{appearance:none}
 .login-google,.login-submit{width:100%;padding:17px 15px;border:1px solid #514638;background:#111;color:var(--ink);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
 .login-google{margin-bottom:24px}.login-submit{background:var(--gold);color:#111;border-color:var(--gold);margin-top:12px}
 .login-divider{display:flex;align-items:center;gap:14px;color:#777;font-size:11px;margin:8px 0 22px}.login-divider:before,.login-divider:after{content:"";height:1px;background:#302b24;flex:1}
-.login-field{text-align:left;margin:13px 0}.login-field label{display:block;color:#aaa;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}.login-field input{width:100%;padding:15px;background:#101010;border:1px solid #40382d;color:#eee;outline:none}.login-field input:focus{border-color:var(--gold)}
+.login-field{text-align:left;margin:13px 0}.login-field label{display:block;color:#aaa;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}.login-field input{width:100%;padding:15px;background:#0a0a0a;border:1px solid #40382d;color:#eee;outline:none;color-scheme:dark;caret-color:#eee}.login-field input:focus{border-color:var(--gold);background:#0a0a0a}
+.login-field input:-webkit-autofill,
+.login-field input:-webkit-autofill:hover,
+.login-field input:-webkit-autofill:focus,
+.login-field input:-webkit-autofill:active{
+ -webkit-text-fill-color:#eee!important;
+ caret-color:#eee;
+ border-color:#40382d!important;
+ box-shadow:0 0 0 1000px #0a0a0a inset!important;
+ -webkit-box-shadow:0 0 0 1000px #0a0a0a inset!important;
+ transition:background-color 99999s ease-out;
+}
 .login-error{color:#d99a8d;font-size:12px;min-height:18px;margin-top:12px}.login-foot{color:#777;font-size:10px;margin-top:24px}
 .portal-logout{border:1px solid var(--line);background:transparent;color:var(--muted);padding:8px 12px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
 .portal-files-panel{border:1px solid var(--line);padding:16px;margin-top:16px;background:#101010}
 @media(max-width:600px){.login-wordmark{font-size:29px}.login-card{padding:26px 20px}}
 
-/* Control global de pantalla completa */
+/* Control global de pantalla completa — estilo landing: sin borde, fondo transparente */
 #fullscreenBtn{display:none!important}
 .global-fullscreen-btn{
- position:fixed;right:22px;bottom:20px;top:auto;z-index:10000;
- width:48px;height:48px;padding:0;display:flex;align-items:center;justify-content:center;
- border:1px solid var(--line);background:#111;color:#cfc9bd;
- cursor:pointer;backdrop-filter:blur(10px);transition:border-color .18s,color .18s,background .18s
+ position:fixed;right:max(18px,3vw);bottom:max(16px,2.4vh);top:auto;z-index:10000;
+ width:34px;height:34px;padding:0;display:grid;place-items:center;
+ border:0;border-radius:0;background:transparent;box-shadow:none;
+ color:#cfc9bd;opacity:.72;
+ cursor:pointer;backdrop-filter:none;-webkit-backdrop-filter:none;
+ transition:color .2s,opacity .2s,transform .35s ease
 }
-.global-fullscreen-btn:hover{border-color:#777;color:#fff;background:#191919}
-.global-fullscreen-btn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.global-fullscreen-btn:hover{border:0;background:transparent;color:#fff;opacity:1;transform:scale(1.08)}
+.global-fullscreen-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.15;stroke-linecap:square;stroke-linejoin:miter}
 .global-fullscreen-btn:focus-visible{outline:2px solid #cfc9bd;outline-offset:3px}
-@media(max-width:600px){.global-fullscreen-btn{right:15px;bottom:15px;width:44px;height:44px}}
+@media(max-width:600px){.global-fullscreen-btn{right:16px;bottom:14px;width:32px;height:32px}}
 
 
 /* ==========================================================
@@ -331,10 +344,12 @@ table{border-radius:10px}
 .portal-form select,.portal-form textarea,.login-field input,.hunter-prices input{
  border-radius:var(--r-ctl);background:var(--well);
  box-shadow:inset 0 1px 3px rgba(0,0,0,.6);transition:border-color .2s ease,box-shadow .25s ease}
+.login-field input{background:#0a0a0a!important;box-shadow:none}
 .field input:focus,.field select:focus,.textinput:focus,.room-row input:focus,.package-area-control input:focus,
 .portal-form input:focus,.portal-form select:focus,.portal-form textarea:focus,.login-field input:focus{
  border-color:#d8d4cc!important;outline:none;
  box-shadow:0 0 0 3px rgba(255,255,255,.10),inset 0 1px 3px rgba(0,0,0,.5)}
+.login-field input:focus{background:#0a0a0a!important;box-shadow:0 0 0 3px rgba(255,255,255,.08)}
 button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid #cfc9bd;outline-offset:3px}
 
 /* ---------- Checkbox y radio personalizados (mismos inputs) ---------- */
@@ -394,10 +409,10 @@ button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid #cf
 .portal-card:hover .picon{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.22)}
 .portal-logout{border-radius:var(--r-ctl);transition:border-color .2s ease,color .2s ease}
 .portal-logout:hover{border-color:var(--edge-hi);color:var(--ink)}
-.portal-back,.global-fullscreen-btn{border-radius:14px;box-shadow:0 10px 28px -10px rgba(0,0,0,.95);
+.portal-back{border-radius:14px;box-shadow:0 10px 28px -10px rgba(0,0,0,.95);
  transition:transform .25s var(--ease),box-shadow .25s ease,border-color .18s,color .18s,background .18s}
 .portal-back:hover{transform:translateY(-2px);box-shadow:0 16px 32px -12px rgba(0,0,0,.95)}
-.global-fullscreen-btn{-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);background:rgba(17,17,17,.82)}
+.global-fullscreen-btn{border-radius:0!important;box-shadow:none!important;background:transparent!important;border:0!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 
 /* Entrada orquestada: único movimiento automático al cargar (tarjetas del portal) */
 .portal-grid>.portal-card{animation:rise .65s var(--ease) backwards}
