@@ -264,47 +264,17 @@ body:not(.workspace-authenticated) #teamChatFloat,body:not(.workspace-authentica
 
 /* ===== patch ===== */
 
-/* Encabezado Panel = Cotizar; ancho útil más amplio (antes tope 1120px dejaba márgenes muertos) */
+/* Geometría del header: SOLO site-chrome.css (panel = cotizador, sin saltos) */
 .portal{padding:0 0 90px!important}
-.portal .portal-wrap{width:min(1480px,calc(100% - 48px));max-width:none;margin:0 auto}
-.portal .portal-head{position:sticky;top:0;z-index:20;display:block!important;padding:0!important;margin:0 0 28px!important;
- border:0!important;border-bottom:1px solid transparent!important;
- background:rgba(11,11,11,.72);-webkit-backdrop-filter:blur(16px) saturate(120%);backdrop-filter:blur(16px) saturate(120%);
- transition:box-shadow .3s ease,border-color .3s ease}
+.portal .portal-head{display:block!important;margin:0!important}
 .portal .portal-head.is-scrolled{box-shadow:0 14px 34px -16px rgba(0,0,0,.95);border-bottom-color:#4a4a4a!important}
-.portal .portal-head-inner{
-  width:min(1480px,calc(100% - 48px));max-width:none;margin:0 auto;
-  padding:12px 0!important;display:flex;flex-wrap:nowrap;
-  align-items:center;justify-content:space-between;gap:16px;
-  border-bottom:1px solid var(--line)
-}
-.portal .portal-head.is-scrolled .portal-head-inner{padding:10px 0!important}
-.portal .portal-brand{
-  display:flex;align-items:center;gap:0;flex:0 0 auto;min-width:0;margin:0;margin-right:auto;
-  white-space:nowrap;font:30px/1 'Italiana',Georgia,serif
-}
-.portal .portal-brand-logo{
-  display:block;width:46px;height:46px;flex:0 0 46px;object-fit:contain
-}
-.portal .portal-brand-copy{display:none!important}
-.portal .portal-head-right{
-  display:flex;align-items:center;justify-content:flex-end;gap:10px;
-  flex:0 1 auto;min-width:0;margin-left:0;white-space:nowrap
-}
 .portal .portal-search{
-  width:min(420px,46vw);max-width:420px;min-width:140px;
-  height:50px;padding:0 18px;border-radius:12px;
   background:#0a0a0a;border:1px solid var(--edge);color:var(--ink);
   font:13px/1.2 'Manrope',Arial
 }
 .portal .portal-search::placeholder{color:#7a756e}
 .portal .portal-search:focus{
   outline:none;border-color:rgba(255,255,255,.28);background:#0c0c0c
-}
-.portal .portal-head .portal-logout-icon{
-  flex:0 0 50px;width:50px;height:50px;min-width:50px;padding:0;
-  border-radius:12px;border:1px solid var(--line);background:transparent;
-  color:var(--ink);display:inline-flex;align-items:center;justify-content:center
 }
 .portal .portal-head .portal-logout-icon svg{
   width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;
@@ -313,18 +283,6 @@ body:not(.workspace-authenticated) #teamChatFloat,body:not(.workspace-authentica
 .portal .portal-head .portal-logout-icon:hover{background:rgba(255,255,255,.055);border-color:#5a5a5a;color:#fff}
 body.hunter-mode .portal .portal-head{display:block!important}
 body.hunter-mode .portal{min-height:0}
-@media(max-width:760px){
- .portal .portal-head-inner{flex-wrap:nowrap;gap:12px}
- .portal .portal-head-right{flex:1 1 auto;min-width:0}
- .portal .portal-search{flex:1 1 auto;width:auto;max-width:none}
-}
-@media(max-width:520px){
- .portal .portal-head-inner,.portal .portal-wrap{width:calc(100% - 24px)}
- .portal .portal-brand-logo{width:37px;height:37px;flex-basis:37px}
- .portal .portal-search{height:43px;padding:0 12px;font-size:12px}
- .portal .portal-head .portal-logout-icon{flex-basis:43px;width:43px;height:43px;min-width:43px}
- .portal .portal-head .portal-logout-icon svg{width:18px;height:18px}
-}
 
 /* Home: primarias Cotizar/Pagos/Contratos por profundidad negra (sin acento dorado) */
 .portal #portalHome .portal-home-intro{margin:4px 0 22px}
@@ -1337,65 +1295,7 @@ body.hunter-mode main {
 
 /* ===== patch ===== */
 
-/* Encabezado de Cotizar: marca fija a la izquierda y precio + reinicio agrupados a la derecha. */
-.topbar {
-  padding-top: 0 !important;
-}
-.topbar .topinner {
-  width: min(1120px, calc(100% - 32px)) !important;
-  max-width: none !important;
-  margin: 0 auto !important;
-  padding: 10px 0 !important;
-  display: flex !important;
-  flex-wrap: nowrap !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 10px !important;
-  border-bottom: 1px solid var(--line) !important;
-}
-.topbar .brand,
-.topbar.is-scrolled .brand {
-  display: flex !important;
-  order: 0 !important;
-  align-items: center !important;
-  flex: 0 1 auto !important;
-  min-width: 0 !important;
-  gap: 10px !important;
-  margin: 0 !important;
-  white-space: nowrap !important;
-  font-size: 22px !important;
-  line-height: 1 !important;
-}
-.topbar .brand-logo {
-  display: block !important;
-  width: 38px !important;
-  height: 38px !important;
-  flex: 0 0 38px !important;
-  object-fit: contain !important;
-}
-.topbar .brand-copy {
-  min-width: 0 !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-.topbar .brand small {
-  display: block !important;
-  font-size: 8px !important;
-  line-height: 1.3 !important;
-  letter-spacing: .12em !important;
-}
-.topbar .topright {
-  order: 1 !important;
-  display: flex !important;
-  flex: 0 0 auto !important;
-  flex-wrap: nowrap !important;
-  align-items: center !important;
-  justify-content: flex-end !important;
-  gap: 8px !important;
-  width: auto !important;
-  margin-left: auto !important;
-  white-space: nowrap !important;
-}
+/* Cotizar header geometry: SOLO site-chrome.css (mismo logo/altura que panel) */
 .topbar .pricebox {
   order: 0 !important;
   display: flex !important;
@@ -1410,8 +1310,6 @@ body.hunter-mode main {
 .topbar .pricebox strong {
   order: 0 !important;
   display: block !important;
-  font-size: clamp(19px, 2.4vw, 27px) !important;
-  line-height: 1 !important;
   white-space: nowrap !important;
 }
 .topbar .pricebox span {
@@ -1424,10 +1322,6 @@ body.hunter-mode main {
 }
 .topbar #headerReset {
   order: 1 !important;
-  flex: 0 0 42px !important;
-  width: 42px !important;
-  height: 42px !important;
-  min-width: 42px !important;
   margin: 0 !important;
 }
 .topbar #fullscreenBtn {
@@ -1435,65 +1329,7 @@ body.hunter-mode main {
   flex: 0 0 auto !important;
   white-space: nowrap !important;
 }
-.topbar.is-scrolled {
-  padding-top: 0 !important;
-}
-.topbar.is-scrolled .topinner {
-  flex-wrap: nowrap !important;
-  padding: 8px 0 !important;
-}
-.topbar.is-scrolled .brand,
-.topbar.is-scrolled .brand small {
-  display: flex !important;
-}
-@media (max-width: 520px) {
-  .topbar .topinner {
-    width: calc(100% - 20px) !important;
-    gap: 6px !important;
-  }
-  .topbar .brand,
-  .topbar.is-scrolled .brand {
-    gap: 6px !important;
-    font-size: 17px !important;
-  }
-  .topbar .brand-logo {
-    width: 31px !important;
-    height: 31px !important;
-    flex-basis: 31px !important;
-  }
-  .topbar .brand small {
-    font-size: 6px !important;
-    letter-spacing: .08em !important;
-  }
-  .topbar .topright {
-    gap: 5px !important;
-  }
-  .topbar .pricebox strong {
-    font-size: 19px !important;
-  }
-  .topbar .pricebox span {
-    font-size: 6px !important;
-  }
-  .topbar #headerReset {
-    flex-basis: 36px !important;
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-  }
-  .topbar #fullscreenBtn {
-    padding: 7px 6px !important;
-    font-size: 8px !important;
-    letter-spacing: 0 !important;
-  }
-}
-@media (max-width: 370px) {
-  .topbar .brand-copy small {
-    display: none !important;
-  }
-  .topbar #fullscreenBtn {
-    display: none !important;
-  }
-}
+/* is-scrolled / breakpoints de logo: site-chrome.css */
 
 /* ===== patch ===== */
 

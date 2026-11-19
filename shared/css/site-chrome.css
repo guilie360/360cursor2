@@ -1,8 +1,8 @@
 /**
- * Site chrome — 3 piezas siempre alineadas:
- *   [FS]  ———  HEADER (logo + slot variable)  ———  [MENÚ]
+ * Site chrome — geometría ÚNICA para panel + cotizador (+ landing logo).
+ * Misma altura, mismo logo, mismos rieles. Solo cambia el slot derecho.
  *
- * El header cambia de contenido por página; la geometría no.
+ *   [logo] ——— slot (search | precio+reset) ——— [MENÚ]
  */
 :root{
   --safe-top:env(safe-area-inset-top,0px);
@@ -11,13 +11,13 @@
   --chrome-side:max(22px,4vw);
   --chrome-top:max(22px,calc(var(--safe-top) + 22px));
   --chrome-rail:calc(var(--chrome-side) + var(--chrome-btn) + var(--chrome-gap));
-  /* FS ya no es icono flotante: riel izquierdo solo margen; derecho reserva el menú */
   --chrome-rail-left:var(--chrome-side);
   --chrome-rail-right:var(--chrome-rail);
-  --chrome-header-h:50px;
-  --chrome-max:1480px;
+  --chrome-header-h:46px;
+  --chrome-pad-bottom:12px;
   --chrome-line:rgba(255,255,255,.12);
   --chrome-ease:cubic-bezier(.2,.8,.2,1);
+  --chrome-bar-h:calc(var(--chrome-top) + var(--chrome-header-h) + var(--chrome-pad-bottom));
 }
 @media (max-width:650px){
   :root{
@@ -25,11 +25,12 @@
     --chrome-gap:10px;
     --chrome-side:max(16px,22px);
     --chrome-top:max(16px,calc(var(--safe-top) + 16px));
-    --chrome-header-h:44px;
+    --chrome-header-h:42px;
+    --chrome-pad-bottom:10px;
   }
 }
 
-/* ——— Menú fijo arriba-derecha; FS ya no tiene icono (va en el menú) ——— */
+/* Menú fijo arriba-derecha */
 .menu-toggle{
   top:var(--chrome-top)!important;
   right:var(--chrome-side)!important;
@@ -52,114 +53,126 @@
   overflow:hidden!important;
 }
 
-/* ——— Shell de header: siempre entre FS y MENÚ ——— */
-.chrome-header,
+/* ——— Shell idéntico: panel (.portal-head) = cotizador (.topbar) ——— */
 .portal .portal-head,
-body.cotizador-app .topbar,
-body:not(.cotizador-app):not(.portal-mode) .topbar{
-  position:sticky;
-  top:0;
-  z-index:40;
-  margin:0;
-  padding:0;
-  border:0;
-  background:rgba(11,11,11,.72);
-  -webkit-backdrop-filter:blur(16px) saturate(120%);
-  backdrop-filter:blur(16px) saturate(120%);
-  box-sizing:border-box;
-}
-/* Landing: header fijo transparente (solo logo), sin barra opaca */
-body:not(.cotizador-app):not(.portal-mode) .topbar{
-  position:fixed;
-  left:0;right:0;
-  background:transparent;
-  -webkit-backdrop-filter:none;
-  backdrop-filter:none;
-  pointer-events:none;
+body.cotizador-app .topbar{
+  position:sticky!important;
+  top:0!important;
+  z-index:40!important;
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-bottom:0!important;
+  background:rgba(11,11,11,.72)!important;
+  -webkit-backdrop-filter:blur(16px) saturate(120%)!important;
+  backdrop-filter:blur(16px) saturate(120%)!important;
+  box-sizing:border-box!important;
+  height:var(--chrome-bar-h)!important;
+  min-height:var(--chrome-bar-h)!important;
+  max-height:var(--chrome-bar-h)!important;
 }
 
-.chrome-header__inner,
 .portal .portal-head-inner,
-body.cotizador-app .topbar .topinner,
-body:not(.cotizador-app):not(.portal-mode) .topbar{
+body.cotizador-app .topbar .topinner{
   width:auto!important;
   max-width:none!important;
+  height:100%!important;
+  min-height:0!important;
   margin:0!important;
-  box-sizing:border-box;
-  min-height:calc(var(--chrome-top) + var(--chrome-header-h));
-  padding:var(--chrome-top) var(--chrome-rail-right) 12px var(--chrome-rail-left)!important;
+  box-sizing:border-box!important;
+  padding:var(--chrome-top) var(--chrome-rail-right) var(--chrome-pad-bottom) var(--chrome-rail-left)!important;
   display:flex!important;
   flex-wrap:nowrap!important;
   align-items:center!important;
   justify-content:space-between!important;
   gap:16px!important;
-  border-bottom:1px solid var(--chrome-line);
-}
-body:not(.cotizador-app):not(.portal-mode) .topbar{
-  min-height:calc(var(--chrome-top) + var(--chrome-header-h));
-  padding:var(--chrome-top) var(--chrome-rail-right) 0 var(--chrome-rail-left)!important;
-  border-bottom:0!important;
-  display:flex!important;
-  align-items:center!important;
+  border:0!important;
+  border-bottom:1px solid var(--chrome-line)!important;
 }
 
-/* Marca izquierda */
-.chrome-header__brand,
+/* Landing: solo logo, misma Y/riel */
+body:not(.cotizador-app):not(.portal-mode) .topbar{
+  position:fixed!important;
+  left:0!important;right:0!important;
+  top:0!important;
+  z-index:40!important;
+  height:var(--chrome-bar-h)!important;
+  min-height:var(--chrome-bar-h)!important;
+  margin:0!important;
+  padding:var(--chrome-top) var(--chrome-rail-right) 0 var(--chrome-rail-left)!important;
+  display:flex!important;
+  align-items:center!important;
+  background:transparent!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  border:0!important;
+  pointer-events:none;
+  box-sizing:border-box!important;
+}
+
+/* Logo: mismo tamaño y ancla en panel + cotizador + landing */
 .portal .portal-brand,
 body.cotizador-app .topbar .brand,
 body:not(.cotizador-app):not(.portal-mode) .header-logo{
-  flex:0 0 auto!important;
+  flex:0 0 var(--chrome-header-h)!important;
   display:flex!important;
   align-items:center!important;
+  justify-content:flex-start!important;
   gap:0!important;
   margin:0!important;
   margin-right:auto!important;
-  height:var(--chrome-header-h);
+  width:var(--chrome-header-h)!important;
+  height:var(--chrome-header-h)!important;
+  min-width:var(--chrome-header-h)!important;
+  max-width:var(--chrome-header-h)!important;
   pointer-events:auto;
+  overflow:hidden!important;
 }
 .portal .portal-brand-logo,
-body.cotizador-app .topbar .brand-logo,
-body:not(.cotizador-app):not(.portal-mode) .header-logo{
+body.cotizador-app .topbar .brand-logo{
+  display:block!important;
   width:var(--chrome-header-h)!important;
   height:var(--chrome-header-h)!important;
   flex:0 0 var(--chrome-header-h)!important;
+  min-width:var(--chrome-header-h)!important;
+  max-width:var(--chrome-header-h)!important;
   object-fit:contain!important;
-  display:block!important;
   margin:0!important;
 }
 body:not(.cotizador-app):not(.portal-mode) .header-logo img{
-  width:100%;height:100%;object-fit:contain
+  width:100%!important;height:100%!important;object-fit:contain!important;display:block!important
 }
 .portal .portal-brand-copy,
 body.cotizador-app .topbar .brand-copy{
   display:none!important
 }
 
-/* Slot derecha: precio | search+logout | vacío */
-.chrome-header__slot,
+/* Slot derecho */
 .portal .portal-head-right,
 body.cotizador-app .topbar .topright{
   flex:1 1 auto!important;
   min-width:0!important;
+  margin:0!important;
   margin-left:0!important;
   display:flex!important;
   align-items:center!important;
   justify-content:flex-end!important;
   gap:10px!important;
-  height:var(--chrome-header-h);
+  height:var(--chrome-header-h)!important;
   pointer-events:auto;
+  flex-wrap:nowrap!important;
 }
 
-/* Controles del slot: misma altura que el chrome */
 .portal .portal-search{
-  flex:1 1 auto;
+  flex:1 1 auto!important;
   width:auto!important;
   max-width:min(440px,52vw)!important;
-  min-width:120px;
+  min-width:120px!important;
   height:var(--chrome-header-h)!important;
   padding:0 16px!important;
-  border-radius:12px;
-  box-sizing:border-box
+  border-radius:12px!important;
+  box-sizing:border-box!important
 }
 .portal .portal-head .portal-logout-icon,
 body.cotizador-app .topbar #headerReset{
@@ -167,12 +180,14 @@ body.cotizador-app .topbar #headerReset{
   width:var(--chrome-header-h)!important;
   height:var(--chrome-header-h)!important;
   min-width:var(--chrome-header-h)!important;
+  max-width:var(--chrome-header-h)!important;
   padding:0!important;
-  border-radius:12px;
+  border-radius:12px!important;
   display:inline-flex!important;
-  align-items:center;justify-content:center
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important
 }
-/* En panel autenticado el logout vive en el menú → liberar el header */
 body.workspace-authenticated .portal .portal-logout-icon,
 body.nav-panel-authed .portal .portal-logout-icon{
   display:none!important
@@ -181,12 +196,21 @@ body.workspace-authenticated .portal .portal-search,
 body.nav-panel-authed .portal .portal-search{
   max-width:min(520px,100%)!important
 }
+body.cotizador-app .topbar .pricebox{
+  display:flex!important;
+  flex-direction:column-reverse!important;
+  align-items:flex-end!important;
+  justify-content:center!important;
+  height:var(--chrome-header-h)!important;
+  margin:0!important
+}
 body.cotizador-app .topbar .pricebox strong{
-  font-size:clamp(24px,3.6vw,32px)!important;
-  line-height:1!important
+  font-size:clamp(22px,3.2vw,30px)!important;
+  line-height:1!important;
+  white-space:nowrap!important
 }
 
-/* Contenido bajo el chrome: mismo riel lateral */
+/* Contenido: mismos rieles que el header */
 .portal .portal-wrap,
 body.cotizador-app main{
   width:auto!important;
@@ -194,11 +218,9 @@ body.cotizador-app main{
   margin:0!important;
   padding-left:var(--chrome-rail-left)!important;
   padding-right:var(--chrome-rail-right)!important;
-  box-sizing:border-box
+  box-sizing:border-box!important
 }
-.portal .portal-wrap{
-  padding-bottom:90px!important
-}
+.portal .portal-wrap{padding-bottom:90px!important}
 #hunterGoalFooter.hunter-goal-footer{
   left:var(--chrome-rail-left)!important;
   right:var(--chrome-rail-right)!important;
@@ -207,75 +229,44 @@ body.cotizador-app main{
   transform:none!important
 }
 
-/* Hueco derecho solo para el menú */
 body.has-global-nav .portal .portal-head-inner,
 body.has-global-nav.cotizador-app .topbar .topinner{
   padding-right:var(--chrome-rail-right)!important
 }
 
-/* ——— Móvil: el slot no puede llevar 4 controles; prioridad = precio + 1 acción ——— */
-@media (max-width:760px){
-  :root{
-    --chrome-gap:8px;
-  }
+/* Ancla de scroll bajo el header fijo */
+body.cotizador-app .step,
+body.cotizador-app .package-accordion,
+.portal .portal-page{
+  scroll-margin-top:calc(var(--chrome-bar-h) + 12px)!important
+}
 
-  /* Contenido usa solo el margen lateral, no el riel completo de FS/MENÚ */
+@media (max-width:760px){
+  :root{--chrome-gap:8px}
+
   .portal .portal-wrap,
   body.cotizador-app main{
     padding-left:var(--chrome-side)!important;
     padding-right:var(--chrome-side)!important
   }
-
-  .chrome-header__inner,
   .portal .portal-head-inner,
   body.cotizador-app .topbar .topinner{
-    gap:8px!important;
-    padding-bottom:10px!important
+    gap:8px!important
   }
-
   .portal .portal-head-right,
   body.cotizador-app .topbar .topright{
-    gap:6px!important;
-    flex-wrap:nowrap!important;
-    overflow:hidden
+    gap:6px!important;overflow:hidden
   }
-
-  /* Cotizar móvil: sin chip de comisión en header (va al card flotante) */
-  body.cotizador-app .interno-commission-btn{
-    display:none!important
-  }
+  body.cotizador-app .interno-commission-btn{display:none!important}
   body.cotizador-app .topbar .pricebox{
-    flex:1 1 auto;
-    min-width:0;
-    max-width:100%;
-    overflow:hidden;
-    text-align:right
+    flex:1 1 auto;min-width:0;max-width:100%;overflow:hidden;text-align:right
   }
   body.cotizador-app .topbar .pricebox strong{
     font-size:clamp(18px,5.6vw,24px)!important;
-    white-space:nowrap;
-    display:block;
-    overflow:hidden;
-    text-overflow:ellipsis
+    overflow:hidden;text-overflow:ellipsis;display:block
   }
-  body.cotizador-app .topbar .brand-logo,
-  body.cotizador-app .topbar .brand{
-    flex:0 0 auto!important
-  }
-  body.cotizador-app .topbar .brand{
-    max-width:var(--chrome-header-h)
-  }
-
-  /* Panel: buscador flexible, logout fijo */
   .portal .portal-search{
-    min-width:0!important;
-    max-width:none!important;
-    flex:1 1 auto!important;
-    font-size:12px!important;
-    padding:0 12px!important
+    min-width:0!important;max-width:none!important;flex:1 1 auto!important;
+    font-size:12px!important;padding:0 12px!important
   }
-}
-
-@media (max-width:520px){
-  .portal .portal-search{max-width:none!important}
 }

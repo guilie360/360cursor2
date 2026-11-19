@@ -516,12 +516,7 @@ button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid #cf
    Misma geometría que .portal-head: marca a la izquierda; los controles propios de Cotizar
    (presupuesto, reiniciar, Hunter) se ubican a su izquierda.
    ========================================================== */
-.topbar{padding-top:30px;border-bottom:1px solid transparent}
-.topbar .topinner{width:min(1120px,calc(100% - 44px));max-width:none;margin:0 auto;padding:10px 0 26px;
- border-bottom:1px solid var(--line);gap:24px}
-.topbar .brand{display:block;font-size:30px;line-height:normal}
-.topbar .brand-logo{display:none}
-.topbar .brand small{letter-spacing:.17em}
+/* Geometría topbar/portal-head: shared/css/site-chrome.css */
 .topbar .topright{margin-left:auto}
 .top-session{display:flex;align-items:center;gap:12px;flex:none}
 .top-session::before{content:"";width:1px;height:44px;background:var(--line);margin-right:8px}
