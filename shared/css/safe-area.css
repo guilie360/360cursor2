@@ -48,8 +48,8 @@
   }
 }
 
-/* Controles flotantes: siempre por encima de la toolbar del browser */
-.menu-toggle,
+/* Controles flotantes inferiores: por encima de la toolbar del browser */
+.fullscreen-toggle,
 .global-fullscreen-btn,
 .float-actions,
 .portal-back,
