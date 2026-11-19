@@ -110,11 +110,11 @@ body.cotizador-app.modo-interno .quote-footer-commission.portal-hidden{
   display:flex!important;
 }
 body.cotizador-app .quote-footer-commission small{
-  font:8px/1 Manrope,Arial,sans-serif;letter-spacing:.1em;text-transform:uppercase;
-  color:#6f6a64;font-weight:600;
+  font:600 var(--t-xs)/1 var(--font-ui);letter-spacing:.1em;text-transform:uppercase;
+  color:#6f6a64;
 }
 body.cotizador-app .quote-footer-commission strong{
-  font:11px/1.1 Manrope,Arial,sans-serif;font-weight:500;color:#9a948c;
+  font:500 var(--t-xs)/1.1 var(--font-ui);color:#9a948c;
 }
 body.cotizador-app .quote-footer-commission:hover{
   opacity:1;color:#cfc9bd;
@@ -128,8 +128,8 @@ body.cotizador-app .quote-footer-price{
   margin:0;padding:0;height:auto;min-width:0;
 }
 body.cotizador-app .quote-footer-price strong{
-  font:clamp(20px,3.2vw,28px)/1 Italiana,Georgia,serif!important;
-  font-weight:400!important;color:#f0ebe3!important;
+  font:400 var(--t-lg)/1 var(--font-display)!important;
+  color:#f0ebe3!important;
   white-space:nowrap;
 }
 body.cotizador-app .quote-footer-reset{
@@ -159,14 +159,14 @@ body.cotizador-app .quote-reset-dialog{
   box-shadow:0 24px 80px rgba(0,0,0,.6);
 }
 body.cotizador-app .quote-reset-dialog .eyebrow{
-  margin:0 0 10px;font:10px/1 Manrope,Arial,sans-serif;
+  margin:0 0 10px;font:600 var(--t-xs)/1 var(--font-ui);
   letter-spacing:.14em;text-transform:uppercase;color:#8d7d69;
 }
 body.cotizador-app .quote-reset-dialog h3{
-  margin:0 0 8px;font:26px Italiana,Georgia,serif;font-weight:400;color:#f4f1eb;
+  margin:0 0 8px;font:400 var(--t-lg)/1.1 var(--font-display);color:#f4f1eb;
 }
 body.cotizador-app .quote-reset-dialog p{
-  margin:0 0 20px;color:#aaa;font-size:13px;line-height:1.55;
+  margin:0 0 20px;color:#aaa;font-size:var(--t-sm);line-height:1.55;
 }
 body.cotizador-app .quote-reset-actions{
   display:flex;gap:9px;flex-wrap:wrap;
@@ -247,8 +247,8 @@ body.cotizador-app main{
   body.cotizador-app .quote-footer-price strong{
     font-size:clamp(18px,5.6vw,24px)!important;
   }
-  body.cotizador-app .quote-footer-commission small{font-size:7px}
-  body.cotizador-app .quote-footer-commission strong{font-size:10px}
+  body.cotizador-app .quote-footer-commission small,
+  body.cotizador-app .quote-footer-commission strong{font-size:var(--t-xs)}
   body.cotizador-app{
     --quote-footer-clearance:calc(64px + env(safe-area-inset-bottom,0px));
   }
@@ -299,8 +299,18 @@ body.cotizador-app{
   --step-open:#181818;
   --chip:#121212;
   --chip-on:#1a1a1a;
+  /* Tipografía cotizador: solo 4 tamaños (go back = quitar bloque TYPE SCALE abajo) */
+  --font-display:'Italiana',Georgia,serif;
+  --font-ui:'Manrope',Arial,Helvetica,sans-serif;
+  --t-xs:10px;
+  --t-sm:12px;
+  --t-md:15px;
+  --t-lg:clamp(28px,4vw,40px);
   background:
     radial-gradient(ellipse 85% 50% at 50% -8%,#161616 0%,#0b0b0b 55%)!important;
+  font-family:var(--font-ui);
+  font-size:var(--t-md);
+  line-height:1.5;
 }
 body.cotizador-app h1{color:#f3f3f1}
 body.cotizador-app .chooser-intro,
@@ -341,7 +351,7 @@ body.cotizador-app #pathChooser .flip-card{
     max-width:100%!important;
   }
   body.cotizador-app #pathChooser .flip-front .visual-title{
-    font-size:clamp(32px,9vw,42px)!important;
+    font-size:var(--t-lg)!important;
     overflow-wrap:anywhere;
   }
   body.cotizador-app #pathChooser .flip-front .visual-subtitle{
@@ -355,7 +365,7 @@ body.cotizador-app #pathChooser .flip-card{
   body.cotizador-app #pathChooser .included-strip small,
   body.cotizador-app #pathChooser .manual-feature-strip small{
     white-space:normal!important;
-    font-size:9px!important;
+    font-size:var(--t-xs)!important;
   }
 }
 
@@ -402,8 +412,7 @@ body.cotizador-app .quote-flow-head-main{
 }
 body.cotizador-app .quote-flow-head h2{
   margin:0!important;
-  font:clamp(24px,4vw,32px)/1.1 'Italiana',Georgia,serif!important;
-  font-weight:400!important;
+  font:400 var(--t-lg)/1.1 var(--font-display)!important;
   color:#f3f3f1!important;
 }
 body.cotizador-app .quote-flow-price{
@@ -414,19 +423,18 @@ body.cotizador-app .quote-flow-price{
 }
 body.cotizador-app .quote-flow-price small{
   color:#7e7e7e!important;
-  font-size:9px!important;
+  font-size:var(--t-xs)!important;
   letter-spacing:.08em;
   text-transform:uppercase;
 }
 body.cotizador-app .quote-flow-price strong{
-  font-size:22px!important;
+  font:400 1.35em/1 var(--font-display)!important;
   color:#f3f3f1!important;
-  line-height:1!important;
 }
 body.cotizador-app .quote-flow-tip{
   margin:0 0 12px!important;
   color:#8f8f8f!important;
-  font-size:12px!important;
+  font-size:var(--t-sm)!important;
   line-height:1.45!important;
   max-width:46ch;
 }
@@ -434,10 +442,13 @@ body.cotizador-app #baseStep .quote-flow-tip{
   margin:0 0 10px!important;
 }
 body.cotizador-app .package-detail-price strong{
-  font-size:22px!important;
+  font:400 1.35em/1 var(--font-display)!important;
   color:#f3f3f1!important;
 }
-body.cotizador-app .package-detail-price small{color:#7e7e7e!important}
+body.cotizador-app .package-detail-price small{
+  color:#7e7e7e!important;
+  font-size:var(--t-xs)!important;
+}
 @media (max-width:760px){
   body.cotizador-app .quote-flow-head{
     flex-direction:column!important;
@@ -708,3 +719,161 @@ body.cotizador-app .visual-package{
   }
 }
 /* ========== /Visual refresh v1.2 ========== */
+
+/* ========== TYPE SCALE v1 (go back = borrar este bloque) ==========
+   4 tamaños: --t-xs 10 / --t-sm 12 / --t-md 15 / --t-lg clamp display
+   Jerarquía = familia + peso + tracking, no más px sueltos. */
+body.cotizador-app h1,
+body.cotizador-app .visual-title,
+body.cotizador-app #pathChooser .flip-front .visual-title,
+body.cotizador-app .quote-flow-head h2,
+body.cotizador-app .package-top h2,
+body.cotizador-app .manual-shell-head h2,
+body.cotizador-app .package-detail-head h3,
+body.cotizador-app .quote-reset-dialog h3{
+  font-family:var(--font-display)!important;
+  font-size:var(--t-lg)!important;
+  font-weight:400!important;
+  line-height:1.08!important;
+  letter-spacing:-.01em;
+}
+/* Filas de paso: misma familia display, tamaño relativo al md (sin 5º token) */
+body.cotizador-app .accordion-title,
+body.cotizador-app .step-title b{
+  font-family:var(--font-display)!important;
+  font-size:1.35em!important;
+  font-weight:400!important;
+  line-height:1.15!important;
+  letter-spacing:-.01em;
+}
+body.cotizador-app .visual-price,
+body.cotizador-app #pathChooser .visual-price,
+body.cotizador-app .quote-footer-price strong,
+body.cotizador-app #packageLivePrice,
+body.cotizador-app #manualHeadTotal,
+body.cotizador-app #manualLiveTotal,
+body.cotizador-app .total-line,
+body.cotizador-app .total-line strong{
+  font-family:var(--font-display)!important;
+  font-size:var(--t-lg)!important;
+  font-weight:400!important;
+  line-height:1!important;
+}
+/* Precio embebido en header: un pelín menor vía em, sin 5º token */
+body.cotizador-app .quote-flow-price strong,
+body.cotizador-app .package-detail-price strong{
+  font-size:1.15em!important;
+}
+
+body.cotizador-app,
+body.cotizador-app .btn,
+body.cotizador-app button.btn,
+body.cotizador-app .choice b,
+body.cotizador-app .base-compact-grid b,
+body.cotizador-app label,
+body.cotizador-app input,
+body.cotizador-app select,
+body.cotizador-app textarea,
+body.cotizador-app .price-line,
+body.cotizador-app .flip-cta,
+body.cotizador-app .manual-upsell-link,
+body.cotizador-app .package-type b{
+  font-family:var(--font-ui)!important;
+  font-size:var(--t-md)!important;
+}
+body.cotizador-app .btn,
+body.cotizador-app .flip-cta,
+body.cotizador-app .manual-upsell-link,
+body.cotizador-app .visual-cta-bottom{
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  font-weight:600!important;
+}
+
+body.cotizador-app .chooser-intro,
+body.cotizador-app .intro,
+body.cotizador-app .desc,
+body.cotizador-app .accordion-intro,
+body.cotizador-app .accordion-note,
+body.cotizador-app .quote-flow-tip,
+body.cotizador-app .choice small,
+body.cotizador-app .base-compact-grid small,
+body.cotizador-app .package-type small,
+body.cotizador-app .visual-subtitle,
+body.cotizador-app .visual-note,
+body.cotizador-app .visual-saving,
+body.cotizador-app .quote-reset-dialog p,
+body.cotizador-app .interno-commission-hint,
+body.cotizador-app .package-selected-note,
+body.cotizador-app .note{
+  font-family:var(--font-ui)!important;
+  font-size:var(--t-sm)!important;
+  line-height:1.45!important;
+  font-weight:400!important;
+}
+
+body.cotizador-app .eyebrow,
+body.cotizador-app .step-num,
+body.cotizador-app .step-meta,
+body.cotizador-app .accordion-meta,
+body.cotizador-app .accordion-index,
+body.cotizador-app .manual-upsell-kicker,
+body.cotizador-app .manual-live-kicker,
+body.cotizador-app .visual-from,
+body.cotizador-app .visual-cta-bottom,
+body.cotizador-app .included-strip small,
+body.cotizador-app .manual-feature-strip small,
+body.cotizador-app .quote-footer-commission small,
+body.cotizador-app .quote-footer-commission strong,
+body.cotizador-app .quote-reset-dialog .eyebrow,
+body.cotizador-app .package-detail-price small,
+body.cotizador-app .quote-flow-price small,
+body.cotizador-app .flip-return,
+body.cotizador-app .tag{
+  font-family:var(--font-ui)!important;
+  font-size:var(--t-xs)!important;
+  line-height:1.3!important;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  font-weight:600!important;
+}
+body.cotizador-app .quote-footer-commission strong,
+body.cotizador-app .included-strip small,
+body.cotizador-app .manual-feature-strip small,
+body.cotizador-app .visual-from{
+  letter-spacing:.04em;
+  text-transform:none;
+  font-weight:500!important;
+}
+body.cotizador-app .step summary:after,
+body.cotizador-app .accordion-plus{
+  font-size:var(--t-md)!important;
+  font-weight:400!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+}
+
+/* Path cards: display title stays lg; price lg; rest sm/xs already mapped */
+body.cotizador-app #pathChooser .visual-saving s,
+body.cotizador-app #pathChooser .visual-saving b{
+  font-size:var(--t-sm)!important;
+  font-family:var(--font-ui)!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+  font-weight:600!important;
+}
+body.cotizador-app .package-type span{
+  font-family:var(--font-display)!important;
+  font-size:var(--t-lg)!important;
+  font-weight:400!important;
+  line-height:1!important;
+}
+@media (max-width:760px){
+  body.cotizador-app{
+    --t-lg:clamp(26px,7.5vw,34px);
+  }
+  body.cotizador-app .quote-footer-price strong{
+    font-size:var(--t-lg)!important;
+  }
+}
+/* ========== /TYPE SCALE v1 ========== */
