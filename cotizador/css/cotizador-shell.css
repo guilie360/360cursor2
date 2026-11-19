@@ -331,12 +331,12 @@ body.cotizador-app .package-accordion-list{
   body.cotizador-app:has(#packageChooser:not(.hidden)) main{
     padding-bottom:calc(var(--quote-footer-clearance) + 28px + var(--safe-bottom,0px))!important;
   }
-  /* Hueco solo al final de la lista (personalizado: pastilla; completo: footer) */
+  /* Hueco solo al final de la lista personalizado (pastilla). Completo: sin pad en la lista. */
   body.cotizador-app .manual-step-list{
     padding-bottom:calc(var(--quote-footer-clearance) + 64px)!important;
   }
   body.cotizador-app .package-accordion-list{
-    padding-bottom:calc(var(--quote-footer-clearance) + 28px)!important;
+    padding-bottom:0!important;
   }
   body.cotizador-app #manualUpsell.manual-upsell--compact:not(.hidden){
     right:12px!important;
@@ -469,6 +469,81 @@ body.cotizador-app .manual-details{
   box-shadow:none!important;
   padding:0!important;
   gap:12px!important;
+}
+/* Completo: tarjeta de ahorro y preview sin huecos enormes en móvil */
+body.cotizador-app #packageSavingsComparison,
+body.cotizador-app .package-savings-compact{
+  margin:12px 0 0!important;
+  padding:14px 16px!important;
+  min-height:0!important;
+  height:auto!important;
+  align-self:stretch!important;
+  flex:none!important;
+}
+body.cotizador-app #packageSavingsComparison .saving-compact{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  justify-content:flex-start!important;
+  gap:10px!important;
+  min-height:0!important;
+  height:auto!important;
+}
+body.cotizador-app #packageSavingsComparison .saving-compact-title{
+  margin:0!important;
+  white-space:normal!important;
+}
+body.cotizador-app #packageSavingsComparison .saving-compact-values{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:8px!important;
+  max-width:none!important;
+  flex:none!important;
+  width:100%!important;
+}
+body.cotizador-app #packageSavingsComparison .saving-compact-item{
+  padding:8px 0 0!important;
+  border-left:0!important;
+  border-top:1px solid rgba(255,255,255,.1)!important;
+}
+body.cotizador-app #packageSavingsComparison .saving-compact-item:first-child{
+  padding-top:0!important;
+  border-top:0!important;
+}
+body.cotizador-app .showroom-visual-delivery{
+  margin:12px 0 0!important;
+  padding:16px 14px 10px!important;
+  min-height:0!important;
+  flex:none!important;
+}
+body.cotizador-app .showroom-visual-heading{
+  margin:0 auto 10px!important;
+}
+body.cotizador-app #packageChooser > .final-quote-actions{
+  margin-top:20px!important;
+}
+@media(min-width:761px){
+  body.cotizador-app #packageSavingsComparison .saving-compact{
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:24px!important;
+  }
+  body.cotizador-app #packageSavingsComparison .saving-compact-values{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:0!important;
+    flex:1!important;
+    max-width:760px!important;
+  }
+  body.cotizador-app #packageSavingsComparison .saving-compact-item{
+    padding:3px 20px!important;
+    border-top:0!important;
+    border-left:1px solid rgba(255,255,255,.12)!important;
+  }
+  body.cotizador-app #packageSavingsComparison .saving-compact-item:first-child{
+    padding-left:0!important;
+    border-left:0!important;
+  }
 }
 /* Header del flujo — desktop: título | presupuesto. Móvil: columna limpia.
    Volver del header oculto (footer flecha). */
