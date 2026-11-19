@@ -37,6 +37,12 @@
 }
 .menu-overlay.open{opacity:1;visibility:visible}
 
+/* Cursor custom por encima del menú (has-cur oculta el cursor del sistema) */
+html.has-cur .cur,
+html.has-cur .cur-dot{
+  z-index:10070!important
+}
+
 .menu-panel{
   position:fixed;z-index:10051;top:0;right:0;
   width:min(410px,100%);height:100svh;
