@@ -196,7 +196,7 @@ body.cotizador-app .manual-upsell--compact{
   padding:8px 36px 8px 12px!important;
   gap:10px!important;
   align-items:center!important;
-  border-radius:999px!important;
+  border-radius:15px!important;
   border:1px solid rgba(205,178,138,.62)!important;
   background:linear-gradient(145deg,rgba(34,32,29,.97),rgba(15,15,15,.97))!important;
   box-shadow:0 12px 38px rgba(0,0,0,.38)!important;

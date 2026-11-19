@@ -715,7 +715,7 @@ button:hover,a:hover,[role="button"]:hover,.btn:hover,.choice:hover,.path-card:h
 .manual-upsell-link:hover{background:rgba(205,178,138,.12)}
 .manual-upsell-close{position:absolute;right:8px;top:5px;border:0;background:transparent;color:#99938a;font-size:17px;line-height:1;cursor:pointer;padding:3px}
 .manual-upsell.hidden{display:none!important}
-.manual-upsell--compact{width:auto;max-width:min(340px,calc(100vw - 28px));min-height:0;padding:8px 36px 8px 12px;gap:10px;align-items:center;border-radius:999px;border:1px solid rgba(205,178,138,.62);background:linear-gradient(145deg,rgba(34,32,29,.97),rgba(15,15,15,.97));box-shadow:0 12px 38px rgba(0,0,0,.38);backdrop-filter:blur(14px)}
+.manual-upsell--compact{width:auto;max-width:min(340px,calc(100vw - 28px));min-height:0;padding:8px 36px 8px 12px;gap:10px;align-items:center;border-radius:15px;border:1px solid rgba(205,178,138,.62);background:linear-gradient(145deg,rgba(34,32,29,.97),rgba(15,15,15,.97));box-shadow:0 12px 38px rgba(0,0,0,.38);backdrop-filter:blur(14px)}
 .manual-upsell--compact .manual-upsell-copy{flex-direction:row;align-items:baseline;gap:8px}
 .manual-upsell--compact .manual-upsell-kicker{display:none}
 .manual-upsell--compact .manual-upsell-copy strong{font:400 13px/1.1 'Italiana',Georgia,serif;color:#f1eee8;letter-spacing:0}
