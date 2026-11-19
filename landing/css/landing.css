@@ -38,10 +38,10 @@ button{font:inherit}
   animation:menuBreath 2s ease-in-out infinite;
   transition:opacity .35s var(--ease),visibility .35s,transform .35s var(--ease);
 }
-.menu-toggle span{display:block;width:22px;height:1px;background:#efeae3;transition:transform .35s var(--ease),opacity .25s,background .25s}
+.menu-toggle span{display:block;width:22px;height:2px;background:#efeae3;border-radius:1px;transition:transform .35s var(--ease),opacity .25s,background .25s}
 .menu-toggle.active{animation:none;filter:none;opacity:1}
-.menu-toggle.active span:first-child{transform:translateY(4px) rotate(45deg)}
-.menu-toggle.active span:last-child{transform:translateY(-4px) rotate(-45deg)}
+.menu-toggle.active span:first-child{transform:translateY(4.5px) rotate(45deg)}
+.menu-toggle.active span:last-child{transform:translateY(-4.5px) rotate(-45deg)}
 body.demo-open .menu-toggle,
 body:has(.page-transit.on) .menu-toggle{
   opacity:0;visibility:hidden;pointer-events:none;
