@@ -208,7 +208,13 @@ $('hunterBack').addEventListener('click',()=>{
  $('portalBack').classList.add('portal-hidden');
  window.scrollTo(0,0);
 });
-$('fullscreenBtn').addEventListener('click',async()=>{try{if(!document.fullscreenElement){await document.documentElement.requestFullscreen();}else{await document.exitFullscreen();}}catch(e){}});
+$('fullscreenBtn').addEventListener('click',async()=>{
+ try{
+  if(window.BoxiesFullscreen?.toggle) await window.BoxiesFullscreen.toggle();
+  else if(!document.fullscreenElement) await document.documentElement.requestFullscreen();
+  else await document.exitFullscreen();
+ }catch(e){}
+});
 document.addEventListener('fullscreenchange',()=>{$('fullscreenBtn').textContent=document.fullscreenElement?'Salir de pantalla completa':'Pantalla completa';});
 function manualPackageComparison(){
  const q=current();
@@ -1451,21 +1457,25 @@ const globalFullscreenBtn=document.getElementById('globalFullscreenBtn');
 const fullscreenExpandIcon='<path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/>';
 const fullscreenShrinkIcon='<path d="M8 3v5H3M16 3v5h5M21 16h-5v5M3 16h5v5"/>';
 function syncGlobalFullscreenControl(){
- const active=!!document.fullscreenElement;
+ if(!globalFullscreenBtn)return;
+ const active=!!(window.BoxiesFullscreen?.isActive?.()||document.fullscreenElement);
  globalFullscreenBtn.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+(active?fullscreenShrinkIcon:fullscreenExpandIcon)+'</svg>';
  globalFullscreenBtn.setAttribute('aria-label',active?'Salir de pantalla completa':'Activar pantalla completa');
  globalFullscreenBtn.title=active?'Salir de pantalla completa':'Pantalla completa';
 }
-globalFullscreenBtn.addEventListener('click',async()=>{
+globalFullscreenBtn?.addEventListener('click',async()=>{
  try{
-  if(!document.fullscreenElement){
+  if(window.BoxiesFullscreen?.toggle) await window.BoxiesFullscreen.toggle();
+  else if(!document.fullscreenElement){
    if(document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
   }else if(document.exitFullscreen){await document.exitFullscreen();}
  }catch(error){
-  globalFullscreenBtn.title='Pantalla completa no disponible en este navegador';
+  if(globalFullscreenBtn) globalFullscreenBtn.title='Pantalla completa no disponible en este navegador';
  }
+ syncGlobalFullscreenControl();
 });
 document.addEventListener('fullscreenchange',syncGlobalFullscreenControl);
+document.addEventListener('boxies:fullscreen',syncGlobalFullscreenControl);
 syncGlobalFullscreenControl();
 
 /* Deep-links desde /cotizador/?modo=interno (fuente única; motor aún embebido aquí). */

@@ -160,11 +160,24 @@ if(fine){
   (function loop(){cx+=(x-cx)*.16;cy+=(y-cy)*.16;c.style.transform=`translate(${cx}px,${cy}px) translate(-50%,-50%)`;requestAnimationFrame(loop)})();
 }
 
-/* PANTALLA COMPLETA */
+/* PANTALLA COMPLETA (persiste en toda la plataforma vía BoxiesFullscreen) */
 const fs=$('#fullscreenToggle');
-const fsLabel=()=>{const a=!!document.fullscreenElement;fs.setAttribute('aria-label',a?'Salir de pantalla completa':'Activar pantalla completa');fs.title=a?'Salir de pantalla completa':'Pantalla completa'};
-fs.addEventListener('click',async()=>{try{document.fullscreenElement?await document.exitFullscreen():await document.documentElement.requestFullscreen()}catch(e){console.warn('Pantalla completa no disponible.',e)}});
+const fsLabel=()=>{
+  const a=!!(window.BoxiesFullscreen?.isActive?.()||document.fullscreenElement);
+  fs.setAttribute('aria-label',a?'Salir de pantalla completa':'Activar pantalla completa');
+  fs.title=a?'Salir de pantalla completa':'Pantalla completa';
+};
+fs.addEventListener('click',async()=>{
+  try{
+    if(window.BoxiesFullscreen?.toggle) await window.BoxiesFullscreen.toggle();
+    else if(document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  }catch(e){console.warn('Pantalla completa no disponible.',e)}
+  fsLabel();
+});
 document.addEventListener('fullscreenchange',fsLabel);
+document.addEventListener('boxies:fullscreen',fsLabel);
+fsLabel();
 
 /* MENÚ */
 const mt=$('#menuToggle'),mp=$('#menuPanel'),mo=$('#menuOverlay');
