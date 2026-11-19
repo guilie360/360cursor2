@@ -1200,16 +1200,22 @@ body.hunter-mode .portal{min-height:0}
 
 /* ===== patch ===== */
 
-/* Restauración del hover de contorno blanco grueso en toda la interfaz */
-:where(button,a,[role="button"],[onclick],.clickable,.nav-item,.menu-item,.sidebar-item,.tab,.tab-btn,.card,.project-card,.task-card,.payment-card,.stat-card,.action-card,.list-row,.table-row,.accordion-header,.select-option,.dropdown-item,.profile-section,.module-card):hover {
-  outline: 2px solid #f5f5f5 !important;
-  outline-offset: -1px !important;
-  border-color: #f5f5f5 !important;
-  box-shadow: 0 0 0 1px rgba(255,255,255,.22), 0 0 12px rgba(255,255,255,.16) !important;
-  color: #fff;
-}
-:where(button,a,[role="button"],[onclick],.clickable,.nav-item,.menu-item,.sidebar-item,.tab,.tab-btn,.card,.project-card,.task-card,.payment-card,.stat-card,.action-card,.list-row,.table-row,.accordion-header,.select-option,.dropdown-item,.profile-section,.module-card):hover :where(span,strong,small,i,svg) {
-  color: inherit;
+/* Hover unificado con landing: sin contorno blanco grueso; el cursor custom marca el foco */
+@media (hover:hover) {
+  :where(button,a,[role="button"],[onclick],.clickable,.nav-item,.menu-item,.sidebar-item,.tab,.tab-btn,.card,.project-card,.task-card,.payment-card,.stat-card,.action-card,.list-row,.table-row,.accordion-header,.select-option,.dropdown-item,.profile-section,.module-card):hover {
+    outline: none !important;
+    color: #fff;
+  }
+  :where(button,a,[role="button"],[onclick],.clickable,.nav-item,.menu-item,.sidebar-item,.tab,.tab-btn,.card,.project-card,.task-card,.payment-card,.stat-card,.action-card,.list-row,.table-row,.accordion-header,.select-option,.dropdown-item,.profile-section,.module-card):hover :where(span,strong,small,i,svg) {
+    color: inherit;
+  }
+  /* Iconos chrome (logo / fullscreen): solo opacidad, como landing */
+  .login-home-logo:hover,
+  .global-fullscreen-btn:hover{
+    outline: none !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
 }
 
 /* ===== patch ===== */

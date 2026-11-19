@@ -1,4 +1,16 @@
-:root{--bg:#0b0b0b;--panel:#151515;--panel2:#101010;--line:#40382d;--ink:#f1eee8;--muted:#b2a797;--accent:#c5a675;--danger:#d99a8d;--gold:#c5a675;--gold-soft:#d0b88f}
+:root{--bg:#0b0b0b;--panel:#151515;--panel2:#101010;--line:#40382d;--ink:#f1eee8;--muted:#b2a797;--accent:#c5a675;--danger:#d99a8d;--gold:#c5a675;--gold-soft:#d0b88f;--ease:cubic-bezier(.2,.8,.2,1);--bronze:#8d7d69;--white:#d6d2cc}
+.mag{transition:transform .35s var(--ease)}
+/* Cursor custom (paridad con landing) */
+html.has-cur,html.has-cur *{cursor:none!important}
+.cur{position:fixed;left:0;top:0;width:34px;height:34px;border:1px solid rgba(214,210,204,.38);border-radius:50%;pointer-events:none;z-index:100000;opacity:0;display:grid;place-items:center;background:rgba(214,210,204,0);transition:width .5s var(--ease),height .5s var(--ease),border-color .3s,background .4s,opacity .3s,backdrop-filter .4s}
+.cur span{font:400 8px/1 Manrope,Arial,sans-serif;letter-spacing:2.6px;text-indent:2.6px;color:var(--white);opacity:0;transform:translateY(4px);transition:opacity .3s,transform .5s var(--ease);white-space:nowrap}
+.cur.big{width:54px;height:54px;border-color:var(--bronze)}
+.cur.label{width:92px;height:92px;border-color:rgba(190,174,151,.55);background:rgba(7,7,7,.45);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.cur.label span{opacity:1;transform:none}
+.cur.down{width:24px;height:24px;border-color:var(--bronze)}
+.cur.label.down{width:80px;height:80px}
+.cur-dot{position:fixed;left:0;top:0;width:5px;height:5px;margin:0;border-radius:50%;background:var(--bronze);pointer-events:none;z-index:100001;opacity:0;transition:opacity .3s,width .3s var(--ease),height .3s var(--ease),background .3s}
+.cur-dot.hide{width:0;height:0}
 *{box-sizing:border-box}html{scroll-behavior:auto}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 'Manrope',Arial,Helvetica,sans-serif}
 button,input,select{font:inherit}button{cursor:pointer;color:inherit}.topbar{position:sticky;top:0;z-index:20;background:#0b0b0bf5;border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
 .topinner{max-width:1120px;margin:auto;padding:12px 22px;display:flex;justify-content:space-between;align-items:center;gap:16px}.brand{font:20px 'Italiana',Georgia,serif}.brand small{display:block;color:var(--muted);font:10px 'Manrope',Arial;letter-spacing:.16em;text-transform:uppercase}

@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/base.css?v=login3">
-  <link rel="stylesheet" href="css/patches.css?v=login3">
+  <link rel="stylesheet" href="css/base.css?v=cursor1">
+  <link rel="stylesheet" href="css/patches.css?v=cursor1">
 </head>
 <body class="portal-mode">
 <button id="teamChatFloat" type="button" aria-label="Abrir chat del equipo" title="Chat del equipo">✉<span id="chatUnreadBadge" class="chat-unread-badge">0</span></button>
@@ -20,24 +20,24 @@
  <div class="chat-bottom-tabs"><button type="button" class="chat-bottom-tab active" id="chatTeamTab">Equipo <span id="teamChatUnread" class="chat-section-count">0</span></button><button type="button" class="chat-bottom-tab" id="chatDirectTab">Seleccionar</button></div>
  <div id="chatRecipientPanel" class="chat-recipient-panel portal-hidden"><div id="chatMemberList" class="chat-member-list" aria-label="Miembros del equipo"></div></div>
 </div>
-<button class="global-fullscreen-btn" id="globalFullscreenBtn" type="button" aria-label="Activar pantalla completa" title="Pantalla completa">
+<button class="global-fullscreen-btn mag" id="globalFullscreenBtn" type="button" aria-label="Activar pantalla completa" title="Pantalla completa" data-cursor="PANTALLA">
  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/></svg>
 </button>
 
 <section class="login-screen" id="loginScreen">
- <a class="login-home-logo" href="/" aria-label="Volver a 360Preventa">
+ <a class="login-home-logo mag" href="/" aria-label="Volver a 360Preventa" data-cursor="INICIO">
   <img src="assets/logo.png" alt="360Preventa">
  </a>
  <div class="login-card">
   <h1 class="login-wordmark">BOXIES</h1>
   <p class="login-subtitle"><strong>360PREVENTA</strong> · PANEL DE GESTIÓN</p>
-  <button class="login-google" id="googleLogin" type="button">Continuar con Google</button>
+  <button class="login-google mag" id="googleLogin" type="button" data-cursor="GOOGLE">Continuar con Google</button>
   <div class="login-divider">o</div>
   <form id="loginForm">
    <div class="login-field"><label for="loginEmail">Correo electrónico</label><input id="loginEmail" type="email" autocomplete="username" placeholder="correo@empresa.com"></div>
    <div class="login-field"><label for="loginPassword">Contraseña</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Contraseña"></div>
    <label style="display:flex;align-items:center;gap:9px;color:var(--muted);font-size:12px;text-align:left;margin:17px 0"><input type="checkbox" id="rememberLogin"> Recordarme</label>
-   <button class="login-submit" type="submit">Iniciar sesión</button>
+   <button class="login-submit mag" type="submit" data-cursor="ENTRAR">Iniciar sesión</button>
    <div class="login-error" id="loginError"></div>
   </form>
   <div class="login-foot">Acceso privado para el equipo 360Preventa</div>
@@ -493,6 +493,7 @@
  </div>
 </div>
 <script src="js/app.js?v=login2"></script>
+<script src="js/cursor-layer.js?v=1"></script>
 <script src="js/visual-layer.js"></script>
 
 <script src="js/google-drive.js"></script>
