@@ -65,7 +65,8 @@
       return [
         { href: '/#inicio', label: 'Inicio', n: '01' },
         { href: '/#demo', label: 'Ver demo', n: '02' },
-        { action: 'logout', label: 'Salir', n: '03' }
+        { action: 'panel-home', label: 'Panel de gestión', n: '03' },
+        { action: 'logout', label: 'Salir', n: '04' }
       ];
     }
     var links = [
@@ -131,13 +132,14 @@
       var list = el('div', { className: 'menu-panel-list' });
       linksForContext().forEach(function (item, i) {
         var delay = (0.12 + i * 0.07).toFixed(2) + 's';
-        if (item.action === 'logout') {
+        if (item.action === 'logout' || item.action === 'panel-home') {
           var btn = el('button', {
             className: 'menu-link',
             type: 'button',
-            'data-nav-logout': '1',
-            'data-cursor': 'SALIR'
+            'data-cursor': item.action === 'logout' ? 'SALIR' : 'PANEL'
           }, item.label + ' <span>' + item.n + '</span>');
+          if (item.action === 'logout') btn.setAttribute('data-nav-logout', '1');
+          if (item.action === 'panel-home') btn.setAttribute('data-nav-panel-home', '1');
           btn.style.setProperty('--dl', delay);
           list.appendChild(btn);
           return;
@@ -185,6 +187,17 @@
       }
     }
 
+    function goPanelHome() {
+      close();
+      try {
+        if (typeof portalShowHome === 'function') {
+          portalShowHome();
+          return;
+        }
+      } catch (err) {}
+      location.href = '/panel_gestion/';
+    }
+
     function doFullscreen() {
       close();
       var run = function () {
@@ -216,6 +229,11 @@
       if (e.target.closest('[data-nav-logout]')) {
         e.preventDefault();
         doLogout();
+        return;
+      }
+      if (e.target.closest('[data-nav-panel-home]')) {
+        e.preventDefault();
+        goPanelHome();
         return;
       }
       if (e.target.closest('[data-nav-fullscreen]')) {
