@@ -58,40 +58,12 @@
   bottom:var(--float-bottom)!important;
 }
 
-/* Fullscreen look; posición la unifica site-chrome.css — NUNCA en móvil */
+/* Icono flotante de fullscreen retirado: la acción vive en el menú global */
 .fullscreen-toggle,
-.global-fullscreen-btn{
-  position:fixed!important;
-  margin:0!important;
-  padding:0!important;
-  display:grid!important;
-  place-items:center!important;
-  border:0!important;
-  border-radius:0!important;
-  background:transparent!important;
-  box-shadow:none!important;
-  color:rgba(214,210,204,.78)!important;
-  opacity:.72!important;
-  pointer-events:auto!important;
-  visibility:visible!important;
-}
-.fullscreen-toggle svg,
-.global-fullscreen-btn svg{
-  width:18px!important;
-  height:18px!important;
-  fill:none!important;
-  stroke:currentColor!important;
-  stroke-width:1.25!important;
-  stroke-linecap:square!important;
-}
-@media (max-width:760px){
-  .fullscreen-toggle,
-  .global-fullscreen-btn,
-  #fullscreenToggle,
-  #globalFullscreenBtn{
-    display:none!important;
-    visibility:hidden!important;
-    pointer-events:none!important;
-    opacity:0!important;
-  }
+.global-fullscreen-btn,
+#fullscreenToggle,
+#globalFullscreenBtn{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
 }

@@ -1,6 +1,7 @@
 /**
  * Menú global 360Preventa — presente en toda la web.
  * El contenido cambia según contexto (landing / cotizador / panel).
+ * Pantalla completa vive en el menú (sin icono flotante).
  */
 (function () {
   if (window.__boxiesGlobalNav) return;
@@ -28,16 +29,28 @@
       document.body.getAttribute('data-app') === 'cotizador';
   }
 
-  /** Links según pantalla */
+  function isFullscreenOn() {
+    if (window.BoxiesFullscreen && typeof window.BoxiesFullscreen.isActive === 'function') {
+      return !!window.BoxiesFullscreen.isActive();
+    }
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+
+  function fullscreenLabel() {
+    return isFullscreenOn() ? 'Salir de pantalla completa' : 'Ver pantalla completa';
+  }
+
+  /** Links según pantalla — siempre incluye pantalla completa */
   function linksForContext() {
+    var fs = { action: 'fullscreen', label: fullscreenLabel(), n: '00' };
     if (isPanelAuthed()) {
       return [
         { href: '/#inicio', label: 'Inicio', n: '01' },
         { href: '/#demo', label: 'Ver demo', n: '02' },
-        { action: 'logout', label: 'Salir', n: '03' }
+        { action: 'fullscreen', label: fullscreenLabel(), n: '03' },
+        { action: 'logout', label: 'Salir', n: '04' }
       ];
     }
-    /* Landing, login, cotizador (público o interno): sin Refrescar */
     var links = [
       { href: '/#inicio', label: 'Inicio', n: '01' },
       { href: '/cotizar', label: 'Cotizar mi showroom', n: '02' },
@@ -46,11 +59,10 @@
     ];
     if (isCotizador() && document.body.classList.contains('modo-interno')) {
       links.push({ href: '/panel_gestion/', label: 'Panel', n: '05' });
-    } else if (!isCotizador() || document.body.classList.contains('modo-publico')) {
-      links.push({ href: '/panel_gestion/', label: 'Ingresar', n: '05' });
     } else {
       links.push({ href: '/panel_gestion/', label: 'Ingresar', n: '05' });
     }
+    links.push({ action: 'fullscreen', label: fullscreenLabel(), n: '06' });
     return links;
   }
 
@@ -58,6 +70,7 @@
     if (document.getElementById('globalMenuToggle')) return;
 
     document.body.classList.add('has-global-nav');
+    document.body.classList.add('nav-fs-in-menu');
 
     var toggle = el('button', {
       className: 'menu-toggle mag',
@@ -100,13 +113,14 @@
       }));
       linksForContext().forEach(function (item, i) {
         var delay = (0.12 + i * 0.07).toFixed(2) + 's';
-        if (item.action === 'logout') {
+        if (item.action === 'logout' || item.action === 'fullscreen') {
           var btn = el('button', {
             className: 'menu-link',
             type: 'button',
-            'data-nav-logout': '1',
-            'data-cursor': 'SALIR'
+            'data-cursor': item.action === 'logout' ? 'SALIR' : 'PANTALLA'
           }, item.label + ' <span>' + item.n + '</span>');
+          if (item.action === 'logout') btn.setAttribute('data-nav-logout', '1');
+          if (item.action === 'fullscreen') btn.setAttribute('data-nav-fullscreen', '1');
           btn.style.setProperty('--dl', delay);
           panel.appendChild(btn);
           return;
@@ -139,6 +153,25 @@
       }
     }
 
+    function doFullscreen() {
+      close();
+      var run = function () {
+        if (window.BoxiesFullscreen && window.BoxiesFullscreen.toggle) {
+          return window.BoxiesFullscreen.toggle();
+        }
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+          var exit = document.exitFullscreen || document.webkitExitFullscreen;
+          return exit ? exit.call(document) : Promise.resolve();
+        }
+        var el = document.documentElement;
+        var req = el.requestFullscreen || el.webkitRequestFullscreen;
+        return req ? req.call(el) : Promise.resolve();
+      };
+      Promise.resolve(run()).catch(function () {}).then(function () {
+        setTimeout(renderLinks, 120);
+      });
+    }
+
     toggle.addEventListener('click', function () {
       setOpen(!panel.classList.contains('open'));
     });
@@ -151,6 +184,11 @@
       if (e.target.closest('[data-nav-logout]')) {
         e.preventDefault();
         doLogout();
+        return;
+      }
+      if (e.target.closest('[data-nav-fullscreen]')) {
+        e.preventDefault();
+        doFullscreen();
         return;
       }
       var a = e.target.closest('a');
@@ -184,9 +222,11 @@
 
     renderLinks();
 
-    /* Reconstruir al login / logout / cambio de modo cotizador */
     var mo = new MutationObserver(function () { renderLinks(); });
     mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    document.addEventListener('fullscreenchange', renderLinks);
+    document.addEventListener('webkitfullscreenchange', renderLinks);
+    document.addEventListener('boxies:fullscreen', renderLinks);
 
     window.BoxiesGlobalNav = {
       open: function () { setOpen(true); },

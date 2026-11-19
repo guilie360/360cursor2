@@ -31,23 +31,13 @@ body.cotizador-app #teamChatPopup,
 body.cotizador-app #paymentsGateBackdrop{
   display:none!important;
 }
-/* Fullscreen solo desktop — en móvil debe quedar oculto (regla fija) */
-@media (min-width:761px){
-  body.cotizador-app #globalFullscreenBtn,
-  body.cotizador-app .global-fullscreen-btn{
-    display:grid!important;
-    visibility:visible!important;
-    pointer-events:auto!important;
-  }
-}
-@media (max-width:760px){
-  body.cotizador-app #globalFullscreenBtn,
-  body.cotizador-app .global-fullscreen-btn,
-  body.cotizador-app #fullscreenToggle{
-    display:none!important;
-    visibility:hidden!important;
-    pointer-events:none!important;
-  }
+/* Fullscreen solo desde el menú global — nunca icono flotante */
+body.cotizador-app #globalFullscreenBtn,
+body.cotizador-app .global-fullscreen-btn,
+body.cotizador-app #fullscreenToggle{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
 }
 
 /* Público: sin comisión de equipo; sí flecha para volver a la landing (#demo) */

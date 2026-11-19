@@ -11,7 +11,8 @@
   --chrome-side:max(22px,4vw);
   --chrome-top:max(22px,calc(var(--safe-top) + 22px));
   --chrome-rail:calc(var(--chrome-side) + var(--chrome-btn) + var(--chrome-gap));
-  --chrome-rail-left:var(--chrome-rail);
+  /* FS ya no es icono flotante: riel izquierdo solo margen; derecho reserva el menú */
+  --chrome-rail-left:var(--chrome-side);
   --chrome-rail-right:var(--chrome-rail);
   --chrome-header-h:50px;
   --chrome-max:1480px;
@@ -28,43 +29,27 @@
   }
 }
 
-/* ——— Controles fijos de esquina (misma Y, espejo X) ——— */
-.fullscreen-toggle,
-.global-fullscreen-btn,
+/* ——— Menú fijo arriba-derecha; FS ya no tiene icono (va en el menú) ——— */
 .menu-toggle{
   top:var(--chrome-top)!important;
+  right:var(--chrome-side)!important;
+  left:auto!important;
+  bottom:auto!important;
   width:var(--chrome-btn)!important;
   height:var(--chrome-btn)!important;
   z-index:10060!important;
 }
 .fullscreen-toggle,
-.global-fullscreen-btn{
-  left:var(--chrome-side)!important;
-  right:auto!important;
-  bottom:auto!important;
-}
-.menu-toggle{
-  right:var(--chrome-side)!important;
-  left:auto!important;
-  bottom:auto!important;
-}
-
-/* Regla fija: fullscreen SOLO desktop — en móvil no existe */
-@media (max-width:760px){
-  .fullscreen-toggle,
-  .global-fullscreen-btn,
-  #fullscreenToggle,
-  #globalFullscreenBtn{
-    display:none!important;
-    visibility:hidden!important;
-    pointer-events:none!important;
-    opacity:0!important;
-  }
-  :root{
-    /* Sin FS a la izquierda: el riel izquierdo es solo margen */
-    --chrome-rail-left:var(--chrome-side);
-    --chrome-rail-right:calc(var(--chrome-side) + var(--chrome-btn) + var(--chrome-gap));
-  }
+.global-fullscreen-btn,
+#fullscreenToggle,
+#globalFullscreenBtn{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+  opacity:0!important;
+  width:0!important;
+  height:0!important;
+  overflow:hidden!important;
 }
 
 /* ——— Shell de header: siempre entre FS y MENÚ ——— */
