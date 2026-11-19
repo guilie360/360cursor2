@@ -14,6 +14,13 @@ body.cotizador-app .chooser-intro{
   margin-bottom:18px;
   opacity:.75;
 }
+/* Al entrar a un flujo: quitar el título de página para ir al grano */
+body.cotizador-app:has(#manualConfigurator:not(.hidden)) > main > h1,
+body.cotizador-app:has(#manualConfigurator:not(.hidden)) > main > .chooser-intro,
+body.cotizador-app:has(#packageChooser:not(.hidden)) > main > h1,
+body.cotizador-app:has(#packageChooser:not(.hidden)) > main > .chooser-intro{
+  display:none!important;
+}
 /* Continuar: deja espacio bajo el header sticky al anclar el siguiente paso */
 body.cotizador-app .step,
 body.cotizador-app .package-accordion{
@@ -372,21 +379,82 @@ body.cotizador-app .manual-details{
   padding:0!important;
   gap:12px!important;
 }
-body.cotizador-app .manual-shell-head p,
-body.cotizador-app .package-top p{
+/* Header compacto del flujo: título + precio + volver */
+body.cotizador-app .shell-head.quote-flow-head,
+body.cotizador-app .package-top.quote-flow-head,
+body.cotizador-app .quote-flow-head{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:14px!important;
+  padding:4px 0 12px!important;
+  border-bottom:1px solid rgba(255,255,255,.08)!important;
+  margin:0 0 12px!important;
+  background:transparent!important;
+}
+body.cotizador-app .quote-flow-head-main{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:flex-end;
+  gap:10px 22px;
+  min-width:0;
+  flex:1;
+}
+body.cotizador-app .quote-flow-head h2{
+  margin:0!important;
+  font:clamp(24px,4vw,32px)/1.1 'Italiana',Georgia,serif!important;
+  font-weight:400!important;
+  color:#f3f3f1!important;
+}
+body.cotizador-app .quote-flow-price{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:2px;
+}
+body.cotizador-app .quote-flow-price small{
+  color:#7e7e7e!important;
+  font-size:9px!important;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+body.cotizador-app .quote-flow-price strong{
+  font-size:22px!important;
+  color:#f3f3f1!important;
+  line-height:1!important;
+}
+body.cotizador-app .quote-flow-tip{
+  margin:0 0 12px!important;
   color:#8f8f8f!important;
-  max-width:42ch;
   font-size:12px!important;
   line-height:1.45!important;
+  max-width:46ch;
+}
+body.cotizador-app #baseStep .quote-flow-tip{
+  margin:0 0 10px!important;
 }
 body.cotizador-app .package-detail-price strong{
   font-size:22px!important;
   color:#f3f3f1!important;
 }
 body.cotizador-app .package-detail-price small{color:#7e7e7e!important}
-body.cotizador-app .package-detail-head .eyebrow{
-  color:#7a7a7a!important;
-  letter-spacing:.14em;
+@media (max-width:760px){
+  body.cotizador-app .quote-flow-head{
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:10px!important;
+    padding:10px 0 12px!important;
+  }
+  body.cotizador-app .quote-flow-head .btn{
+    align-self:flex-start;
+  }
+  body.cotizador-app .quote-flow-head-main{
+    gap:8px 16px;
+  }
+  body.cotizador-app #packageChooser,
+  body.cotizador-app #manualConfigurator{
+    padding:16px!important;
+  }
 }
 
 /* Ritmo sutil: A casi negro / B gris un tono más claro */

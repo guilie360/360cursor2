@@ -32,6 +32,17 @@ button,input,select{font:inherit}button{cursor:pointer;color:inherit}.topbar{pos
 .topright{display:flex;align-items:center;gap:14px}.pricebox{text-align:right}.pricebox span{display:block;color:var(--muted);font-size:10px;letter-spacing:.12em;text-transform:uppercase}.pricebox strong{font:27px 'Italiana',Georgia,serif}.btn{border:1px solid var(--line);background:transparent;padding:10px 14px;font-size:11px;letter-spacing:.07em;text-transform:uppercase}.btn:hover{border-color:var(--gold)}.btn.primary{background:var(--gold);color:#111;border-color:var(--gold)}
 main{max-width:960px;margin:0 auto;padding:34px 22px 70px}.eyebrow{color:#aaa;font-size:10px;letter-spacing:.2em;text-transform:uppercase}h1{font:clamp(36px,6vw,58px)/1.04 Georgia,serif;font-weight:400;margin:10px 0 12px}.intro{color:var(--muted);max-width:700px;margin:0 0 28px}
 .config-shell{border:1px solid var(--line);background:var(--panel)}.shell-head{padding:22px 24px;border-bottom:1px solid var(--line)}.shell-head h2{font:26px Georgia,serif;font-weight:400;margin:5px 0}.shell-head p{color:var(--muted);font-size:13px;margin:0}
+.quote-flow-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:14px 0 12px;border-bottom:1px solid var(--line);margin:0 0 12px}
+.quote-flow-head-main{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 22px;min-width:0;flex:1}
+.quote-flow-head h2{margin:0;font:clamp(24px,4vw,32px)/1.1 'Italiana',Georgia,serif;font-weight:400}
+.quote-flow-price{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.quote-flow-price small{color:var(--muted);font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.quote-flow-price strong{font-size:22px;line-height:1;color:var(--ink,#eee)}
+.quote-flow-tip{margin:0 0 12px;color:var(--muted);font-size:12px;line-height:1.45;max-width:46ch}
+body:has(#manualConfigurator:not(.hidden)) main>h1,
+body:has(#packageChooser:not(.hidden)) main>h1,
+body:has(#manualConfigurator:not(.hidden)) main>.chooser-intro,
+body:has(#packageChooser:not(.hidden)) main>.chooser-intro{display:none}
 .step{border-bottom:1px solid var(--line)}.step:last-child{border:0}.step summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:19px 23px;cursor:pointer}.step summary::-webkit-details-marker{display:none}.step summary:after{content:"+";font-size:23px;color:#aaa}.step[open] summary:after{content:"−"}.step-title{display:flex;align-items:center;gap:14px}.step-num{color:#888;font-size:11px;letter-spacing:.12em}.step-title b{font:20px Georgia,serif;font-weight:400}.step-meta{color:var(--muted);font-size:11px;text-align:right}.step-content{padding:0 23px 24px}.desc{color:var(--muted);font-size:13px;margin:0 0 15px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
 .choice{border:1px solid var(--line);background:var(--panel2);padding:13px;display:flex;align-items:flex-start;gap:10px;min-height:58px}.choice input{margin:4px 0 0;accent-color:#ddd;flex:none}.choice label{flex:1;cursor:pointer}.choice b{display:block;font-size:13px;font-weight:500}.choice small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
 .field{margin:12px 0}.field label{display:block;color:#bbb;font-size:12px;margin-bottom:6px}.field input,.field select,.textinput{width:100%;min-width:0;background:#090909;color:#eee;border:1px solid var(--line);padding:12px;border-radius:0}

@@ -12,8 +12,8 @@
   <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
   <link rel="stylesheet" href="/shared/css/site-chrome.css?v=9">
   <link rel="stylesheet" href="/shared/css/global-nav.css?v=4">
-  <link rel="stylesheet" href="css/base.css?v=panel18">
-  <link rel="stylesheet" href="css/patches.css?v=panel18">
+  <link rel="stylesheet" href="css/base.css?v=panel19">
+  <link rel="stylesheet" href="css/patches.css?v=panel19">
 </head>
 <body class="portal-mode">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat del equipo">
@@ -244,7 +244,13 @@
  </section>
 
 <section id="packageChooser" class="package-chooser hidden">
- <div class="package-top"><div><div class="eyebrow">Paquetes especiales 360Preventa</div><h2>Elige tu showroom completo</h2><p>Selecciona una tipología para consultar lo que incluye, su valor individual y el ahorro del paquete.</p></div><button class="btn" id="backToPaths" type="button">← Volver</button></div>
+ <div class="package-top quote-flow-head">
+  <div class="quote-flow-head-main">
+   <h2>Showroom completo</h2>
+  </div>
+  <button class="btn" id="backToPaths" type="button">← Volver</button>
+ </div>
+ <p class="quote-flow-tip">Elige la tipología para ver qué incluye y el precio del paquete.</p>
  <div class="package-types">
   <button class="package-type active" data-package="apartment" type="button"><span>A</span><b>Apartamento</b><small>Vivienda independiente</small></button>
   <button class="package-type" data-package="studio" type="button"><span>E</span><b>Apartestudio</b><small>Espacio compacto integrado</small></button>
@@ -278,23 +284,23 @@
   <button type="button" class="manual-upsell-close" id="manualUpsellClose" aria-label="Ocultar sugerencia">×</button>
  </aside>
  </div>
-  <div class="shell-head manual-shell-head"><div><div class="eyebrow">Configuración guiada</div><h2>Tu proyecto</h2><p>Completa cada apartado en orden. Puedes volver a abrir cualquier paso para editarlo.</p></div><button class="btn" id="manualBackToStart" type="button">← Volver</button></div>
-  <div class="package-details manual-details" id="manualDetails">
-   <div class="package-detail-head simple-package-head">
-    <div>
-     <div class="eyebrow">SHOWROOM PERSONALIZADO · A TU MEDIDA</div>
-     <h3>Showroom Personalizado</h3>
-    </div>
-    <div class="package-detail-price">
+  <div class="shell-head manual-shell-head quote-flow-head">
+   <div class="quote-flow-head-main">
+    <h2>Showroom personalizado</h2>
+    <div class="package-detail-price quote-flow-price">
      <small>PRESUPUESTO ACTUAL</small>
      <strong id="manualHeadTotal">490 €</strong>
      <small>100 m² incluidos · +7 €/m² adicional</small>
     </div>
    </div>
+   <button class="btn" id="manualBackToStart" type="button">← Volver</button>
+  </div>
+  <div class="package-details manual-details" id="manualDetails">
    <div class="package-accordion-list manual-step-list">
   <details class="step" id="baseStep">
    <summary><div class="step-title"><span class="step-num">00</span><b>Base del showroom</b></div><span class="step-meta">Incluida</span></summary>
    <div class="step-content" style="padding-top:0">
+   <p class="accordion-intro quote-flow-tip">Completa cada apartado en orden. Puedes volver a abrir cualquier paso para editarlo.</p>
    <div id="manualBaseContent"></div>
    <div class="price-line total-line"><span>Precio base hasta 100 m²</span><strong>490 €</strong></div>
    <p class="desc" style="margin-top:10px">Incluye 1 planta 3D interactiva del inmueble. Las plantas adicionales del mismo inmueble cuestan 220 € cada una. Los espacios interiores y recursos opcionales se cotizan aparte y se explican en los siguientes pasos.</p>
