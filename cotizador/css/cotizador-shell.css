@@ -108,9 +108,30 @@ body.cotizador-app main{
 }
 
 @media(max-width:760px){
-  body.cotizador-app.modo-interno .topright{gap:8px;flex-wrap:wrap;justify-content:flex-end}
-  .interno-commission-btn{padding:5px 10px}
-  .interno-commission-btn strong{font-size:18px}
-  .interno-commission-card{top:auto;bottom:84px;right:12px}
-  body.cotizador-app.modo-interno .portal-back{left:12px;bottom:12px}
+  /* Header móvil: never wrap — comisión sale del chrome (site-chrome la oculta) */
+  body.cotizador-app.modo-interno .topright{
+    gap:6px;flex-wrap:nowrap!important;justify-content:flex-end;min-width:0
+  }
+  body.cotizador-app.modo-interno .interno-commission-btn,
+  body.cotizador-app.modo-interno .interno-commission-btn.portal-hidden{
+    display:none!important
+  }
+  /* Card de comisión / upsell: por encima del chrome Safari */
+  .interno-commission-card,
+  body.cotizador-app .manual-upsell{
+    top:auto!important;
+    bottom:max(88px,calc(var(--float-bottom,24px) + 56px))!important;
+    right:max(12px,var(--chrome-side,12px))!important;
+    left:auto!important;
+    width:min(300px,calc(100vw - 24px))!important;
+    z-index:90
+  }
+  body.cotizador-app.modo-interno .portal-back,
+  body.cotizador-app.modo-publico .portal-back{
+    left:max(12px,var(--chrome-side,12px));
+    bottom:max(16px,var(--float-bottom,16px));
+  }
+  body.cotizador-app main{
+    padding-bottom:calc(120px + var(--safe-bottom,0px))
+  }
 }

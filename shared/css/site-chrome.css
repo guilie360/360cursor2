@@ -199,6 +199,69 @@ body.has-global-nav.cotizador-app .topbar .topinner{
   padding-right:var(--chrome-rail)!important
 }
 
+/* ——— Móvil: el slot no puede llevar 4 controles; prioridad = precio + 1 acción ——— */
+@media (max-width:760px){
+  :root{
+    --chrome-gap:8px;
+  }
+
+  /* Contenido usa solo el margen lateral, no el riel completo de FS/MENÚ */
+  .portal .portal-wrap,
+  body.cotizador-app main{
+    padding-left:var(--chrome-side)!important;
+    padding-right:var(--chrome-side)!important
+  }
+
+  .chrome-header__inner,
+  .portal .portal-head-inner,
+  body.cotizador-app .topbar .topinner{
+    gap:8px!important;
+    padding-bottom:10px!important
+  }
+
+  .portal .portal-head-right,
+  body.cotizador-app .topbar .topright{
+    gap:6px!important;
+    flex-wrap:nowrap!important;
+    overflow:hidden
+  }
+
+  /* Cotizar móvil: sin chip de comisión en header (va al card flotante) */
+  body.cotizador-app .interno-commission-btn{
+    display:none!important
+  }
+  body.cotizador-app .topbar .pricebox{
+    flex:1 1 auto;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    text-align:right
+  }
+  body.cotizador-app .topbar .pricebox strong{
+    font-size:clamp(18px,5.6vw,24px)!important;
+    white-space:nowrap;
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis
+  }
+  body.cotizador-app .topbar .brand-logo,
+  body.cotizador-app .topbar .brand{
+    flex:0 0 auto!important
+  }
+  body.cotizador-app .topbar .brand{
+    max-width:var(--chrome-header-h)
+  }
+
+  /* Panel: buscador flexible, logout fijo */
+  .portal .portal-search{
+    min-width:0!important;
+    max-width:none!important;
+    flex:1 1 auto!important;
+    font-size:12px!important;
+    padding:0 12px!important
+  }
+}
+
 @media (max-width:520px){
   .portal .portal-search{max-width:none!important}
 }
