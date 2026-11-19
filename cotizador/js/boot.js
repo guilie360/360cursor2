@@ -35,6 +35,10 @@
   var commissionLabel = document.getElementById('internoCommission');
   var commissionCardValue = document.getElementById('internoCommissionCardValue');
   var live = document.getElementById('hunterLiveCommission');
+  var resetBtn = document.getElementById('headerReset');
+  var resetBackdrop = document.getElementById('quoteResetConfirm');
+  var resetCancel = document.getElementById('quoteResetCancel');
+  var resetConfirm = document.getElementById('quoteResetConfirmBtn');
 
   if (back) {
     back.classList.remove('portal-hidden');
@@ -99,15 +103,45 @@
       else closeCommissionCard();
     });
     if (commissionClose) commissionClose.addEventListener('click', closeCommissionCard);
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeCommissionCard();
-    });
   }
 
-  startQuote();
-  // Tras abrir el motor, reafirmar controles internos (openEmbeddedQuote puede ocultar portalBack).
-  if (modo === 'interno' && back) {
-    back.classList.remove('portal-hidden');
+  function openResetConfirm() {
+    if (!resetBackdrop) return;
+    resetBackdrop.classList.remove('hidden');
+    (resetCancel || resetConfirm)?.focus?.();
   }
+  function closeResetConfirm() {
+    if (!resetBackdrop) return;
+    resetBackdrop.classList.add('hidden');
+  }
+  function doReset() {
+    closeResetConfirm();
+    if (typeof resetConfigurator === 'function') resetConfigurator();
+  }
+
+  if (resetBtn) {
+    // Captura: evita el listener directo de app.js y pide confirmación.
+    resetBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      openResetConfirm();
+    }, true);
+  }
+  if (resetCancel) resetCancel.addEventListener('click', closeResetConfirm);
+  if (resetConfirm) resetConfirm.addEventListener('click', doReset);
+  if (resetBackdrop) {
+    resetBackdrop.addEventListener('click', function (e) {
+      if (e.target === resetBackdrop) closeResetConfirm();
+    });
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    closeCommissionCard();
+    if (resetBackdrop && !resetBackdrop.classList.contains('hidden')) closeResetConfirm();
+  });
+
+  startQuote();
+  // Tras abrir el motor, reafirmar controles (openEmbeddedQuote puede ocultar portalBack).
+  if (back) back.classList.remove('portal-hidden');
   syncCommission();
 })();

@@ -12,34 +12,49 @@
 <link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel7">
 <link rel="stylesheet" href="/shared/css/scrollbar.css?v=1">
 <link rel="stylesheet" href="/shared/css/safe-area.css?v=8">
-<link rel="stylesheet" href="/shared/css/site-chrome.css?v=7">
+<link rel="stylesheet" href="/shared/css/site-chrome.css?v=8">
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=4">
-<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=16">
+<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=17">
 </head>
 <body data-app="cotizador" class="cotizador-app">
-<!-- Solo modo interno: flecha volver abajo-izquierda (estilo panel) -->
-<button class="portal-back portal-hidden" id="portalBack" type="button" aria-label="Volver al panel" title="Volver al panel">
- <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-</button>
-
 <header class="topbar"><div class="topinner">
  <div class="brand">
   <img class="brand-logo" alt="Logo 360Preventa" src="/panel_gestion/assets/logo.png">
   <span class="brand-copy">360Preventa<small>Configurador de showroom</small></span>
  </div>
  <div class="topright">
- <div class="pricebox"><strong id="stickyPrice">0 €</strong></div>
- <button class="interno-commission-btn portal-hidden" id="internoCommissionBtn" type="button" aria-expanded="false" aria-controls="internoCommissionCard">
-  <small>Comisión</small>
-  <strong id="internoCommission">0 €</strong>
- </button>
- <button class="btn reset-header" id="headerReset" type="button" aria-label="Reiniciar configuración" title="Reiniciar">
-  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8.3"/><path d="M3 3v5.3h5.3"/></svg>
- </button>
- <button class="btn" id="fullscreenBtn" type="button" hidden aria-hidden="true">Pantalla completa</button>
-</div>
-
+  <button class="btn" id="fullscreenBtn" type="button" hidden aria-hidden="true">Pantalla completa</button>
+ </div>
 </div></header>
+
+<footer class="quote-goal-footer" id="quoteGoalFooter" aria-label="Resumen de cotización">
+ <div class="quote-goal-footer-inner">
+  <button class="quote-footer-back" id="portalBack" type="button" aria-label="Volver" title="Volver">
+   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  </button>
+  <div class="quote-footer-spacer" aria-hidden="true"></div>
+  <button class="quote-footer-commission portal-hidden" id="internoCommissionBtn" type="button" aria-expanded="false" aria-controls="internoCommissionCard" title="Comisión Hunter estimada">
+   <small>Comisión</small>
+   <strong id="internoCommission">0 €</strong>
+  </button>
+  <div class="pricebox quote-footer-price"><strong id="stickyPrice">0 €</strong></div>
+  <button class="btn reset-header quote-footer-reset" id="headerReset" type="button" aria-label="Reiniciar cotización" title="Reiniciar">
+   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8.3"/><path d="M3 3v5.3h5.3"/></svg>
+  </button>
+ </div>
+</footer>
+
+<div id="quoteResetConfirm" class="quote-reset-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="quoteResetTitle">
+ <div class="quote-reset-dialog">
+  <div class="eyebrow">COTIZACIÓN</div>
+  <h3 id="quoteResetTitle">¿Reiniciar a cero?</h3>
+  <p>Se restablecerán los valores del showroom. La cotización actual se perderá.</p>
+  <div class="quote-reset-actions">
+   <button type="button" class="btn" id="quoteResetCancel">Cancelar</button>
+   <button type="button" class="btn primary" id="quoteResetConfirmBtn">Reiniciar</button>
+  </div>
+ </div>
+</div>
 <aside class="manual-upsell interno-commission-card hidden" id="internoCommissionCard" aria-label="Comisión estimada del proyecto">
   <div class="manual-upsell-copy">
     <span class="manual-upsell-kicker">MODO EQUIPO · HUNTER</span>
@@ -454,6 +469,6 @@
 <script src="/panel_gestion/js/path-chooser-flip.js"></script>
 <script src="/panel_gestion/js/accordion-tones.js"></script>
 <script src="/panel_gestion/js/path-chooser-actions.js"></script>
-<script src="/cotizador/js/boot.js?v=4"></script>
+<script src="/cotizador/js/boot.js?v=5"></script>
 </body>
 </html>

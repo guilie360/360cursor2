@@ -174,8 +174,7 @@ body.cotizador-app .topbar .topright{
   border-radius:12px!important;
   box-sizing:border-box!important
 }
-.portal .portal-head .portal-logout-icon,
-body.cotizador-app .topbar #headerReset{
+.portal .portal-head .portal-logout-icon{
   flex:0 0 var(--chrome-header-h)!important;
   width:var(--chrome-header-h)!important;
   height:var(--chrome-header-h)!important;
@@ -196,19 +195,7 @@ body.workspace-authenticated .portal .portal-search,
 body.nav-panel-authed .portal .portal-search{
   max-width:min(520px,100%)!important
 }
-body.cotizador-app .topbar .pricebox{
-  display:flex!important;
-  flex-direction:column-reverse!important;
-  align-items:flex-end!important;
-  justify-content:center!important;
-  height:var(--chrome-header-h)!important;
-  margin:0!important
-}
-body.cotizador-app .topbar .pricebox strong{
-  font-size:clamp(22px,3.2vw,30px)!important;
-  line-height:1!important;
-  white-space:nowrap!important
-}
+/* Cotizador: precio + reset viven en .quote-goal-footer */
 
 /* Contenido: mismos rieles que el header */
 .portal .portal-wrap,
@@ -250,14 +237,6 @@ body.cotizador-app .package-accordion,
   .portal .portal-head-right,
   body.cotizador-app .topbar .topright{
     gap:6px!important;overflow:hidden
-  }
-  body.cotizador-app .interno-commission-btn{display:none!important}
-  body.cotizador-app .topbar .pricebox{
-    flex:1 1 auto;min-width:0;max-width:100%;overflow:hidden;text-align:right
-  }
-  body.cotizador-app .topbar .pricebox strong{
-    font-size:clamp(18px,5.6vw,24px)!important;
-    overflow:hidden;text-overflow:ellipsis;display:block
   }
   .portal .portal-search{
     min-width:0!important;max-width:none!important;flex:1 1 auto!important;

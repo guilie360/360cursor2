@@ -3,16 +3,12 @@ body.cotizador-app{
   background:#0b0b0b;
 }
 
-/* Header más limpio: logo + precio + reiniciar (+ comisión solo interno) */
+/* Header limpio: solo logo (+ menú global). Precio/reset viven en el footer. */
 body.cotizador-app .brand-copy,
 body.cotizador-app .pricebox span,
-body.cotizador-app #fullscreenBtn{
+body.cotizador-app #fullscreenBtn,
+body.cotizador-app .topbar .topright{
   display:none!important;
-}
-/* Tamaños de logo/reset los unifica site-chrome (--chrome-header-h) */
-body.cotizador-app #headerReset svg{
-  width:20px;
-  height:20px;
 }
 body.cotizador-app .chooser-intro{
   margin-bottom:18px;
@@ -40,54 +36,132 @@ body.cotizador-app #fullscreenToggle{
   pointer-events:none!important;
 }
 
-/* Público: sin comisión de equipo; sí flecha para volver a la landing (#demo) */
-body.cotizador-app.modo-publico .interno-commission-btn,
+/* Público: sin comisión de equipo */
+body.cotizador-app.modo-publico .quote-footer-commission,
 body.cotizador-app.modo-publico .interno-commission-card{
   display:none!important;
 }
 
-/* Flecha abajo izquierda: público → landing#demo | interno → panel */
-body.cotizador-app.modo-publico .portal-back,
-body.cotizador-app.modo-publico .portal-back.portal-hidden,
-body.cotizador-app.modo-interno .portal-back,
-body.cotizador-app.modo-interno .portal-back.portal-hidden{
-  display:flex!important;
+/* ——— Footer cotización: misma geometría que meta del panel ——— */
+body.cotizador-app .quote-goal-footer{
+  position:fixed!important;
+  left:0!important;right:0!important;bottom:0!important;
+  width:100%!important;max-width:none!important;
+  z-index:80;
+  margin:0!important;padding:0!important;
+  border-top:1px solid rgba(255,255,255,.14);
+  background:rgba(10,10,10,.96);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  padding-bottom:env(safe-area-inset-bottom,0px)!important;
+}
+body.cotizador-app .quote-goal-footer-inner{
+  width:100%;max-width:none;margin:0;box-sizing:border-box;
+  display:flex;align-items:center;gap:14px;
+  padding:10px max(16px,var(--chrome-side,22px));
+}
+body.cotizador-app .quote-footer-spacer{flex:1 1 auto;min-width:8px}
+body.cotizador-app .quote-footer-back{
+  flex:0 0 40px;width:40px;height:40px;margin:0;padding:0;
+  border:1px solid rgba(255,255,255,.16);border-radius:12px;
+  background:rgba(255,255,255,.04);color:#eee;
+  display:grid;place-items:center;cursor:pointer;
+  transition:background .18s ease,border-color .18s ease,color .18s ease;
+}
+body.cotizador-app .quote-footer-back svg{
+  width:18px;height:18px;stroke:currentColor;fill:none;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+body.cotizador-app .quote-footer-back:hover{
+  background:#3b3b3b;color:#fff;border-color:#fff;
+}
+body.cotizador-app .quote-footer-back.portal-hidden{
+  display:grid!important;
 }
 
-/* Comisión en el header, junto al presupuesto (no abajo) */
-.interno-commission-btn{
-  position:relative;right:auto;bottom:auto;z-index:5;
-  display:none;flex-direction:column;align-items:flex-end;justify-content:center;gap:2px;
-  min-width:0;padding:6px 12px;border:1px solid rgba(205,178,138,.45);border-radius:12px;
-  background:rgba(20,18,16,.92);
-  color:#f1eee8;cursor:pointer;text-align:right;
-  box-shadow:none;
-  transition:border-color .18s ease,background .18s ease,transform .18s ease;
+/* Comisión Hunter: sutil, nunca compite con el precio del cliente */
+body.cotizador-app .quote-footer-commission{
+  position:relative;flex:0 0 auto;
+  display:none;flex-direction:column;align-items:flex-end;justify-content:center;gap:1px;
+  margin:0;padding:2px 6px 2px 0;border:0;background:transparent;
+  color:#8a8580;cursor:pointer;text-align:right;
+  opacity:.72;transition:opacity .18s ease,color .18s ease;
 }
-body.cotizador-app.modo-interno .interno-commission-btn,
-body.cotizador-app.modo-interno .interno-commission-btn.portal-hidden{
+body.cotizador-app.modo-interno .quote-footer-commission,
+body.cotizador-app.modo-interno .quote-footer-commission.portal-hidden{
   display:flex!important;
 }
-.interno-commission-btn small{
-  font:8px/1 Manrope,Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#cdb28a;font-weight:700;
+body.cotizador-app .quote-footer-commission small{
+  font:8px/1 Manrope,Arial,sans-serif;letter-spacing:.1em;text-transform:uppercase;
+  color:#6f6a64;font-weight:600;
 }
-.interno-commission-btn strong{
-  font:22px/1 Italiana,Georgia,serif;font-weight:400;color:#e7d3b5;
+body.cotizador-app .quote-footer-commission strong{
+  font:11px/1.1 Manrope,Arial,sans-serif;font-weight:500;color:#9a948c;
 }
-.interno-commission-btn:hover{
-  transform:translateY(-1px);border-color:rgba(231,211,181,.9);
-  background:rgba(32,28,24,.96);
+body.cotizador-app .quote-footer-commission:hover{
+  opacity:1;color:#cfc9bd;
 }
-body.cotizador-app.modo-interno .topright{
-  align-items:center;gap:12px;
+body.cotizador-app .quote-footer-commission:hover small{color:#a39c93}
+body.cotizador-app .quote-footer-commission:hover strong{color:#d6d0c8}
+
+/* Precio cliente: protagonista */
+body.cotizador-app .quote-footer-price{
+  display:flex!important;flex-direction:column;align-items:flex-end;justify-content:center;
+  margin:0;padding:0;height:auto;min-width:0;
 }
-body.cotizador-app.modo-interno .pricebox{
-  padding-right:4px;
+body.cotizador-app .quote-footer-price strong{
+  font:clamp(20px,3.2vw,28px)/1 Italiana,Georgia,serif!important;
+  font-weight:400!important;color:#f0ebe3!important;
+  white-space:nowrap;
+}
+body.cotizador-app .quote-footer-reset{
+  flex:0 0 40px!important;width:40px!important;height:40px!important;
+  min-width:40px!important;max-width:40px!important;
+  padding:0!important;margin:0;
+  border:1px solid rgba(255,255,255,.16)!important;border-radius:12px!important;
+  background:rgba(255,255,255,.04)!important;color:#eee!important;
+  display:inline-flex!important;align-items:center;justify-content:center;
+  box-sizing:border-box;
+}
+body.cotizador-app .quote-footer-reset svg{
+  width:18px;height:18px;stroke:currentColor;fill:none;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+body.cotizador-app .quote-footer-reset:hover{
+  background:#3b3b3b!important;color:#fff!important;border-color:#fff!important;
 }
 
-/* Mini popup comisión anclado arriba-derecha, bajo el header */
+/* Mini alerta reinicio — mismo lenguaje visual que payments-gate */
+body.cotizador-app .quote-reset-backdrop{
+  position:fixed;inset:0;z-index:10090;
+  background:rgba(0,0,0,.78);backdrop-filter:blur(5px);
+  display:grid;place-items:center;padding:20px;
+}
+body.cotizador-app .quote-reset-backdrop.hidden{display:none!important}
+body.cotizador-app .quote-reset-dialog{
+  width:min(420px,100%);
+  background:#171717;border:1px solid rgba(255,255,255,.18);
+  border-radius:16px;padding:28px;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+}
+body.cotizador-app .quote-reset-dialog .eyebrow{
+  margin:0 0 10px;font:10px/1 Manrope,Arial,sans-serif;
+  letter-spacing:.14em;text-transform:uppercase;color:#8d7d69;
+}
+body.cotizador-app .quote-reset-dialog h3{
+  margin:0 0 8px;font:26px Italiana,Georgia,serif;font-weight:400;color:#f4f1eb;
+}
+body.cotizador-app .quote-reset-dialog p{
+  margin:0 0 20px;color:#aaa;font-size:13px;line-height:1.55;
+}
+body.cotizador-app .quote-reset-actions{
+  display:flex;gap:9px;flex-wrap:wrap;
+}
+body.cotizador-app .quote-reset-actions .btn{flex:1;min-width:120px}
+
+/* Mini popup comisión anclado sobre el footer */
 .interno-commission-card{
-  position:fixed;top:72px;right:22px;bottom:auto;left:auto;z-index:120;
+  position:fixed;right:22px;bottom:72px;top:auto;left:auto;z-index:120;
   width:min(310px,calc(100vw - 32px));
 }
 .interno-commission-hint{
@@ -105,34 +179,35 @@ body.cotizador-app.modo-publico #shareFormats{
 
 body.cotizador-app main{
   padding-top:12px;
-  padding-bottom:96px;
+  padding-bottom:88px;
 }
 
 @media(max-width:760px){
-  /* Header móvil: never wrap — comisión sale del chrome (site-chrome la oculta) */
-  body.cotizador-app.modo-interno .topright{
-    gap:6px;flex-wrap:nowrap!important;justify-content:flex-end;min-width:0
+  body.cotizador-app .quote-goal-footer-inner{
+    gap:8px;padding:9px 14px;
   }
-  body.cotizador-app.modo-interno .interno-commission-btn,
-  body.cotizador-app.modo-interno .interno-commission-btn.portal-hidden{
-    display:none!important
+  body.cotizador-app .quote-footer-back,
+  body.cotizador-app .quote-footer-reset{
+    flex-basis:36px!important;width:36px!important;height:36px!important;
+    min-width:36px!important;max-width:36px!important;
   }
-  /* Card de comisión / upsell: por encima del chrome Safari */
+  body.cotizador-app .quote-footer-back svg,
+  body.cotizador-app .quote-footer-reset svg{width:16px;height:16px}
+  body.cotizador-app .quote-footer-price strong{
+    font-size:clamp(18px,5.6vw,24px)!important;
+  }
+  body.cotizador-app .quote-footer-commission small{font-size:7px}
+  body.cotizador-app .quote-footer-commission strong{font-size:10px}
   .interno-commission-card,
   body.cotizador-app .manual-upsell{
     top:auto!important;
-    bottom:max(88px,calc(var(--float-bottom,24px) + 56px))!important;
+    bottom:max(72px,calc(var(--float-bottom,24px) + 56px))!important;
     right:max(12px,var(--chrome-side,12px))!important;
     left:auto!important;
     width:min(300px,calc(100vw - 24px))!important;
     z-index:90
   }
-  body.cotizador-app.modo-interno .portal-back,
-  body.cotizador-app.modo-publico .portal-back{
-    left:max(12px,var(--chrome-side,12px));
-    bottom:max(16px,var(--float-bottom,16px));
-  }
   body.cotizador-app main{
-    padding-bottom:calc(120px + var(--safe-bottom,0px))
+    padding-bottom:calc(84px + var(--safe-bottom,0px))
   }
 }
