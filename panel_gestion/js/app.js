@@ -1332,10 +1332,20 @@ function paymentReportHtml(rows,title){
 </body></html>`;
 }
 
-$('portalBack').addEventListener('click',()=>{
+$('portalBack').addEventListener('click',(e)=>{
+ // En cotizador el boot.js maneja el atrás (capture). Aquí solo panel.
+ if(document.body.classList.contains('cotizador-app')||document.body.dataset.app==='cotizador')return;
+ e.preventDefault();
+ // Hunter: salir al panel
+ if(document.body.classList.contains('hunter-mode')){
+  document.body.classList.remove('hunter-mode');
+  if($('hunter'))$('hunter').style.display='none';
+  portalShowHome();
+  return;
+ }
  if(!document.body.classList.contains('portal-mode')){portalShowHome();return;}
- // Un paso atrás: subpágina → inicio del panel.
- if(!$('portalSubpage').classList.contains('portal-hidden')){portalShowHome();return;}
+ // Subpágina → inicio del panel
+ if($('portalSubpage')&&!$('portalSubpage').classList.contains('portal-hidden')){portalShowHome();return;}
  window.scrollTo({top:0,behavior:'smooth'});
 });
 $('portalSubpage').addEventListener('click',e=>{

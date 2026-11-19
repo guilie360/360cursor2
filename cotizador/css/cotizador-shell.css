@@ -63,18 +63,23 @@ body.cotizador-app .quote-goal-footer-inner{
 /* Spacer absorbe el centro (equivalente a la meta del panel); botones anclados izq/der */
 body.cotizador-app .quote-footer-spacer{flex:1 1 auto;min-width:8px}
 body.cotizador-app .quote-footer-back{
-  flex:0 0 40px;width:40px;height:40px;margin:0;padding:0;
+  flex:0 0 40px;width:40px;height:40px;margin:0;padding:0;z-index:5;
   border:1px solid rgba(255,255,255,.16);border-radius:12px;
   background:rgba(255,255,255,.04);color:#eee;
-  display:grid;place-items:center;cursor:pointer;
+  display:grid;place-items:center;cursor:pointer;pointer-events:auto;
   transition:background .18s ease,border-color .18s ease,color .18s ease;
 }
 body.cotizador-app .quote-footer-back svg{
   width:18px;height:18px;stroke:currentColor;fill:none;
   stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  pointer-events:none;
 }
-body.cotizador-app .quote-footer-back:hover{
-  background:#3b3b3b;color:#fff;border-color:#fff;
+body.cotizador-app .quote-footer-back:hover,
+body.cotizador-app .quote-footer-back:focus-visible{
+  background:#3b3b3b;color:#fff;border-color:#fff;outline:none;
+}
+body.cotizador-app .quote-footer-back:active{
+  background:#4a4a4a;border-color:#fff;
 }
 body.cotizador-app .quote-footer-back.portal-hidden{
   display:grid!important;

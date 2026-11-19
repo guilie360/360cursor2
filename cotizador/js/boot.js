@@ -81,11 +81,24 @@
   }
 
   function exitCotizador() {
+    // Navegación explícita: history.back() a veces no hace nada (stack corto / same-doc).
+    if (modo === 'interno') {
+      location.href = '/panel_gestion/';
+      return;
+    }
     var sameOrigin = false;
     try {
       sameOrigin = !!(document.referrer && document.referrer.indexOf(location.origin) === 0);
     } catch (err) {}
-    if (sameOrigin) {
+    if (sameOrigin && window.history.length > 1) {
+      var left = false;
+      var timer = setTimeout(function () {
+        if (!left) location.href = exitFallback;
+      }, 350);
+      window.addEventListener('pagehide', function () {
+        left = true;
+        clearTimeout(timer);
+      }, { once: true });
       history.back();
       return;
     }
@@ -96,7 +109,19 @@
     if (closeQuoteOverlays()) return;
     var screen = currentQuoteScreen();
     if (screen === 'manual' || screen === 'package') {
-      if (typeof showConfiguratorScreen === 'function') showConfiguratorScreen('paths');
+      if (typeof showConfiguratorScreen === 'function') {
+        showConfiguratorScreen('paths');
+      } else {
+        var path = document.getElementById('pathChooser');
+        var pkg = document.getElementById('packageChooser');
+        var manual = document.getElementById('manualConfigurator');
+        var upsell = document.getElementById('manualUpsell');
+        if (manual) manual.classList.add('hidden');
+        if (pkg) pkg.classList.add('hidden');
+        if (upsell) upsell.classList.add('hidden');
+        if (path) path.classList.remove('hidden');
+        window.scrollTo(0, 0);
+      }
       return;
     }
     exitCotizador();
@@ -107,9 +132,10 @@
     back.setAttribute('aria-label', 'Volver');
     back.title = 'Volver';
     back.onclick = null;
-    // Un solo paso atrás: overlay → pantalla anterior → origen (landing/panel).
+    // Capture: un solo paso atrás; evita el listener del panel (app.js).
     back.addEventListener('click', function (e) {
       e.preventDefault();
+      e.stopPropagation();
       e.stopImmediatePropagation();
       stepBackQuote();
     }, true);

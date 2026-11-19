@@ -751,11 +751,12 @@ body.portal-mode #hunterGoalFooter #portalBack,
 #hunterGoalFooter .footer-back{
  position:static!important;
  inset:auto!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;
- flex:0 0 40px;width:40px;height:40px;min-width:40px;max-width:40px;margin:0;padding:0;z-index:1;
+ flex:0 0 40px;width:40px;height:40px;min-width:40px;max-width:40px;margin:0;padding:0;z-index:5;
  border:1px solid rgba(255,255,255,.16)!important;border-radius:12px!important;
  background:rgba(255,255,255,.04)!important;color:#eee!important;
- display:grid!important;place-items:center;cursor:pointer;
- box-shadow:none!important;transform:none!important;filter:none!important;
+ display:grid!important;place-items:center;cursor:pointer;pointer-events:auto!important;
+ box-shadow:none!important;filter:none!important;
+ transition:background .18s ease,border-color .18s ease,color .18s ease!important;
 }
 body.portal-mode #hunterGoalFooter #portalBack.portal-hidden,
 #hunterGoalFooter #portalBack.portal-hidden,
@@ -771,11 +772,18 @@ body.workspace-authenticated #hunterGoalFooter #portalBack{
 #hunterGoalFooter .footer-back svg{
  width:18px;height:18px;stroke:currentColor;fill:none;
  stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+ pointer-events:none;
 }
 #hunterGoalFooter #portalBack:hover,
-#hunterGoalFooter .footer-back:hover{
+#hunterGoalFooter #portalBack:focus-visible,
+#hunterGoalFooter .footer-back:hover,
+#hunterGoalFooter .footer-back:focus-visible{
  background:#3b3b3b!important;color:#fff!important;border-color:#fff!important;
- transform:none!important;box-shadow:none!important;
+ box-shadow:none!important;outline:none!important;
+}
+#hunterGoalFooter #portalBack:active,
+#hunterGoalFooter .footer-back:active{
+ background:#4a4a4a!important;border-color:#fff!important;
 }
 /* Bloque meta: es lo único que se comprime al aparecer el back */
 #hunterGoalFooter .hunter-goal-meta{
@@ -1324,11 +1332,11 @@ body.workspace-authenticated #hunterGoalFooter #portalBack{
 
 /* Hover unificado con landing: sin contorno blanco grueso; el cursor custom marca el foco */
 @media (hover:hover) {
-  :where(button,a,[role="button"],[onclick],.clickable,.nav-item,.menu-item,.sidebar-item,.tab,.tab-btn,.card,.project-card,.task-card,.payment-card,.stat-card,.action-card,.list-row,.table-row,.accordion-header,.select-option,.dropdown-item,.profile-section,.module-card):hover {
+  :where(button,a,[role="button"],[onclick],.clickable,.nav-item,.menu-item,.sidebar-item,.tab,.tab-btn,.card,.project-card,.task-card,.payment-card,.stat-card,.action-card,.list-row,.table-row,.accordion-header,.select-option,.dropdown-item,.profile-section,.module-card):not(.footer-back):not(.quote-footer-back):not(.footer-chat-btn):not(.quote-footer-reset):hover {
     outline: none !important;
     color: #fff;
   }
-  :where(button,a,[role="button"],[onclick],.clickable,.nav-item,.menu-item,.sidebar-item,.tab,.tab-btn,.card,.project-card,.task-card,.payment-card,.stat-card,.action-card,.list-row,.table-row,.accordion-header,.select-option,.dropdown-item,.profile-section,.module-card):hover :where(span,strong,small,i,svg) {
+  :where(button,a,[role="button"],[onclick],.clickable,.nav-item,.menu-item,.sidebar-item,.tab,.tab-btn,.card,.project-card,.task-card,.payment-card,.stat-card,.action-card,.list-row,.table-row,.accordion-header,.select-option,.dropdown-item,.profile-section,.module-card):not(.footer-back):not(.quote-footer-back):not(.footer-chat-btn):not(.quote-footer-reset):hover :where(span,strong,small,i,svg) {
     color: inherit;
   }
   /* Iconos chrome (logo / fullscreen): solo opacidad, como landing */
@@ -1357,14 +1365,21 @@ body.hunter-mode .portal {
 }
 body.hunter-mode .portal-head,
 body.hunter-mode #portalHome,
-body.hunter-mode #portalSubpage,
-body.hunter-mode body.hunter-mode #portalBack {
+body.hunter-mode #portalSubpage{
   display: none !important;
+}
+/* Footer + flecha siguen visibles en Hunter para volver al panel */
+body.hunter-mode #hunterGoalFooter{
+  display: block !important;
+}
+body.hunter-mode.workspace-authenticated #hunterGoalFooter #portalBack{
+  display: grid !important;
 }
 body.hunter-mode .hunter {
   display: block !important;
   max-width: 960px;
   margin: 30px auto;
+  padding-bottom: 88px;
 }
 body.hunter-mode main {
   display: none !important;
