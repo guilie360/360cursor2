@@ -1383,6 +1383,12 @@ html:not(.has-cur) #pathChooser .flip-back>.flip-cta{cursor:pointer!important}
 #manualConfigurator .final-quote-actions > a.final-quote-whatsapp{
  color:#e5d0aa!important;
  border-color:rgba(195,166,119,.55)!important;
+ display:flex!important;
+ align-items:center!important;
+ justify-content:center!important;
+ text-align:center!important;
+ line-height:1.2!important;
+ white-space:normal!important;
 }
 #packageChooser .final-quote-actions > button:hover,
 #manualConfigurator .final-quote-actions > button:hover,

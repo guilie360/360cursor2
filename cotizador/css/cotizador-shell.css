@@ -983,8 +983,15 @@ body.cotizador-app #manualConfigurator > .final-quote-actions > a.final-quote-wh
   margin-left:0!important;
   margin-right:0!important;
 }
-body.cotizador-app .final-quote-whatsapp{
+body.cotizador-app .final-quote-whatsapp,
+body.cotizador-app a.btn.final-quote-whatsapp{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
   text-decoration:none!important;
+  line-height:1.2!important;
+  white-space:normal!important;
 }
 @media(max-width:620px){
   body.cotizador-app #packageChooser > .final-quote-actions,
