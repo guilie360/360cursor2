@@ -103,6 +103,7 @@ function revealNextStep(next,current){
    setTimeout(align,200);
   });
  });
+ saveQuoteDraftSoon();
 }
 document.querySelectorAll('#manualConfigurator [data-next]').forEach(b=>b.addEventListener('click',()=>{
  const current=b.closest('details.step');
@@ -115,7 +116,107 @@ $('addSimilar').addEventListener('change',update);
 $('confirmOpen').addEventListener('click',showManualPackageOffer);
 $('copyQuote').addEventListener('click',async()=>{const q=current();const text=['PRESUPUESTO SHOWROOM 360PREVENTA', 'Tipología: '+document.querySelector('input[name="type"]:checked').value,'Superficie: '+q.area+' m²','Plantas: '+q.floors,'Subtotal primer inmueble: '+money(q.primary),...(q.hasSimilar?['Segundo showroom: '+q.simType+' · '+q.simArea+' m²','Tipo de inmueble: '+q.simType,'1 planta 3D incluida','Recursos adicionales compartidos','Descuento: 50 % ('+money(q.discount)+')','Importe segundo showroom: '+money(q.similarBase-q.discount)]:[]),'TOTAL: '+money(q.total)].join('\\n');try{await navigator.clipboard.writeText(text);$('copyStatus').textContent='Presupuesto copiado.'}catch(e){$('copyStatus').textContent=text}});
 
+const QUOTE_DRAFT_KEY='boxiesQuoteDraft';
+const QUOTE_DRAFT_TTL_MS=1000*60*60*24; // 24h
+let _quoteDraftTimer=null;
+let _restoringQuote=false;
+
+function quoteDraftScreen(){
+ if($('manualConfigurator')&&!$('manualConfigurator').classList.contains('hidden')) return 'manual';
+ if($('packageChooser')&&!$('packageChooser').classList.contains('hidden')) return 'package';
+ return 'paths';
+}
+function collectQuoteDraft(){
+ const rootManual=$('manualConfigurator');
+ const rootPkg=$('packageDetails');
+ const manual={checks:{},values:{},openSteps:[]};
+ if(rootManual){
+  rootManual.querySelectorAll('input[type="checkbox"],input[type="radio"]').forEach(el=>{
+   const key=el.id||(el.name?`${el.name}:${el.value}`:'');
+   if(key) manual.checks[key]=!!el.checked;
+  });
+  rootManual.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]),select,textarea').forEach(el=>{
+   if(el.id) manual.values[el.id]=el.value;
+  });
+  rootManual.querySelectorAll('details.step').forEach(s=>{ if(s.open&&s.id) manual.openSteps.push(s.id); });
+ }
+ let pkgKey='apartment';
+ try{ if(typeof activePackage==='string'&&activePackage) pkgKey=activePackage; }catch(e){}
+ const pkg={activePackage:pkgKey,checks:{},values:{},openAccordions:[]};
+ if(rootPkg){
+  rootPkg.querySelectorAll('input[type="checkbox"],input[type="radio"]').forEach(el=>{
+   const key=el.id||(el.name?`${el.name}:${el.value}`:'');
+   if(key) pkg.checks[key]=!!el.checked;
+  });
+  rootPkg.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]),select,textarea').forEach(el=>{
+   if(el.id) pkg.values[el.id]=el.value;
+  });
+  rootPkg.querySelectorAll('details.package-accordion').forEach(s=>{ if(s.open&&s.id) pkg.openAccordions.push(s.id); });
+ }
+ return {v:1,screen:quoteDraftScreen(),ts:Date.now(),manual,package:pkg};
+}
+function saveQuoteDraft(){
+ if(_restoringQuote) return;
+ try{ localStorage.setItem(QUOTE_DRAFT_KEY,JSON.stringify(collectQuoteDraft())); }catch(e){}
+}
+function saveQuoteDraftSoon(){
+ clearTimeout(_quoteDraftTimer);
+ _quoteDraftTimer=setTimeout(saveQuoteDraft,140);
+}
+function clearQuoteDraft(){
+ clearTimeout(_quoteDraftTimer);
+ try{ localStorage.removeItem(QUOTE_DRAFT_KEY); }catch(e){}
+}
+function readQuoteDraft(){
+ try{
+  const raw=JSON.parse(localStorage.getItem(QUOTE_DRAFT_KEY)||'null');
+  if(!raw||raw.v!==1) return null;
+  if(raw.ts&&(Date.now()-Number(raw.ts))>QUOTE_DRAFT_TTL_MS){ clearQuoteDraft(); return null; }
+  return raw;
+ }catch(e){ return null; }
+}
+function applyFieldMap(checks,values){
+ Object.entries(checks||{}).forEach(([key,on])=>{
+  let el=$(key);
+  if(!el&&key.includes(':')){
+   const i=key.indexOf(':');
+   el=document.querySelector(`input[name="${CSS.escape(key.slice(0,i))}"][value="${CSS.escape(key.slice(i+1))}"]`);
+  }
+  if(el&&(el.type==='checkbox'||el.type==='radio')) el.checked=!!on;
+ });
+ Object.entries(values||{}).forEach(([id,val])=>{
+  const el=$(id);
+  if(el) el.value=val;
+ });
+}
+function applyManualDraft(draft){
+ if(!draft?.manual) return;
+ applyFieldMap(draft.manual.checks,draft.manual.values);
+ (draft.manual.openSteps||[]).forEach(id=>{ const s=$(id); if(s) s.open=true; });
+}
+function applyPackageDraft(draft){
+ if(!draft?.package) return;
+ applyFieldMap(draft.package.checks,draft.package.values);
+ (draft.package.openAccordions||[]).forEach(id=>{ const s=$(id); if(s) s.open=true; });
+ if(typeof updatePackagePrice==='function'&&$('packageDetails')?.innerHTML.trim()) updatePackagePrice();
+}
+function restoreQuoteSession(){
+ const draft=readQuoteDraft();
+ if(!draft||!draft.screen||draft.screen==='paths') return false;
+ _restoringQuote=true;
+ try{
+  if(draft.screen==='manual') showConfiguratorScreen('manual');
+  else if(draft.screen==='package') showConfiguratorScreen('package');
+  else return false;
+ }finally{
+  _restoringQuote=false;
+ }
+ saveQuoteDraft();
+ return true;
+}
+
 function resetConfigurator(){
+ clearQuoteDraft();
  const manualVisible=!$('manualConfigurator').classList.contains('hidden');
  const packageVisible=!$('packageChooser').classList.contains('hidden') && $('packageDetails').innerHTML.trim()!=='';
  if(manualVisible){
@@ -885,6 +986,7 @@ function showConfiguratorScreen(screen){
  const packageView=$('packageChooser');
  const manualView=$('manualConfigurator');
  const upsell=$('manualUpsell');
+ const draft=readQuoteDraft();
 
  // Ocultar primero todas las pantallas para evitar que se solapen.
  path.classList.add('hidden');
@@ -899,14 +1001,20 @@ function showConfiguratorScreen(screen){
   $('packageSelectedNote').textContent='';
  }else if(screen==='package'){
   packageView.classList.remove('hidden');
-  $('stickyPrice').textContent=money(1970);
-  $('hunterLiveCommission').textContent=money(Math.max(70,1970*.07874015748031496));
-  renderPackage('apartment');
+  let key='apartment';
+  try{ if(draft&&draft.package&&draft.package.activePackage) key=draft.package.activePackage; else if(activePackage) key=activePackage; }catch(e){}
+  // No regenerar el HTML si ya hay configuración en curso (atrás → volver a entrar).
+  if(!$('packageDetails').innerHTML.trim()){
+   renderPackage(key);
+   applyPackageDraft(draft);
+  }else{
+   try{ document.querySelectorAll('.package-type').forEach(b=>b.classList.toggle('active',b.dataset.package===activePackage)); }catch(e){}
+   updatePackagePrice();
+  }
  }else if(screen==='manual'){
   manualView.classList.remove('hidden');
   if(upsell) upsell.classList.remove('hidden');
-  $('stickyPrice').textContent=money(490);
-  $('hunterLiveCommission').textContent=money(70);
+  applyManualDraft(draft);
   $('packageSelectedNote').textContent='';
   update();
   const liveQuote=$('manualLiveQuote');
@@ -916,6 +1024,7 @@ function showConfiguratorScreen(screen){
   }
  }
  window.scrollTo({top:0,behavior:'auto'});
+ saveQuoteDraftSoon();
 }
 
 $('manualPath').addEventListener('click',()=>showConfiguratorScreen('manual'));
@@ -925,7 +1034,19 @@ $('packagePath').addEventListener('click',()=>showConfiguratorScreen('package'))
 $('backToPaths').addEventListener('click',()=>showConfiguratorScreen('paths'));
 $('packageBack').addEventListener('click',()=>showConfiguratorScreen('paths'));
 
-document.querySelectorAll('.package-type').forEach(b=>b.addEventListener('click',()=>renderPackage(b.dataset.package)));
+document.querySelectorAll('.package-type').forEach(b=>b.addEventListener('click',()=>{
+ renderPackage(b.dataset.package);
+ saveQuoteDraftSoon();
+}));
+document.addEventListener('input',e=>{
+ if(e.target.closest&&e.target.closest('#manualConfigurator,#packageDetails,#packageChooser')) saveQuoteDraftSoon();
+},true);
+document.addEventListener('change',e=>{
+ if(e.target.closest&&e.target.closest('#manualConfigurator,#packageDetails,#packageChooser')) saveQuoteDraftSoon();
+},true);
+document.addEventListener('toggle',e=>{
+ if(e.target&&e.target.closest&&e.target.closest('#manualConfigurator,#packageDetails')) saveQuoteDraftSoon();
+},true);
 $('packageSelect').addEventListener('click',()=>{
  const p=packageCatalog[activePackage],area=packageAreaValue(),q=packageTotalPrice();
  const rows=[['Paquete',p.title],['Superficie total del inmueble',area+' m²'],['Base completa del showroom','Incluida'],['Todos los espacios interiores existentes','Incluidos sin límite'],['Plantas 3D del inmueble',(1+packageExtraFloors())+' planta(s) · '+money(q.main.floorCost)+' en plantas adicionales'],['Reel Ads promocional','Incluido'],['Pack de imágenes verticales','Incluido']];
@@ -1200,6 +1321,8 @@ function openEmbeddedQuote(){
  document.body.classList.remove('portal-mode');
  $('portalBack').classList.remove('portal-hidden');
  window.scrollTo(0,0);
+ // Tras fullscreen (iframe) o recarga: recuperar la cotización en curso.
+ requestAnimationFrame(()=>{ restoreQuoteSession(); });
 }
 
 function portalOpenPage(key){
