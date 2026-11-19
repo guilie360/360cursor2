@@ -187,6 +187,49 @@ body.cotizador-app .interno-commission-card{
   bottom:calc(var(--quote-footer-clearance) + 12px)!important;
   width:min(310px,calc(100vw - 32px));
 }
+/* Upsell compacto: una sola línea, menos invasivo */
+body.cotizador-app #manualUpsell.manual-upsell--compact,
+body.cotizador-app .manual-upsell--compact{
+  width:auto!important;
+  max-width:min(280px,calc(100vw - 28px))!important;
+  min-height:0!important;
+  padding:8px 36px 8px 12px!important;
+  gap:10px!important;
+  align-items:center!important;
+  border-radius:999px!important;
+  border-color:rgba(255,255,255,.16)!important;
+  background:rgba(14,14,14,.92)!important;
+  box-shadow:0 10px 28px -14px rgba(0,0,0,.9)!important;
+}
+body.cotizador-app .manual-upsell--compact .manual-upsell-copy{
+  flex-direction:row!important;
+  align-items:baseline!important;
+  gap:8px!important;
+}
+body.cotizador-app .manual-upsell--compact .manual-upsell-kicker{display:none!important}
+body.cotizador-app .manual-upsell--compact .manual-upsell-copy strong{
+  font:600 var(--t-sm)/1.1 var(--font-ui)!important;
+  color:#eee!important;
+  letter-spacing:0!important;
+}
+body.cotizador-app .manual-upsell--compact .manual-upsell-price{
+  font:500 var(--t-sm)/1 var(--font-ui)!important;
+  color:#bdbdbd!important;
+}
+body.cotizador-app .manual-upsell--compact .manual-upsell-price small{display:none!important}
+body.cotizador-app .manual-upsell--compact .manual-upsell-link{
+  padding:7px 10px!important;
+  font-size:var(--t-xs)!important;
+  border-color:rgba(255,255,255,.22)!important;
+  color:#ddd!important;
+}
+body.cotizador-app .manual-upsell--compact .manual-upsell-close{
+  right:6px!important;
+  top:50%!important;
+  transform:translateY(-50%);
+  font-size:14px!important;
+  color:#888!important;
+}
 /* Paquete completo debajo; comisión Hunter encima al abrirse */
 body.cotizador-app #manualUpsell,
 body.cotizador-app .manual-upsell:not(.interno-commission-card){
@@ -275,14 +318,15 @@ body.cotizador-app .package-accordion-list{
   body.cotizador-app:has(#packageChooser:not(.hidden)) main{
     padding-bottom:calc(var(--quote-footer-clearance) + 28px + var(--safe-bottom,0px))!important;
   }
-  /* Hueco solo al final de las fichas (no entre ellas) */
+  /* Hueco solo al final (upsell ya es una pastilla baja) */
   body.cotizador-app .manual-step-list,
   body.cotizador-app .package-accordion-list{
-    padding-bottom:calc(var(--quote-footer-clearance) + 120px)!important;
+    padding-bottom:calc(var(--quote-footer-clearance) + 64px)!important;
   }
-  body.cotizador-app #manualUpsell:not(.hidden){
-    width:min(300px,calc(100vw - 24px))!important;
-    padding:12px 12px 11px!important;
+  body.cotizador-app #manualUpsell.manual-upsell--compact:not(.hidden){
+    right:12px!important;
+    max-width:calc(100vw - 24px)!important;
+    padding:7px 32px 7px 11px!important;
   }
 }
 
