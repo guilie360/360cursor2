@@ -8,11 +8,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/panel_gestion/css/base.css">
-<link rel="stylesheet" href="/panel_gestion/css/patches.css">
+<link rel="stylesheet" href="/panel_gestion/css/base.css?v=fs-pos2">
+<link rel="stylesheet" href="/panel_gestion/css/patches.css?v=fs-pos2">
 <link rel="stylesheet" href="/shared/css/scrollbar.css?v=1">
-<link rel="stylesheet" href="/shared/css/safe-area.css?v=4">
-<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=11">
+<link rel="stylesheet" href="/shared/css/safe-area.css?v=5">
+<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=12">
 </head>
 <body data-app="cotizador" class="cotizador-app">
 <!-- Solo modo interno: flecha volver abajo-izquierda (estilo panel) -->
@@ -404,7 +404,9 @@
 <div id="teamChatFloat" class="portal-hidden" hidden></div>
 <div id="teamChatPopup" class="portal-hidden" hidden></div>
 <div id="paymentsGateBackdrop" class="portal-hidden" hidden></div>
-<div id="globalFullscreenBtn" class="portal-hidden" hidden></div>
+<button class="global-fullscreen-btn mag" id="globalFullscreenBtn" type="button" aria-label="Activar pantalla completa" title="Pantalla completa" data-cursor="PANTALLA">
+ <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/></svg>
+</button>
 <form id="loginForm" class="portal-hidden" hidden></form>
 <form id="paymentsGateForm" class="portal-hidden" hidden><input id="paymentsDynamicKey"><div id="paymentsGateError"></div></form>
 <button id="requestPaymentsKey" type="button" class="portal-hidden" hidden></button>

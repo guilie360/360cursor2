@@ -14,7 +14,8 @@ button{font:inherit}
 
 /* HEADER */
 .topbar{position:fixed;z-index:60;top:34px;left:4vw;width:92vw;height:48px;display:flex;align-items:center;justify-content:space-between;pointer-events:none}
-.header-logo{width:44px;height:44px;display:flex;align-items:center;pointer-events:none;opacity:0;will-change:opacity,transform}
+/* Hueco a la izquierda para el FS (espejo del menú) */
+.header-logo{width:44px;height:44px;margin-left:52px;display:flex;align-items:center;pointer-events:none;opacity:0;will-change:opacity,transform}
 .header-logo img{width:100%;height:100%;object-fit:contain}
 .header-actions{display:flex;align-items:center;gap:9px;pointer-events:auto}
 .mag{transition:transform .35s var(--ease)}
@@ -48,7 +49,7 @@ button{font:inherit}
 .menu-toggle.active span{background:#fff}
 .menu-toggle.active span:first-child{transform:translateY(4.5px) rotate(45deg)}
 .menu-toggle.active span:last-child{transform:translateY(-4.5px) rotate(-45deg)}
-/* Fullscreen: abajo-derecha (posición unificada en shared/safe-area.css) */
+/* Fullscreen: arriba-izquierda (espejo del menú; posición en shared/safe-area.css) */
 .fullscreen-toggle{
   cursor:pointer;
   transition:color .2s,opacity .2s,transform .35s var(--ease),visibility .35s;
@@ -57,8 +58,7 @@ button{font:inherit}
 body.demo-open .menu-toggle,
 body:has(.page-transit.on) .menu-toggle,
 body.demo-open .fullscreen-toggle,
-body:has(.page-transit.on) .fullscreen-toggle,
-body:has(.menu-panel.open) .fullscreen-toggle{
+body:has(.page-transit.on) .fullscreen-toggle{
   opacity:0!important;visibility:hidden;pointer-events:none;
 }
 .menu-overlay{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.5);opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s}
@@ -137,6 +137,7 @@ body:has(.menu-panel.open) .fullscreen-toggle{
 @keyframes lineMove{0%,100%{opacity:.35;transform:scaleY(.7)}50%{opacity:1;transform:scaleY(1)}}
 @keyframes ul{from{transform:scaleX(0)}}
 @media(max-width:650px){
+ .header-logo{margin-left:48px;width:40px;height:40px}
  .topbar{top:22px;left:22px;width:calc(100% - 44px);height:44px}
  .menu-panel{padding:115px 30px 40px}
  .intro-logo{width:108px;height:108px}.intro h1{font-size:48px;letter-spacing:3px}

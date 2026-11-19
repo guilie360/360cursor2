@@ -61,9 +61,15 @@ body.cotizador-app #portal,
 body.cotizador-app #hunter,
 body.cotizador-app #teamChatFloat,
 body.cotizador-app #teamChatPopup,
-body.cotizador-app #paymentsGateBackdrop,
-body.cotizador-app #globalFullscreenBtn{
+body.cotizador-app #paymentsGateBackdrop{
   display:none!important;
+}
+/* Fullscreen global siempre visible (espejo menú / chrome compartido) */
+body.cotizador-app #globalFullscreenBtn,
+body.cotizador-app .global-fullscreen-btn{
+  display:grid!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
 }
 
 /* Público: sin comisión de equipo; sí flecha para volver a la landing (#demo) */
