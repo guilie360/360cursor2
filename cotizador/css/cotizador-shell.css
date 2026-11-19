@@ -423,18 +423,20 @@ body.cotizador-app .quote-flow-head-aside{
 body.cotizador-app .quote-flow-head-aside > .btn{
   flex:none;
 }
-body.cotizador-app .quote-flow-price{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-end;
-  gap:4px;
-  min-width:200px;
-  padding:14px 16px;
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:14px;
-  background:linear-gradient(180deg,#171717 0%,#101010 100%);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 12px 28px -18px rgba(0,0,0,.9);
-  text-align:right;
+body.cotizador-app .quote-flow-price,
+body.cotizador-app .quote-flow-head-aside .quote-flow-price,
+body.cotizador-app .package-detail-price.quote-flow-price{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-end!important;
+  gap:4px!important;
+  min-width:200px!important;
+  padding:14px 16px!important;
+  border:1px solid rgba(255,255,255,.14)!important;
+  border-radius:14px!important;
+  background:linear-gradient(180deg,#1a1a1a 0%,#101010 100%)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 14px 32px -16px rgba(0,0,0,.95)!important;
+  text-align:right!important;
 }
 body.cotizador-app .quote-flow-price small{
   color:#8a8a8a!important;
