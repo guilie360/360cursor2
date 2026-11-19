@@ -19,7 +19,7 @@
     var hb=document.getElementById('hunterBack');
     if(document.body.classList.contains('hunter-mode')&&hb)hb.click();
     logout.click();
-    var back=document.getElementById('portalBack');if(back)back.classList.add('portal-hidden');
+    var back=document.getElementById('portalBack');if(back && !document.body.classList.contains('workspace-authenticated'))back.classList.add('portal-hidden');
    });
   }
   var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;

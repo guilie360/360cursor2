@@ -759,8 +759,13 @@ body.portal-mode #hunterGoalFooter #portalBack,
 }
 body.portal-mode #hunterGoalFooter #portalBack.portal-hidden,
 #hunterGoalFooter #portalBack.portal-hidden,
-#hunterGoalFooter .footer-back.portal-hidden{
+#hunterGoalFooter .footer-back.portal-hidden,
+body:not(.workspace-authenticated) #hunterGoalFooter #portalBack{
  display:none!important;
+}
+/* Autenticado: flecha siempre en el footer de todas las secciones */
+body.workspace-authenticated #hunterGoalFooter #portalBack{
+ display:grid!important;
 }
 #hunterGoalFooter #portalBack svg,
 #hunterGoalFooter .footer-back svg{

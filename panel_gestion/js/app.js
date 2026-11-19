@@ -205,7 +205,7 @@ $('hunterBack').addEventListener('click',()=>{
  $('portal').classList.remove('portal-hidden');
  $('portalHome').classList.remove('portal-hidden');
  $('portalSubpage').classList.add('portal-hidden');
- $('portalBack').classList.add('portal-hidden');
+ $('portalBack').classList.remove('portal-hidden');
  window.scrollTo(0,0);
 });
 $('fullscreenBtn').addEventListener('click',async()=>{
@@ -1128,7 +1128,9 @@ function restoreOrderModal(){
  ['downloadImage','downloadPdf','shareQuote','quoteToProject','shareFormats'].forEach(id=>$(id).style.display='');
 }
 function portalShowHome(){
- $('portalHome').classList.remove('portal-hidden');$('portalSubpage').classList.add('portal-hidden');$('portalBack').classList.add('portal-hidden');
+ $('portalHome').classList.remove('portal-hidden');$('portalSubpage').classList.add('portal-hidden');
+ // Flecha siempre visible en el footer del panel (todas las secciones).
+ $('portalBack').classList.remove('portal-hidden');
  document.body.classList.add('portal-mode');$('portal').classList.remove('portal-hidden');window.scrollTo(0,0);
 }
 function hunterGoalSettings(){
@@ -1332,7 +1334,9 @@ function paymentReportHtml(rows,title){
 
 $('portalBack').addEventListener('click',()=>{
  if(!document.body.classList.contains('portal-mode')){portalShowHome();return;}
- if(!$('portalSubpage').classList.contains('portal-hidden'))portalShowHome();
+ // Un paso atrás: subpágina → inicio del panel.
+ if(!$('portalSubpage').classList.contains('portal-hidden')){portalShowHome();return;}
+ window.scrollTo({top:0,behavior:'smooth'});
 });
 $('portalSubpage').addEventListener('click',e=>{
  const b=e.target.closest('[data-demo]');if(!b)return;
