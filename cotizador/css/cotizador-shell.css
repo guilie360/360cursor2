@@ -417,12 +417,12 @@ body.cotizador-app .quote-flow-head-aside{
   display:flex;
   flex-direction:column;
   align-items:flex-end;
-  gap:12px;
+  justify-content:center;
+  gap:0;
   min-width:min(220px,100%);
+  align-self:center;
 }
-body.cotizador-app .quote-flow-head-aside > .btn{
-  flex:none;
-}
+/* Volver del header eliminado: la flecha del footer es la única vía atrás */
 body.cotizador-app .quote-flow-price,
 body.cotizador-app .quote-flow-head-aside .quote-flow-price,
 body.cotizador-app .package-detail-price.quote-flow-price{

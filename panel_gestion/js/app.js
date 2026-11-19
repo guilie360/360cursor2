@@ -1028,11 +1028,11 @@ function showConfiguratorScreen(screen){
 }
 
 $('manualPath').addEventListener('click',()=>showConfiguratorScreen('manual'));
-$('manualBackToStart').addEventListener('click',()=>showConfiguratorScreen('paths'));
-$('manualBackBottom').addEventListener('click',()=>showConfiguratorScreen('paths'));
-$('packagePath').addEventListener('click',()=>showConfiguratorScreen('package'));
-$('backToPaths').addEventListener('click',()=>showConfiguratorScreen('paths'));
-$('packageBack').addEventListener('click',()=>showConfiguratorScreen('paths'));
+$('manualBackToStart')?.addEventListener('click',()=>showConfiguratorScreen('paths'));
+$('manualBackBottom')?.addEventListener('click',()=>showConfiguratorScreen('paths'));
+$('packagePath')?.addEventListener('click',()=>showConfiguratorScreen('package'));
+$('backToPaths')?.addEventListener('click',()=>showConfiguratorScreen('paths'));
+$('packageBack')?.addEventListener('click',()=>showConfiguratorScreen('paths'));
 
 document.querySelectorAll('.package-type').forEach(b=>b.addEventListener('click',()=>{
  renderPackage(b.dataset.package);

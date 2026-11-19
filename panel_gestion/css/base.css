@@ -34,7 +34,7 @@ main{max-width:960px;margin:0 auto;padding:34px 22px 70px}.eyebrow{color:#aaa;fo
 .config-shell{border:1px solid var(--line);background:var(--panel)}.shell-head{padding:22px 24px;border-bottom:1px solid var(--line)}.shell-head h2{font:26px Georgia,serif;font-weight:400;margin:5px 0}.shell-head p{color:var(--muted);font-size:13px;margin:0}
 .quote-flow-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;column-gap:28px;row-gap:14px;padding:8px 0 20px;border-bottom:1px solid var(--line);margin:0 0 18px}
 .quote-flow-head-copy{min-width:0;padding-top:4px}
-.quote-flow-head-aside{display:flex;flex-direction:column;align-items:flex-end;gap:12px;min-width:min(220px,100%)}
+.quote-flow-head-aside{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:0;min-width:min(220px,100%);align-self:center}
 .quote-flow-head h2{margin:0;max-width:16ch;font:clamp(24px,4vw,32px)/1.08 'Italiana',Georgia,serif;font-weight:400}
 .quote-flow-price{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:200px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#121212;text-align:right}
 .quote-flow-price small{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
