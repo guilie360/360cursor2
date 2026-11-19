@@ -63,7 +63,7 @@ body:has(.page-transit.on) .fullscreen-toggle{
 }
 .menu-overlay{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.5);opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s}
 .menu-overlay.open{opacity:1;visibility:visible}
-.menu-panel{position:fixed;z-index:51;top:0;right:0;width:min(410px,100%);height:100svh;padding:125px 45px 28px;background:rgba(5,5,5,.86);border-left:1px solid rgba(190,174,151,.16);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;flex-direction:column;transform:translateX(105%);visibility:hidden;transition:transform .5s var(--ease),visibility .5s}
+.menu-panel{position:fixed;z-index:51;top:0;right:0;width:min(410px,100%);height:100svh;padding:125px 45px 28px;background:rgba(5,5,5,.69);border-left:1px solid rgba(190,174,151,.16);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;flex-direction:column;transform:translateX(105%);visibility:hidden;transition:transform .5s var(--ease),visibility .5s}
 .menu-panel.open{transform:none;visibility:visible}
 .menu-caption{color:var(--bronze);font-size:9px;letter-spacing:3px;margin-bottom:35px}
 .menu-panel a{--dl:0s;display:flex;justify-content:space-between;align-items:center;padding:23px 0;border-bottom:1px solid rgba(255,255,255,.13);font:400 clamp(24px,5vw,32px)/1.2 var(--serif);color:var(--white);opacity:0;transform:translateX(26px);transition:color .25s,padding .4s var(--ease),opacity .5s var(--ease),transform .6s var(--ease)}
