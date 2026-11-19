@@ -159,9 +159,19 @@ body.cotizador-app .quote-reset-actions{
 }
 body.cotizador-app .quote-reset-actions .btn{flex:1;min-width:120px}
 
-/* Mini popup comisión anclado sobre el footer */
-.interno-commission-card{
-  position:fixed;right:22px;bottom:72px;top:auto;left:auto;z-index:120;
+/* Popups anclados por encima del footer (no taparlo) */
+body.cotizador-app{
+  --quote-footer-clearance:calc(68px + env(safe-area-inset-bottom,0px));
+}
+body.cotizador-app .manual-upsell,
+body.cotizador-app #manualUpsell,
+body.cotizador-app .interno-commission-card{
+  position:fixed!important;
+  top:auto!important;
+  right:max(16px,var(--chrome-side,22px))!important;
+  left:auto!important;
+  bottom:calc(var(--quote-footer-clearance) + 12px)!important;
+  z-index:90!important;
   width:min(310px,calc(100vw - 32px));
 }
 .interno-commission-hint{
@@ -198,14 +208,15 @@ body.cotizador-app main{
   }
   body.cotizador-app .quote-footer-commission small{font-size:7px}
   body.cotizador-app .quote-footer-commission strong{font-size:10px}
-  .interno-commission-card,
-  body.cotizador-app .manual-upsell{
-    top:auto!important;
-    bottom:max(72px,calc(var(--float-bottom,24px) + 56px))!important;
+  body.cotizador-app{
+    --quote-footer-clearance:calc(64px + env(safe-area-inset-bottom,0px));
+  }
+  body.cotizador-app .manual-upsell,
+  body.cotizador-app #manualUpsell,
+  body.cotizador-app .interno-commission-card{
     right:max(12px,var(--chrome-side,12px))!important;
-    left:auto!important;
+    bottom:calc(var(--quote-footer-clearance) + 10px)!important;
     width:min(300px,calc(100vw - 24px))!important;
-    z-index:90
   }
   body.cotizador-app main{
     padding-bottom:calc(84px + var(--safe-bottom,0px))
