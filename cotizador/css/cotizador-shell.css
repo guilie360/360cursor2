@@ -885,9 +885,14 @@ body.cotizador-app #manualConfigurator > .final-quote-actions{
   float:none!important;
 }
 body.cotizador-app #packageChooser > .final-quote-actions > button:not([hidden]),
-body.cotizador-app #manualConfigurator > .final-quote-actions > button:not([hidden]){
+body.cotizador-app #manualConfigurator > .final-quote-actions > button:not([hidden]),
+body.cotizador-app #packageChooser > .final-quote-actions > a.final-quote-whatsapp,
+body.cotizador-app #manualConfigurator > .final-quote-actions > a.final-quote-whatsapp{
   margin-left:0!important;
   margin-right:0!important;
+}
+body.cotizador-app .final-quote-whatsapp{
+  text-decoration:none!important;
 }
 @media(max-width:620px){
   body.cotizador-app #packageChooser > .final-quote-actions,
