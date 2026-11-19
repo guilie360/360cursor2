@@ -48,14 +48,21 @@
   }
 }
 
-/* Controles flotantes inferiores: por encima de la toolbar del browser */
+/* Controles flotantes inferiores (back/chat ya viven en el footer: no elevar). */
 .float-actions,
-.portal-back,
 .chat-float,
 .quote-float,
-#teamChatFloat,
 #profileFloat{
   bottom:var(--float-bottom)!important;
+}
+#hunterGoalFooter #portalBack,
+#hunterGoalFooter #teamChatFloat,
+#hunterGoalFooter .footer-back,
+.quote-goal-footer .quote-footer-back,
+.quote-goal-footer #headerReset,
+.quote-goal-footer #teamChatFloat{
+  bottom:auto!important;
+  position:static!important;
 }
 
 /* Icono flotante de fullscreen retirado: la acción vive en el menú global */

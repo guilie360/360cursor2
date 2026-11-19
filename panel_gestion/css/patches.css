@@ -731,7 +731,7 @@ body.hunter-mode .portal{min-height:0}
 /* ===== patch ===== */
 
 .portal-wrap{padding-bottom:72px!important}
-/* Footer meta: ancho completo; back izq + chat der (misma geometría que cotizador) */
+/* Footer meta: [back] [meta que cede] [chat] — botones anclados, meta se comprime */
 #hunterGoalFooter.hunter-goal-footer{
  position:fixed!important;left:0!important;right:0!important;bottom:0!important;
  width:100%!important;max-width:none!important;transform:none!important;z-index:80;
@@ -742,46 +742,74 @@ body.hunter-mode .portal{min-height:0}
 }
 #hunterGoalFooter .hunter-goal-footer-inner{
  width:100%;max-width:none;margin:0;box-sizing:border-box;
- display:flex;align-items:center;gap:14px;
+ display:flex;align-items:center;gap:12px;
  padding:10px max(16px,var(--chrome-side,22px));
 }
-/* Back en footer: mismo slot/tamaño que cotizador; sin estilo gold flotante */
-#hunterGoalFooter #portalBack.footer-back,
+/* Anula por completo el .portal-back flotante/gold si alguien lo reusa */
+body.portal-mode #hunterGoalFooter #portalBack,
+#hunterGoalFooter #portalBack,
 #hunterGoalFooter .footer-back{
- position:relative!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;
- flex:0 0 40px;width:40px;height:40px;margin:0;padding:0;
+ position:static!important;
+ inset:auto!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;
+ flex:0 0 40px;width:40px;height:40px;min-width:40px;max-width:40px;margin:0;padding:0;z-index:1;
  border:1px solid rgba(255,255,255,.16)!important;border-radius:12px!important;
  background:rgba(255,255,255,.04)!important;color:#eee!important;
  display:grid!important;place-items:center;cursor:pointer;
- box-shadow:none!important;transform:none!important;
+ box-shadow:none!important;transform:none!important;filter:none!important;
 }
-#hunterGoalFooter #portalBack.footer-back.portal-hidden,
+body.portal-mode #hunterGoalFooter #portalBack.portal-hidden,
+#hunterGoalFooter #portalBack.portal-hidden,
 #hunterGoalFooter .footer-back.portal-hidden{
  display:none!important;
 }
+#hunterGoalFooter #portalBack svg,
 #hunterGoalFooter .footer-back svg{
  width:18px;height:18px;stroke:currentColor;fill:none;
  stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
 }
+#hunterGoalFooter #portalBack:hover,
 #hunterGoalFooter .footer-back:hover{
  background:#3b3b3b!important;color:#fff!important;border-color:#fff!important;
+ transform:none!important;box-shadow:none!important;
 }
-/* La meta cede espacio; botones (back/chat) mantienen ancla */
+/* Bloque meta: es lo único que se comprime al aparecer el back */
+#hunterGoalFooter .hunter-goal-meta{
+ flex:1 1 auto;min-width:0;max-width:100%;
+ display:flex;align-items:center;gap:12px;
+ overflow:hidden;
+}
 #hunterGoalFooter .goal-caption{
- flex:0 1 auto;min-width:0;max-width:42%;
+ flex:0 1 auto;min-width:0;
  font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#aaa;
  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-#hunterGoalFooter .hunter-goal-track{height:6px;flex:1 1 48px;min-width:36px}
-#hunterGoalFooter .hunter-goal-bonus{flex:0 1 auto;min-width:0;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#hunterGoalFooter .hunter-goal-bonus small{font-size:8px;display:block;color:#aaa;text-transform:uppercase;letter-spacing:.08em}
+#hunterGoalFooter .hunter-goal-track{height:6px;flex:1 1 40px;min-width:28px}
+#hunterGoalFooter .hunter-goal-bonus{
+ flex:0 1 auto;min-width:0;font-size:11px;white-space:nowrap;
+ overflow:hidden;text-overflow:ellipsis;
+}
+#hunterGoalFooter .hunter-goal-bonus small{
+ font-size:8px;display:block;color:#aaa;text-transform:uppercase;letter-spacing:.08em;
+}
+#hunterGoalFooter #teamChatFloat.footer-chat-btn,
+#hunterGoalFooter #teamChatFloat{
+ position:static!important;inset:auto!important;
+ bottom:auto!important;right:auto!important;left:auto!important;top:auto!important;
+ flex:0 0 40px;width:40px;height:40px;margin:0;z-index:1;
+}
 @media(max-width:600px){
  .portal-wrap{padding-bottom:68px!important}
- #hunterGoalFooter .hunter-goal-footer-inner{gap:8px;padding:9px 14px}
- #hunterGoalFooter #portalBack.footer-back,
- #hunterGoalFooter .footer-back{flex-basis:36px;width:36px;height:36px}
+ #hunterGoalFooter .hunter-goal-footer-inner{gap:8px;padding:9px 12px}
+ #hunterGoalFooter .hunter-goal-meta{gap:8px}
+ body.portal-mode #hunterGoalFooter #portalBack,
+ #hunterGoalFooter #portalBack,
+ #hunterGoalFooter .footer-back,
+ #hunterGoalFooter #teamChatFloat{
+  flex-basis:36px;width:36px;height:36px;min-width:36px;max-width:36px
+ }
+ #hunterGoalFooter #portalBack svg,
  #hunterGoalFooter .footer-back svg{width:16px;height:16px}
- #hunterGoalFooter .goal-caption{font-size:8px;letter-spacing:.04em;max-width:38%}
+ #hunterGoalFooter .goal-caption{font-size:8px;letter-spacing:.04em}
  #hunterGoalFooter .hunter-goal-bonus{font-size:10px}
 }
 

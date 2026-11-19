@@ -9,11 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/shared/css/scrollbar.css?v=1">
-  <link rel="stylesheet" href="/shared/css/safe-area.css?v=8">
+  <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
   <link rel="stylesheet" href="/shared/css/site-chrome.css?v=8">
   <link rel="stylesheet" href="/shared/css/global-nav.css?v=4">
-  <link rel="stylesheet" href="css/base.css?v=panel8">
-  <link rel="stylesheet" href="css/patches.css?v=panel8">
+  <link rel="stylesheet" href="css/base.css?v=panel9">
+  <link rel="stylesheet" href="css/patches.css?v=panel9">
 </head>
 <body class="portal-mode">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat del equipo">
@@ -149,9 +149,11 @@
    <button class="footer-back portal-hidden" id="portalBack" type="button" aria-label="Volver" title="Volver">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
    </button>
-   <span class="goal-caption" id="hunterGoalCaption">Meta · 5 proyectos</span>
-   <div class="hunter-goal-track" id="hunterGoalTrack" style="--goal-step:20%" role="progressbar" aria-label="Progreso de ventas" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0"><span class="hunter-goal-fill" id="hunterGoalFill"></span><span class="hunter-goal-ticks" aria-hidden="true"></span></div>
-   <span class="hunter-goal-bonus" id="hunterGoalBonus"><small>Bono meta</small>+170 €</span>
+   <div class="hunter-goal-meta">
+    <span class="goal-caption" id="hunterGoalCaption">Meta · 5 proyectos</span>
+    <div class="hunter-goal-track" id="hunterGoalTrack" style="--goal-step:20%" role="progressbar" aria-label="Progreso de ventas" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0"><span class="hunter-goal-fill" id="hunterGoalFill"></span><span class="hunter-goal-ticks" aria-hidden="true"></span></div>
+    <span class="hunter-goal-bonus" id="hunterGoalBonus"><small>Bono meta</small>+170 €</span>
+   </div>
    <button id="teamChatFloat" class="footer-chat-btn" type="button" aria-label="Abrir chat del equipo" title="Chat del equipo">✉<span id="chatUnreadBadge" class="chat-unread-badge">0</span></button>
   </div>
  </footer>
