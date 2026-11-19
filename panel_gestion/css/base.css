@@ -36,7 +36,7 @@ main{max-width:960px;margin:0 auto;padding:34px 22px 70px}.eyebrow{color:#aaa;fo
 .quote-flow-head-copy{min-width:0}
 .quote-flow-head-aside{display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:0;min-width:0;width:100%;max-width:280px;margin-left:auto}
 .quote-flow-head h2{margin:0;font:clamp(24px,4vw,32px)/1.08 'Italiana',Georgia,serif;font-weight:400;overflow-wrap:anywhere}
-.quote-flow-price{display:flex;flex-direction:column;align-items:flex-end;gap:4px;width:100%;min-width:0;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#121212;text-align:right;white-space:normal}
+.quote-flow-price{display:flex;flex-direction:column;align-items:flex-end;gap:4px;width:100%;min-width:0;padding:14px 16px;border:1px solid var(--line);border-radius:15px;background:#121212;text-align:right;white-space:normal}
 .quote-flow-price small{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase;white-space:normal}
 .quote-flow-price small:last-child{letter-spacing:.02em;text-transform:none;font-weight:400;max-width:100%}
 .quote-flow-price strong{font-size:clamp(24px,4vw,32px);line-height:1;color:var(--ink,#eee);white-space:nowrap}
@@ -171,9 +171,10 @@ button,input,select,textarea,.btn,label,.eyebrow,.desc,.muted,.hunter-goal,.hunt
 .package-details{border:1px solid var(--line);background:#101010;padding:22px}
 .package-detail-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:12px}
 .package-detail-head h3{font:30px 'Italiana',Georgia,serif;font-weight:400;margin:3px 0}
-.package-detail-price{text-align:right;white-space:nowrap}
-.package-detail-price strong{display:block;font:32px 'Italiana',Georgia,serif;color:var(--gold-soft)}
+.package-detail-price{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right;white-space:normal}
+.package-detail-price strong{display:block;font:32px 'Italiana',Georgia,serif;color:var(--gold-soft);order:-1}
 .package-detail-price small{font-size:10px;color:var(--muted)}
+.package-detail-price small:last-child{letter-spacing:.02em;text-transform:none}
 .package-rows .price-line{padding:10px 0}
 .package-saving{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:18px}
 .package-saving>div{padding:13px;border:1px solid var(--line);background:#151515}

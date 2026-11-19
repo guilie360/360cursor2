@@ -709,8 +709,8 @@ function renderPackage(key){
     <h3>${p.title}</h3>
    </div>
    <div class="package-detail-price">
-    <small>PRECIO DEL PAQUETE</small>
     <strong id="packageLivePrice">1.970 €</strong>
+    <small>PRECIO DEL PAQUETE</small>
     <small>100 m² incluidos · +7 €/m² adicional</small>
    </div>
   </div>
