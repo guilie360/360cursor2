@@ -112,6 +112,7 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
   // Dejar que el overlay pinte un frame antes del salto.
   requestAnimationFrame(()=>setTimeout(run, fromLoad ? 40 : 90));
 }
+window.BoxiesGoToSection=goToSection;
 function bootHashJump(){
   const raw=(location.hash||'').replace(/^#/,'');
   if(!raw) return;
@@ -179,13 +180,7 @@ document.addEventListener('fullscreenchange',fsLabel);
 document.addEventListener('boxies:fullscreen',fsLabel);
 fsLabel();
 
-/* MENÚ */
-const mt=$('#menuToggle'),mp=$('#menuPanel'),mo=$('#menuOverlay');
-function setMenu(o){mp.classList.toggle('open',o);mo.classList.toggle('open',o);mt.classList.toggle('active',o);mt.setAttribute('aria-expanded',o);mt.setAttribute('aria-label',o?'Cerrar menú':'Abrir menú');document.body.style.overflow=o?'hidden':''}
-mt.addEventListener('click',()=>setMenu(!mp.classList.contains('open')));
-mo.addEventListener('click',()=>setMenu(false));
-document.addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false)});
-/* Menú / anclas internas: transición con logo (sin scrub del scroll) */
+/* Anclas internas (logo header, etc.): transición con logo */
 document.querySelectorAll('a[href^="#"]').forEach(a=>{
   const href=a.getAttribute('href')||'';
   const id=href.slice(1);
@@ -193,7 +188,7 @@ document.querySelectorAll('a[href^="#"]').forEach(a=>{
   if(!document.getElementById(id)) return;
   a.addEventListener('click',e=>{
     e.preventDefault();
-    setMenu(false);
+    window.BoxiesGlobalNav?.close?.();
     goToSection(id,{updateHash:true});
   });
 });

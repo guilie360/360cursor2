@@ -17,60 +17,20 @@ button{font:inherit}
 /* Hueco a la izquierda para el FS (espejo del menú) */
 .header-logo{width:44px;height:44px;margin-left:52px;display:flex;align-items:center;pointer-events:none;opacity:0;will-change:opacity,transform}
 .header-logo img{width:100%;height:100%;object-fit:contain}
-.header-actions{display:flex;align-items:center;gap:9px;pointer-events:auto}
 .mag{transition:transform .35s var(--ease)}
-@keyframes menuBreath{
-  0%,100%{
-    filter:drop-shadow(0 0 2px rgba(214,210,204,.12));
-    opacity:.9;
-  }
-  50%{
-    filter:drop-shadow(0 0 12px rgba(214,210,204,.55)) drop-shadow(0 0 26px rgba(141,125,105,.32));
-    opacity:1;
-  }
-}
-/* Menú: arriba-derecha, siempre visible; se anima a X al abrir */
-.menu-toggle{
-  position:relative;z-index:60;
-  width:44px;height:44px;padding:0;border:0;border-radius:0;background:transparent;
-  display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;
-  cursor:pointer;pointer-events:auto;
-  animation:menuBreath 2s ease-in-out infinite;
-  transition:opacity .35s var(--ease),visibility .35s,transform .35s var(--ease);
-}
-.menu-toggle span{
-  display:block;width:22px;height:2px;background:#efeae3;border-radius:1px;
-  transform-origin:center;
-  transition:transform .4s var(--ease),opacity .25s,background .25s,width .35s var(--ease);
-}
-.menu-toggle.active{
-  animation:none;filter:none;opacity:1;
-}
-.menu-toggle.active span{background:#fff}
-.menu-toggle.active span:first-child{transform:translateY(4.5px) rotate(45deg)}
-.menu-toggle.active span:last-child{transform:translateY(-4.5px) rotate(-45deg)}
 /* Fullscreen: arriba-izquierda (espejo del menú; posición en shared/safe-area.css) */
 .fullscreen-toggle{
   cursor:pointer;
   transition:color .2s,opacity .2s,transform .35s var(--ease),visibility .35s;
 }
 .fullscreen-toggle svg{transition:transform .35s var(--ease)}
+/* Menú/FS se ocultan solo en demo o tránsito de página */
 body.demo-open .menu-toggle,
 body:has(.page-transit.on) .menu-toggle,
 body.demo-open .fullscreen-toggle,
 body:has(.page-transit.on) .fullscreen-toggle{
   opacity:0!important;visibility:hidden;pointer-events:none;
 }
-.menu-overlay{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.5);opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s}
-.menu-overlay.open{opacity:1;visibility:visible}
-.menu-panel{position:fixed;z-index:51;top:0;right:0;width:min(410px,100%);height:100svh;padding:125px 45px 28px;background:rgba(5,5,5,.69);border-left:1px solid rgba(190,174,151,.16);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;flex-direction:column;transform:translateX(105%);visibility:hidden;transition:transform .5s var(--ease),visibility .5s}
-.menu-panel.open{transform:none;visibility:visible}
-.menu-caption{color:var(--bronze);font-size:9px;letter-spacing:3px;margin-bottom:35px}
-.menu-panel a{--dl:0s;display:flex;justify-content:space-between;align-items:center;padding:23px 0;border-bottom:1px solid rgba(255,255,255,.13);font:400 clamp(24px,5vw,32px)/1.2 var(--serif);color:var(--white);opacity:0;transform:translateX(26px);transition:color .25s,padding .4s var(--ease),opacity .5s var(--ease),transform .6s var(--ease)}
-.menu-panel.open a{opacity:1;transform:none;transition-delay:0s,0s,var(--dl),var(--dl)}
-.menu-panel.open a:nth-of-type(1){--dl:.12s}.menu-panel.open a:nth-of-type(2){--dl:.19s}
-.menu-panel.open a:nth-of-type(3){--dl:.26s}.menu-panel.open a:nth-of-type(4){--dl:.33s}.menu-panel.open a:nth-of-type(5){--dl:.40s}
-.menu-panel a span{font:400 9px var(--sans);letter-spacing:2px;color:var(--bronze);flex:0 0 auto;margin-left:14px;transition:transform .4s var(--ease)}
 /* INTRO */
 .intro{height:100svh;min-height:650px;display:flex;align-items:center;justify-content:center;text-align:center;position:relative;padding:100px 24px var(--float-safe)}
 .intro-content{max-width:850px;will-change:opacity,transform}
@@ -120,17 +80,9 @@ body:has(.page-transit.on) .fullscreen-toggle{
 @media(hover:hover){
  .fullscreen-toggle:hover{color:#c1bcb4;opacity:.78;transform:scale(1.12)}
  .fullscreen-toggle:hover svg{transform:rotate(90deg)}
- .menu-toggle:not(.active):hover span:first-child{transform:translateY(-2px)}
- .menu-toggle:not(.active):hover span:last-child{transform:translateY(2px)}
- .menu-panel a:hover{color:var(--bronze);padding-left:12px}
- .menu-panel a:hover span{transform:translateX(-4px)}
 }
-
-.menu-panel a:active{color:var(--bronze)}
 @media(max-width:640px){
  :root{--float-safe:calc(96px + env(safe-area-inset-bottom,0px))}
- .menu-toggle{width:42px;height:42px}
- .menu-toggle span{width:20px}
 }
 
 @keyframes appear{from{opacity:0;transform:translateY(18px)}}
@@ -139,7 +91,6 @@ body:has(.page-transit.on) .fullscreen-toggle{
 @media(max-width:650px){
  .header-logo{margin-left:48px;width:40px;height:40px}
  .topbar{top:22px;left:22px;width:calc(100% - 44px);height:44px}
- .menu-panel{padding:115px 30px 40px}
  .intro-logo{width:108px;height:108px}.intro h1{font-size:48px;letter-spacing:3px}
  .experience{height:420vh}.experience-sticky{min-height:550px}
  .sequence{width:84vw;height:410px}.message{padding:30px}.message h2{font-size:40px}.message p{font-size:12px}
@@ -225,7 +176,7 @@ body:has(.page-transit.on) .fullscreen-toggle{
 }
 .showroom:active{transform:scale(.985);background:rgba(5,5,5,.96)}
 /* Radio uniforme de los contenedores visibles */
-.message,.showroom,.menu-panel{border-radius:13px}
+.message,.showroom{border-radius:13px}
 
 
 @media(max-width:650px){
