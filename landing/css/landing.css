@@ -40,7 +40,7 @@ button{font:inherit}
 /* Menú: único control abajo-derecha, con glow */
 .menu-toggle{
   position:fixed;z-index:52;
-  right:max(18px,4vw);bottom:max(16px,2.4vh);
+  right:max(18px,4vw);bottom:var(--float-bottom, max(16px,2.4vh));
   width:52px;height:52px;padding:0;border:0;border-radius:0;background:transparent;
   display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;
   cursor:pointer;pointer-events:auto;
@@ -122,8 +122,8 @@ body:has(.page-transit.on) .menu-toggle{
 
 .menu-panel a:active{color:var(--bronze)}
 @media(max-width:640px){
- :root{--float-safe:82px}
- .menu-toggle{right:16px;bottom:14px;width:48px;height:48px}
+ :root{--float-safe:calc(120px + env(safe-area-inset-bottom,0px))}
+ .menu-toggle{right:16px;width:48px;height:48px}
  .menu-toggle span{width:20px}
 }
 
@@ -261,7 +261,7 @@ body:has(.page-transit.on) .menu-toggle{
 .showroom-count{color:var(--bronze);font-variant-numeric:tabular-nums}
 .showrooms{display:grid;grid-template-columns:1fr;gap:10px}
 .final-footer{
-  position:absolute;bottom:calc(var(--float-safe) + 10px);left:50%;
+  position:absolute;bottom:calc(var(--float-bottom, 24px) + 52px);left:50%;
   width:auto;max-width:58vw;transform:translateX(-50%);
   display:flex;justify-content:center;gap:15px;text-align:center;
   color:rgba(255,255,255,.22);font-size:7px;letter-spacing:1.6px;
