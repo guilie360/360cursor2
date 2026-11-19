@@ -21,21 +21,24 @@ button{font:inherit}
   gap:20px;pointer-events:none;
 }
 .quote-float{
-  display:inline-flex;align-items:center;gap:14px;
-  padding:10px 2px;border:0;background:transparent;color:var(--white);
+  display:inline-flex;align-items:center;gap:0;
+  padding:10px 0 8px;border:0;background:transparent;color:var(--white);
   text-decoration:none;cursor:pointer;pointer-events:auto;
   transition:opacity .35s var(--ease),transform .35s var(--ease),color .25s;
   animation:quoteBreath 2s ease-in-out infinite;
 }
 .quote-float-label{
+  position:relative;display:inline-block;
   font:400 11px/1 var(--sans);letter-spacing:.22em;text-transform:uppercase;color:rgba(214,210,204,.92);
   transition:color .25s;
 }
-.quote-float-mark{
-  width:36px;height:1px;background:rgba(214,210,204,.78);
-  transform-origin:left center;transition:transform .45s var(--ease),background .25s;
-  box-shadow:0 0 10px rgba(214,210,204,.35);
+.quote-float-label::after{
+  content:"";position:absolute;left:0;right:0;bottom:-7px;height:1px;
+  background:rgba(214,210,204,.72);
+  box-shadow:0 0 10px rgba(214,210,204,.3);
+  transform-origin:center;transition:transform .45s var(--ease),background .25s,opacity .25s;
 }
+.quote-float-mark{display:none!important}
 @keyframes quoteBreath{
   0%,100%{
     filter:drop-shadow(0 0 0 rgba(214,210,204,0));
@@ -132,7 +135,7 @@ body:has(.page-transit.on) .float-actions{
  .menu-toggle:not(.active):hover span:last-child{transform:translateY(2px)}
  .quote-float:hover{color:#fff}
  .quote-float:hover .quote-float-label{color:#fff}
- .quote-float:hover .quote-float-mark{transform:scaleX(1.35);background:#d6d2cc}
+ .quote-float:hover .quote-float-label::after{transform:scaleX(1.08);background:#d6d2cc}
  .chat-float:hover{color:#fff}
  .menu-panel a:hover{color:var(--bronze);padding-left:12px}
  .menu-panel a:hover span{transform:translateX(-4px)}
@@ -142,9 +145,9 @@ body:has(.page-transit.on) .float-actions{
 @media(max-width:640px){
  :root{--float-safe:86px}
  .float-actions{left:16px;right:16px;bottom:14px;height:48px}
- .quote-float{gap:10px;padding:8px 0}
+ .quote-float{padding:8px 0 7px}
  .quote-float-label{font-size:10px;letter-spacing:.18em}
- .quote-float-mark{width:28px}
+ .quote-float-label::after{bottom:-6px}
  .chat-float{width:46px;height:46px}
  .chat-float svg{width:24px;height:24px}
 }
