@@ -28,6 +28,9 @@ button{font:inherit}
   transition:color .2s,opacity .2s,transform .35s var(--ease);
 }
 .fullscreen-toggle svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.15;stroke-linecap:square;transition:transform .35s var(--ease)}
+@media(max-width:760px){
+  .fullscreen-toggle{display:none!important}
+}
 /* Menú: único control abajo-derecha, con glow */
 .menu-toggle{
   position:fixed;z-index:52;
@@ -149,7 +152,7 @@ body:has(.page-transit.on) .menu-toggle{
   -webkit-backdrop-filter:blur(20px);
   box-shadow:0 14px 38px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.035);
   display:grid;
-  grid-template-columns:42px 1fr 28px;
+  grid-template-columns:42px 1fr;
   align-items:center;
   gap:10px;
   text-align:center;
@@ -189,14 +192,7 @@ body:has(.page-transit.on) .menu-toggle{
   text-align:center;
   transition:color .25s ease;
 }
-.showroom-arrow{
-  display:block;
-  color:rgba(190,174,151,.55);
-  font-size:15px;
-  line-height:1;
-  text-align:right;
-  transition:transform .35s var(--ease),color .25s ease,opacity .25s ease;
-}
+.showroom-arrow{display:none!important}
 .showroom small{display:none}
 @keyframes showroomFloat{
   0%,100%{translate:0 0}
@@ -213,7 +209,6 @@ body:has(.page-transit.on) .menu-toggle{
   .showroom:hover::before{opacity:1}
   .showroom:hover strong{color:#fff}
   .showroom:hover .showroom-index{color:rgba(190,174,151,.9)}
-  .showroom:hover .showroom-arrow{color:rgba(226,200,152,.95);transform:translate(3px,-3px)}
 }
 .showroom:active{transform:scale(.985);background:rgba(5,5,5,.96)}
 /* Radio uniforme de los contenedores visibles */
@@ -221,10 +216,9 @@ body:has(.page-transit.on) .menu-toggle{
 
 
 @media(max-width:650px){
-  .showroom{min-height:78px;padding:16px 18px;grid-template-columns:34px 1fr 22px;gap:8px}
+  .showroom{min-height:78px;padding:16px 18px;grid-template-columns:34px 1fr;gap:8px}
   .showroom strong{font-size:10px;letter-spacing:2.6px}
   .showroom-index{font-size:8px}
-  .showroom-arrow{font-size:14px}
 }
 
 
@@ -348,9 +342,9 @@ html.has-cur,html.has-cur *{cursor:none!important}
 .demo-page-actions{position:absolute;z-index:2;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;padding:clamp(22px,4vw,48px)}
 .demo-back{width:52px;height:52px;display:grid;place-items:center;border:1px solid rgba(190,174,151,.35);background:rgba(10,10,10,.35);color:var(--white);cursor:pointer;transition:background .25s,border-color .25s,transform .25s}
 .demo-back svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
-.demo-explore{min-width:150px;display:inline-flex;align-items:center;justify-content:center;gap:22px;padding:16px 21px;border:1px solid rgba(190,174,151,.55);background:rgba(10,10,10,.45);color:var(--white);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;transition:background .25s,border-color .25s,color .25s}
-.demo-explore span{font-size:16px;color:var(--bronze)}
-@media(hover:hover){.demo-back:hover{background:rgba(255,255,255,.08);border-color:var(--white);transform:translateX(-3px)}.demo-explore:hover{background:var(--white);color:#111;border-color:var(--white)}.demo-explore:hover span{color:#111}}
+.demo-explore{min-width:150px;display:inline-flex;align-items:center;justify-content:center;gap:0;padding:16px 21px;border:1px solid rgba(190,174,151,.55);background:rgba(10,10,10,.45);color:var(--white);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;transition:background .25s,border-color .25s,color .25s}
+.demo-explore span{display:none!important}
+@media(hover:hover){.demo-back:hover{background:rgba(255,255,255,.08);border-color:var(--white);transform:translateX(-3px)}.demo-explore:hover{background:var(--white);color:#111;border-color:var(--white)}}
 @media(max-width:600px){.demo-page-inner{width:92vw;padding:20px}.demo-page h1{font-size:clamp(44px,12vw,72px)}.demo-page-eyebrow{font-size:9px;letter-spacing:3px}.demo-page-actions{padding:20px}.demo-back{width:48px;height:48px}.demo-explore{min-width:132px;padding:15px 17px}}
 body.demo-open{overflow:hidden}
 /* Mantener el cursor personalizado por encima de las pantallas de demo */
