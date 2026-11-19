@@ -962,8 +962,8 @@ html:not(.has-cur) #pathChooser .flip-back>.flip-cta{cursor:pointer!important}
   /* El estado cerrado lo controla el elemento details, sin atributo open inicial. */
 }
 /* Continuar siempre ocupa la última línea del contenido y queda alineado a la derecha. */
-#packageDetails .actions,
-#manualDetails .actions {
+#packageDetails .actions:not(.final-quote-actions),
+#manualDetails .actions:not(.final-quote-actions) {
   display:flex!important;
   justify-content:flex-end!important;
   align-items:center!important;
@@ -972,8 +972,8 @@ html:not(.has-cur) #pathChooser .flip-back>.flip-cta{cursor:pointer!important}
   margin-top:18px!important;
   text-align:right!important;
 }
-#packageDetails .actions .btn,
-#manualDetails .actions .btn {
+#packageDetails .actions:not(.final-quote-actions) .btn,
+#manualDetails .actions:not(.final-quote-actions) .btn {
   margin-left:auto;
 }
 
