@@ -255,40 +255,40 @@ html.has-cur .flip-return{
   cursor:none!important;
 }
 
-/* ========== Visual refresh v1.1 ==========
-   Menos texto + ritmo negro/beige + profundidad.
-   (go back = quitar este bloque) */
+/* ========== Visual refresh v1.2 ==========
+   Menos texto + ritmo sutil (negro / gris frío) + profundidad.
+   Sin rellenos beige/marrón. (go back = quitar este bloque) */
 body.cotizador-app{
-  --line:rgba(255,255,255,.12);
-  --muted:#a39e96;
-  --panel:#141210;
-  --panel2:#0e0d0c;
-  --ink:#f2efe9;
+  --line:rgba(255,255,255,.11);
+  --muted:#9a9a9a;
+  --panel:#121212;
+  --panel2:#0e0e0e;
+  --ink:#f3f3f1;
   --u-gap:14px;
-  --u-gold:#c5a675;
+  --u-gold:#cfc9bd;
   --u-line:rgba(255,255,255,.10);
-  --u-line-open:rgba(205,178,138,.38);
-  --step-black:#101010;
-  --step-beige:#1a1814;
-  --step-open:#1e1b16;
-  --chip:#161512;
-  --chip-alt:#12100e;
+  --u-line-open:rgba(255,255,255,.22);
+  --step-a:#0c0c0c;
+  --step-b:#151515;
+  --step-open:#181818;
+  --chip:#121212;
+  --chip-on:#1a1a1a;
   background:
-    radial-gradient(ellipse 90% 55% at 50% -10%,#1a1713 0%,#0b0b0b 58%)!important;
+    radial-gradient(ellipse 85% 50% at 50% -8%,#161616 0%,#0b0b0b 55%)!important;
 }
-body.cotizador-app h1{color:#f2efe9}
+body.cotizador-app h1{color:#f3f3f1}
 body.cotizador-app .chooser-intro,
-body.cotizador-app .eyebrow{color:#8f8980!important}
+body.cotizador-app .eyebrow{color:#8a8a8a!important}
 
-/* Shell exterior: capa con profundidad */
+/* Shell: profundidad con sombra/inset, sin tinte café */
 body.cotizador-app #packageChooser,
 body.cotizador-app #manualConfigurator{
-  border:1px solid rgba(205,178,138,.16)!important;
-  background:linear-gradient(180deg,#171512 0%,#12100e 100%)!important;
+  border:1px solid rgba(255,255,255,.10)!important;
+  background:linear-gradient(180deg,#141414 0%,#101010 100%)!important;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.05),
-    0 28px 64px -28px rgba(0,0,0,.92),
-    0 0 0 1px rgba(0,0,0,.5)!important;
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 30px 70px -32px rgba(0,0,0,.95),
+    0 0 0 1px rgba(0,0,0,.55)!important;
   padding:24px!important;
   border-radius:18px!important;
 }
@@ -302,73 +302,71 @@ body.cotizador-app .manual-details{
 }
 body.cotizador-app .manual-shell-head p,
 body.cotizador-app .package-top p{
-  color:#9a948c!important;
+  color:#8f8f8f!important;
   max-width:42ch;
   font-size:12px!important;
   line-height:1.45!important;
 }
 body.cotizador-app .package-detail-price strong{
   font-size:22px!important;
-  color:#f0ebe3!important;
+  color:#f3f3f1!important;
 }
-body.cotizador-app .package-detail-price small{color:#8a847c!important}
+body.cotizador-app .package-detail-price small{color:#7e7e7e!important}
 body.cotizador-app .package-detail-head .eyebrow{
-  color:#8a847c!important;
+  color:#7a7a7a!important;
   letter-spacing:.14em;
 }
 
-/* Ritmo: pasos impares negros, pares beige cálido */
+/* Ritmo sutil: A casi negro / B gris un tono más claro */
 body.cotizador-app .manual-step-list > .step:nth-child(odd),
 body.cotizador-app .package-accordion-list > .package-accordion:nth-child(odd){
-  background:var(--step-black)!important;
-  border:1px solid rgba(255,255,255,.10)!important;
+  background:var(--step-a)!important;
+  border:1px solid rgba(255,255,255,.08)!important;
 }
 body.cotizador-app .manual-step-list > .step:nth-child(even),
 body.cotizador-app .package-accordion-list > .package-accordion:nth-child(even){
-  background:var(--step-beige)!important;
-  border:1px solid rgba(205,178,138,.18)!important;
+  background:var(--step-b)!important;
+  border:1px solid rgba(255,255,255,.12)!important;
 }
 body.cotizador-app .package-accordion,
 body.cotizador-app .step{
   border-radius:14px!important;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.04),
-    0 10px 28px -18px rgba(0,0,0,.85)!important;
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 12px 30px -18px rgba(0,0,0,.88)!important;
 }
 body.cotizador-app .package-accordion[open],
 body.cotizador-app .step[open]{
   background:var(--step-open)!important;
-  border-color:rgba(205,178,138,.42)!important;
+  border-color:rgba(255,255,255,.22)!important;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.06),
-    0 18px 40px -20px rgba(0,0,0,.9),
-    0 0 0 1px rgba(205,178,138,.08)!important;
+    inset 0 1px 0 rgba(255,255,255,.07),
+    0 20px 44px -22px rgba(0,0,0,.92)!important;
 }
 body.cotizador-app .step-num,
 body.cotizador-app .accordion-index,
 body.cotizador-app .step[open]>summary .step-num{
-  border:1px solid rgba(205,178,138,.35)!important;
-  color:#d8cfc3!important;
+  border:1px solid rgba(255,255,255,.22)!important;
+  color:#d6d6d6!important;
   font:600 10px/1 Manrope,Arial,sans-serif!important;
   width:30px!important;height:30px!important;flex-basis:30px!important;
-  background:rgba(0,0,0,.25)!important;
+  background:rgba(255,255,255,.03)!important;
 }
 body.cotizador-app .step[open]>summary .step-num{
-  border-color:rgba(205,178,138,.55)!important;
-  color:#e7d3b5!important;
+  border-color:rgba(255,255,255,.38)!important;
+  color:#fff!important;
 }
 body.cotizador-app .step>summary::after,
-body.cotizador-app .step[open]>summary::after{color:#c4b7a6!important}
+body.cotizador-app .step[open]>summary::after{color:#b5b5b5!important}
 body.cotizador-app .step-title b,
-body.cotizador-app .accordion-title{color:#f0ebe3!important}
+body.cotizador-app .accordion-title{color:#f2f2f0!important}
 body.cotizador-app .step-meta,
-body.cotizador-app .accordion-meta{color:#9a948c!important}
+body.cotizador-app .accordion-meta{color:#8a8a8a!important}
 
-/* Texto guía: corto */
 body.cotizador-app .accordion-intro,
 body.cotizador-app #manualDetails #baseStep .accordion-intro,
 body.cotizador-app #baseStep > .step-content > .desc{
-  color:#9a948c!important;
+  color:#8f8f8f!important;
   font-size:13px!important;
   line-height:1.45!important;
   max-width:52ch;
@@ -381,20 +379,19 @@ body.cotizador-app #baseStep > .step-content > .desc{
 }
 body.cotizador-app .desc,
 body.cotizador-app .note{
-  color:#9a948c!important;
-  border-left-color:rgba(205,178,138,.35)!important;
-  background:rgba(205,178,138,.05)!important;
+  color:#8f8f8f!important;
+  border-left-color:rgba(255,255,255,.18)!important;
+  background:rgba(255,255,255,.03)!important;
 }
 
-/* Chips internos: contraste + ritmo dentro del paso */
 body.cotizador-app .choice,
 body.cotizador-app .base-compact-grid>div,
 body.cotizador-app #manualDetails #baseStep .base-compact-grid>div,
 body.cotizador-app #packageDetails .base-compact-grid>div{
   background:var(--chip)!important;
-  border:1px solid rgba(255,255,255,.08)!important;
+  border:1px solid rgba(255,255,255,.09)!important;
   border-radius:12px!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 6px 16px -12px rgba(0,0,0,.75)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 8px 18px -14px rgba(0,0,0,.8)!important;
   min-height:0!important;
   padding:14px 16px!important;
   transition:border-color .18s ease,background .18s ease,box-shadow .18s ease;
@@ -402,24 +399,23 @@ body.cotizador-app #packageDetails .base-compact-grid>div{
 body.cotizador-app .step:nth-child(even) .choice,
 body.cotizador-app .step:nth-child(even) .base-compact-grid>div,
 body.cotizador-app .package-accordion:nth-child(even) .choice{
-  background:var(--chip-alt)!important;
-  border-color:rgba(205,178,138,.14)!important;
+  background:#0f0f0f!important;
 }
 body.cotizador-app .choice:hover,
 body.cotizador-app .base-compact-grid>div:hover{
-  border-color:rgba(205,178,138,.35)!important;
-  background:#1c1915!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 22px -12px rgba(0,0,0,.8)!important;
+  border-color:rgba(255,255,255,.22)!important;
+  background:#1a1a1a!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 12px 24px -14px rgba(0,0,0,.85)!important;
 }
 body.cotizador-app .choice:has(input:checked){
-  border-color:rgba(205,178,138,.55)!important;
-  background:#221e18!important;
-  box-shadow:0 0 0 1px rgba(205,178,138,.12),0 12px 26px -14px rgba(0,0,0,.85)!important;
+  border-color:rgba(255,255,255,.36)!important;
+  background:var(--chip-on)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08),0 14px 28px -16px rgba(0,0,0,.9)!important;
 }
 body.cotizador-app .choice b,
 body.cotizador-app .base-compact-grid b,
 body.cotizador-app #manualDetails #baseStep .base-compact-grid b{
-  color:#f0ebe3!important;
+  color:#efefed!important;
   font-size:13px!important;
   font-weight:600!important;
 }
@@ -432,7 +428,7 @@ body.cotizador-app #packageDetails .base-compact-grid small{
   opacity:0;
   overflow:hidden;
   margin:0!important;
-  color:#9a948c!important;
+  color:#8f8f8f!important;
   font-size:12px!important;
   line-height:1.4!important;
   transition:max-height .22s ease,opacity .18s ease,margin .18s ease;
@@ -454,58 +450,56 @@ body.cotizador-app #similarArea,
 body.cotizador-app #floors,
 body.cotizador-app #similarFloors,
 body.cotizador-app #extraBedrooms{
-  border-color:rgba(205,178,138,.22)!important;
-  background:#0c0b0a!important;
+  border-color:rgba(255,255,255,.12)!important;
+  background:#0a0a0a!important;
   box-shadow:inset 0 1px 3px rgba(0,0,0,.55)!important;
 }
 body.cotizador-app .package-type.active{
-  border-color:rgba(205,178,138,.55)!important;
-  box-shadow:0 0 0 1px rgba(205,178,138,.2)!important;
+  border-color:rgba(255,255,255,.4)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.12)!important;
 }
 body.cotizador-app #packageArea:focus,
 body.cotizador-app #area:focus{
-  border-color:rgba(205,178,138,.5)!important;
+  border-color:rgba(255,255,255,.35)!important;
 }
 
-/* CTA: acento claro con un poco de relieve */
+/* CTA claro (único acento cálido suave, no relleno marrón) */
 body.cotizador-app .btn.primary,
 body.cotizador-app .final-quote-download{
-  background:linear-gradient(180deg,#efeae1,#e2d8c8)!important;
+  background:#eceae6!important;
   color:#111!important;
-  border-color:rgba(205,178,138,.45)!important;
-  box-shadow:0 10px 24px -14px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.45)!important;
+  border-color:rgba(255,255,255,.2)!important;
+  box-shadow:0 12px 28px -16px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.55)!important;
 }
 body.cotizador-app .btn.primary:hover,
 body.cotizador-app .final-quote-download:hover{
-  background:linear-gradient(180deg,#fff,#ebe4d8)!important;
-  border-color:rgba(205,178,138,.65)!important;
+  background:#fff!important;
   transform:translateY(-1px)!important;
 }
 body.cotizador-app .btn:not(.primary){
   border-color:rgba(255,255,255,.14)!important;
   color:#ddd!important;
-  background:rgba(0,0,0,.2)!important;
+  background:rgba(0,0,0,.25)!important;
 }
 body.cotizador-app .btn:not(.primary):hover{
-  border-color:rgba(205,178,138,.35)!important;
+  border-color:rgba(255,255,255,.35)!important;
   color:#fff!important;
 }
 body.cotizador-app .total-line,
 body.cotizador-app .total-line strong,
-body.cotizador-app .price-line strong{color:#f2efe9!important}
+body.cotizador-app .price-line strong{color:#f3f3f1!important}
 body.cotizador-app .price-line{
   border-bottom-color:rgba(255,255,255,.08)!important;
-  color:#9a948c!important;
+  color:#8f8f8f!important;
 }
 
-/* Path cards con relieve */
 body.cotizador-app .visual-choice{
   border-color:rgba(255,255,255,.12)!important;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 22px 48px -24px rgba(0,0,0,.9)!important;
 }
 body.cotizador-app .visual-package{
-  border-color:rgba(205,178,138,.42)!important;
-  box-shadow:0 0 0 1px rgba(205,178,138,.08),0 22px 52px -20px rgba(0,0,0,.92)!important;
+  border-color:rgba(255,255,255,.28)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.04),0 22px 52px -20px rgba(0,0,0,.92)!important;
 }
 
 @media (hover:none){
@@ -524,4 +518,4 @@ body.cotizador-app .visual-package{
     -webkit-box-orient:vertical;
   }
 }
-/* ========== /Visual refresh v1.1 ========== */
+/* ========== /Visual refresh v1.2 ========== */
