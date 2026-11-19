@@ -162,8 +162,6 @@ body:has(.page-transit.on) .float-actions{
  .experience{height:420vh}.experience-sticky{min-height:550px}
  .sequence{width:84vw;height:410px}.message{padding:30px}.message h2{font-size:40px}.message p{font-size:12px}
  .progress{left:3%;height:110px}
- .showrooms{grid-template-columns:1fr;gap:8px}.showroom{min-height:95px;padding:15px 20px}.showroom small{margin-bottom:14px}.showroom strong{font-size:23px}
- .final{min-height:850px}.final-content{width:86vw}.final-description{margin-bottom:28px}
 }
 @media(prefers-reduced-motion:reduce){
  html{scroll-behavior:auto}
