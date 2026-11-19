@@ -569,9 +569,15 @@ let activePackage='apartment';
 const BASE_SHOWROOM_INTRO='La estructura digital para presentar tu inmueble.';
 const BASE_SHOWROOM_ITEMS=[["Enlace y portada", "Acceso único con imagen personalizada."], ["Ficha del inmueble", "Descripción e información técnica."], ["Ubicación exterior", "Se integra con fotografías, Google Maps o Street View. No incluye modelado 3D de fachadas ni diseño arquitectónico desde cero."], ["Contacto WhatsApp", "Acceso directo para consultas."], ["Experiencia visual", "Animaciones, transiciones y navegación adaptable."], ["Mini brochure PDF", "Vertical y horizontal, optimizado para móvil, iPad y computador."], ["Alojamiento", "6 meses de publicación incluidos."], ["Menú personalizable", "Sección con enlaces e información relevante de la empresa, el proyecto, el inmueble y cualquier contenido adicional que se necesite agregar."]];
 function baseShowroomHTML(){
- return `<p class="accordion-intro">${BASE_SHOWROOM_INTRO}</p><div class="base-compact-grid">${BASE_SHOWROOM_ITEMS.map(([t,d])=>`<div><b>${t}</b><small>${d}</small></div>`).join('')}</div>`;
+ return `<p class="accordion-intro">${BASE_SHOWROOM_INTRO}</p><div class="base-compact-grid">${BASE_SHOWROOM_ITEMS.map(([t,d])=>`<button type="button" class="base-include-item" aria-expanded="false"><b>${t}</b><small>${d}</small></button>`).join('')}</div>`;
 }
 if($('manualBaseContent'))$('manualBaseContent').innerHTML=baseShowroomHTML();
+document.addEventListener('click',(e)=>{
+ const item=e.target.closest('.base-include-item');
+ if(!item)return;
+ const open=item.classList.toggle('is-open');
+ item.setAttribute('aria-expanded',open?'true':'false');
+});
 
 
 function packageAreaValue(id='packageArea'){return Math.max(1,Math.round(Number($(id)?.value))||100);}

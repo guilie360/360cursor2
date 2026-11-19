@@ -386,8 +386,11 @@ body.cotizador-app .note{
 
 body.cotizador-app .choice,
 body.cotizador-app .base-compact-grid>div,
+body.cotizador-app .base-compact-grid>.base-include-item,
 body.cotizador-app #manualDetails #baseStep .base-compact-grid>div,
-body.cotizador-app #packageDetails .base-compact-grid>div{
+body.cotizador-app #manualDetails #baseStep .base-compact-grid>.base-include-item,
+body.cotizador-app #packageDetails .base-compact-grid>div,
+body.cotizador-app #packageDetails .base-compact-grid>.base-include-item{
   background:var(--chip)!important;
   border:1px solid rgba(255,255,255,.09)!important;
   border-radius:12px!important;
@@ -396,13 +399,29 @@ body.cotizador-app #packageDetails .base-compact-grid>div{
   padding:14px 16px!important;
   transition:border-color .18s ease,background .18s ease,box-shadow .18s ease;
 }
+body.cotizador-app .base-compact-grid>.base-include-item{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:0!important;
+  width:100%;
+  text-align:left;
+  color:inherit;
+  font:inherit;
+  cursor:pointer;
+  -webkit-appearance:none;
+  appearance:none;
+}
 body.cotizador-app .step:nth-child(even) .choice,
 body.cotizador-app .step:nth-child(even) .base-compact-grid>div,
+body.cotizador-app .step:nth-child(even) .base-compact-grid>.base-include-item,
 body.cotizador-app .package-accordion:nth-child(even) .choice{
   background:#0f0f0f!important;
 }
 body.cotizador-app .choice:hover,
-body.cotizador-app .base-compact-grid>div:hover{
+body.cotizador-app .base-compact-grid>div:hover,
+body.cotizador-app .base-compact-grid>.base-include-item:hover,
+body.cotizador-app .base-compact-grid>.base-include-item.is-open{
   border-color:rgba(255,255,255,.22)!important;
   background:#1a1a1a!important;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 12px 24px -14px rgba(0,0,0,.85)!important;
@@ -437,8 +456,11 @@ body.cotizador-app .choice:hover small,
 body.cotizador-app .choice:focus-within small,
 body.cotizador-app .choice:has(input:checked) small,
 body.cotizador-app .base-compact-grid>div:hover small,
-body.cotizador-app .base-compact-grid>div:focus-within small{
-  max-height:4.5em;
+body.cotizador-app .base-compact-grid>div:focus-within small,
+body.cotizador-app .base-compact-grid>.base-include-item:hover small,
+body.cotizador-app .base-compact-grid>.base-include-item:focus-visible small,
+body.cotizador-app .base-compact-grid>.base-include-item.is-open small{
+  max-height:12em;
   opacity:1;
   margin-top:6px!important;
 }
@@ -509,13 +531,16 @@ body.cotizador-app .visual-package{
     opacity:1;
     margin-top:6px!important;
   }
+  /* Base items: stay collapsed until tap (.is-open); no always-visible clamp */
   body.cotizador-app .base-compact-grid small{
-    max-height:none;
-    opacity:.85;
-    margin-top:4px!important;
-    display:-webkit-box;
-    -webkit-line-clamp:2;
-    -webkit-box-orient:vertical;
+    max-height:0;
+    opacity:0;
+    margin-top:0!important;
+  }
+  body.cotizador-app .base-compact-grid>.base-include-item.is-open small{
+    max-height:12em;
+    opacity:1;
+    margin-top:6px!important;
   }
 }
 /* ========== /Visual refresh v1.2 ========== */

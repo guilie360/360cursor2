@@ -1141,9 +1141,27 @@ html:not(.has-cur) #pathChooser .flip-back>.flip-cta{cursor:pointer!important}
   gap:10px!important;
 }
 #packageDetails #packageStep2 .base-compact-grid>div,
-#manualDetails #baseStep .base-compact-grid>div {
+#packageDetails #packageStep2 .base-compact-grid>.base-include-item,
+#manualDetails #baseStep .base-compact-grid>div,
+#manualDetails #baseStep .base-compact-grid>.base-include-item {
   padding:14px 16px!important;
-  gap:6px!important;
+  gap:0!important;
+}
+#packageDetails #packageStep2 .base-compact-grid>.base-include-item,
+#manualDetails #baseStep .base-compact-grid>.base-include-item {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  width:100%;
+  text-align:left;
+  color:inherit;
+  font:inherit;
+  cursor:pointer;
+  -webkit-appearance:none;
+  appearance:none;
+  background:#191919!important;
+  border:1px solid #40382d!important;
+  border-radius:12px!important;
 }
 #packageDetails #packageStep2 .base-compact-grid b,
 #manualDetails #baseStep .base-compact-grid b {
@@ -1156,10 +1174,26 @@ html:not(.has-cur) #pathChooser .flip-back>.flip-cta{cursor:pointer!important}
 #packageDetails #packageStep2 .base-compact-grid small,
 #manualDetails #baseStep .base-compact-grid small {
   font-family:'Manrope',Arial,Helvetica,sans-serif!important;
-  font-size:15px!important;
+  font-size:13px!important;
   font-weight:400!important;
   line-height:1.5!important;
   color:#a9a196!important;
+  display:block;
+  max-height:0;
+  opacity:0;
+  overflow:hidden;
+  margin:0!important;
+  transition:max-height .22s ease,opacity .18s ease,margin .18s ease;
+}
+#packageDetails #packageStep2 .base-compact-grid>.base-include-item:hover small,
+#packageDetails #packageStep2 .base-compact-grid>.base-include-item:focus-visible small,
+#packageDetails #packageStep2 .base-compact-grid>.base-include-item.is-open small,
+#manualDetails #baseStep .base-compact-grid>.base-include-item:hover small,
+#manualDetails #baseStep .base-compact-grid>.base-include-item:focus-visible small,
+#manualDetails #baseStep .base-compact-grid>.base-include-item.is-open small {
+  max-height:12em;
+  opacity:1;
+  margin-top:6px!important;
 }
 @media(max-width:650px){
   #packageDetails #packageStep2 .base-compact-grid,

@@ -943,9 +943,10 @@ body:not(.portal-mode) #teamChatFloat{
 .accordion-content{padding:0 16px 17px 56px}
 .accordion-intro{font-size:11px;color:#aaa196;margin:0 0 12px}
 .base-compact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.base-compact-grid>div{padding:10px 12px;border:1px solid rgba(255,255,255,.09);border-radius:8px;display:flex;flex-direction:column;gap:4px}
+.base-compact-grid>div,.base-compact-grid>.base-include-item{padding:10px 12px;border:1px solid rgba(255,255,255,.09);border-radius:8px;display:flex;flex-direction:column;gap:0;align-items:flex-start;width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer;-webkit-appearance:none;appearance:none;background:transparent}
 .base-compact-grid b{font-size:11px;color:#e9e4dc;font-weight:600}
-.base-compact-grid small{font-size:9px;line-height:1.45;color:#a9a196}
+.base-compact-grid small{font-size:9px;line-height:1.45;color:#a9a196;display:block;max-height:0;opacity:0;overflow:hidden;margin:0;transition:max-height .22s ease,opacity .18s ease,margin .18s ease}
+.base-compact-grid>.base-include-item:hover small,.base-compact-grid>.base-include-item:focus-visible small,.base-compact-grid>.base-include-item.is-open small{max-height:12em;opacity:1;margin-top:6px}
 .area-accordion-content{display:grid;grid-template-columns:1fr auto;align-items:center;gap:18px}
 .accordion-note{font-size:10px;line-height:1.5;color:#cdb28a;margin:0;max-width:450px}
 .area-accordion-content .area-panel-control{align-items:flex-end;min-width:190px}
