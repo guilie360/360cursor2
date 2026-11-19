@@ -1381,18 +1381,9 @@ html:not(.has-cur) #pathChooser .flip-back>.flip-cta{cursor:pointer!important}
 }
 #packageChooser .final-quote-actions > a.final-quote-whatsapp,
 #manualConfigurator .final-quote-actions > a.final-quote-whatsapp{
- flex:0 0 82px!important;
- width:82px!important;
- min-width:82px!important;
- max-width:82px!important;
- padding:18px 12px!important;
  color:#e5d0aa!important;
  border-color:rgba(195,166,119,.55)!important;
 }
-#packageChooser .final-quote-actions > a.final-quote-whatsapp span,
-#manualConfigurator .final-quote-actions > a.final-quote-whatsapp span{display:none}
-#packageChooser .final-quote-actions > a.final-quote-whatsapp svg,
-#manualConfigurator .final-quote-actions > a.final-quote-whatsapp svg{display:block;flex:none}
 #packageChooser .final-quote-actions > button:hover,
 #manualConfigurator .final-quote-actions > button:hover,
 #packageChooser .final-quote-actions > a.final-quote-whatsapp:hover,
@@ -1409,14 +1400,11 @@ html:not(.has-cur) #pathChooser .flip-back>.flip-cta{cursor:pointer!important}
  #packageChooser .final-quote-actions,
  #manualConfigurator .final-quote-actions{flex-direction:column!important;align-items:stretch!important}
  #packageChooser .final-quote-actions > button:not([hidden]),
- #manualConfigurator .final-quote-actions > button:not([hidden]){flex:1 1 auto!important;width:100%!important;min-width:0!important}
+ #manualConfigurator .final-quote-actions > button:not([hidden]),
  #packageChooser .final-quote-actions > a.final-quote-whatsapp,
  #manualConfigurator .final-quote-actions > a.final-quote-whatsapp{
-  flex:0 0 auto!important;width:100%!important;min-width:0!important;max-width:none!important;
-  gap:12px!important;
+  flex:1 1 auto!important;width:100%!important;min-width:0!important;max-width:none!important;
  }
- #packageChooser .final-quote-actions > a.final-quote-whatsapp span,
- #manualConfigurator .final-quote-actions > a.final-quote-whatsapp span{display:inline}
 }
 
 /* ===== patch ===== */
