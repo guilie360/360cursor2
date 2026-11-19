@@ -39,26 +39,80 @@
   var resetBackdrop = document.getElementById('quoteResetConfirm');
   var resetCancel = document.getElementById('quoteResetCancel');
   var resetConfirm = document.getElementById('quoteResetConfirmBtn');
+  var exitFallback = modo === 'interno' ? '/panel_gestion/' : '/#demo';
+
+  function isVisible(el) {
+    return !!(el && !el.classList.contains('hidden') && !el.classList.contains('portal-hidden'));
+  }
+
+  function currentQuoteScreen() {
+    if (isVisible(document.getElementById('manualConfigurator'))) return 'manual';
+    if (isVisible(document.getElementById('packageChooser'))) return 'package';
+    return 'paths';
+  }
+
+  function closeQuoteOverlays() {
+    var closed = false;
+    if (resetBackdrop && !resetBackdrop.classList.contains('hidden')) {
+      resetBackdrop.classList.add('hidden');
+      closed = true;
+    }
+    if (commissionCard && !commissionCard.classList.contains('hidden')) {
+      commissionCard.classList.add('hidden');
+      if (commissionBtn) commissionBtn.setAttribute('aria-expanded', 'false');
+      closed = true;
+    }
+    var order = document.getElementById('orderModal');
+    if (order && !order.classList.contains('hidden')) {
+      order.classList.add('hidden');
+      closed = true;
+    }
+    var path = document.getElementById('pathChooser');
+    if (path && isVisible(path)) {
+      var flipped = path.querySelector('.flip-card.flipped');
+      if (flipped) {
+        flipped.classList.remove('flipped');
+        var front = flipped.querySelector('.flip-front');
+        if (front) front.setAttribute('aria-expanded', 'false');
+        closed = true;
+      }
+    }
+    return closed;
+  }
+
+  function exitCotizador() {
+    var sameOrigin = false;
+    try {
+      sameOrigin = !!(document.referrer && document.referrer.indexOf(location.origin) === 0);
+    } catch (err) {}
+    if (sameOrigin) {
+      history.back();
+      return;
+    }
+    location.href = exitFallback;
+  }
+
+  function stepBackQuote() {
+    if (closeQuoteOverlays()) return;
+    var screen = currentQuoteScreen();
+    if (screen === 'manual' || screen === 'package') {
+      if (typeof showConfiguratorScreen === 'function') showConfiguratorScreen('paths');
+      return;
+    }
+    exitCotizador();
+  }
 
   if (back) {
     back.classList.remove('portal-hidden');
-    if (modo === 'interno') {
-      back.setAttribute('aria-label', 'Volver al panel');
-      back.title = 'Volver al panel';
-      back.onclick = function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        location.href = '/panel_gestion/';
-      };
-    } else {
-      back.setAttribute('aria-label', 'Volver a la demo');
-      back.title = 'Volver a la landing · Demo';
-      back.onclick = function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        location.href = '/#demo';
-      };
-    }
+    back.setAttribute('aria-label', 'Volver');
+    back.title = 'Volver';
+    back.onclick = null;
+    // Un solo paso atrás: overlay → pantalla anterior → origen (landing/panel).
+    back.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      stepBackQuote();
+    }, true);
   }
   if (modo === 'interno' && commissionBtn) {
     commissionBtn.classList.remove('portal-hidden');
