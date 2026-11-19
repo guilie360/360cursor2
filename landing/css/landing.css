@@ -1,4 +1,7 @@
-:root{--bg:#0b0b0b;--white:#d6d2cc;--muted:#96918a;--bronze:#8d7d69;--serif:'Italiana',Georgia,serif;--sans:'DM Sans',Arial,sans-serif;--ease:cubic-bezier(.2,.8,.2,1);--float-safe:92px}
+:root{--bg:#0b0b0b;--white:#d6d2cc;--muted:#96918a;--bronze:#8d7d69;--serif:'Italiana',Georgia,serif;--sans:'DM Sans',Arial,sans-serif;--ease:cubic-bezier(.2,.8,.2,1);--float-safe:calc(92px + env(safe-area-inset-bottom,0px))}
+@media(max-width:640px){
+  :root{--float-safe:calc(96px + env(safe-area-inset-bottom,0px) + 24px)}
+}
 /* Shell fullscreen: el iframe ocupa todo; evita dobles scrolls en el padre */
 html.boxies-fs-shell-on,html.boxies-fs-shell-on body{overflow:hidden!important;height:100%!important;overscroll-behavior:none}
 html.boxies-fs-shell-on body>*:not(#boxies-fs-shell){visibility:hidden!important;pointer-events:none!important}
