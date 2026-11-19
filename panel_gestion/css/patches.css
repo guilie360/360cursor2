@@ -263,22 +263,24 @@ body:not(.workspace-authenticated) #teamChatFloat,body:not(.workspace-authentica
  letter-spacing:.11em!important;
 }
 @media(max-width:850px){
- #pathChooser.path-chooser-visual{grid-template-columns:minmax(0,1fr)!important}
- #pathChooser .visual-choice{height:590px!important;min-height:590px!important}
+ #pathChooser.path-chooser-visual,
+ #pathChooser.path-chooser-visual:not(.hidden){grid-template-columns:minmax(0,1fr)!important;gap:14px!important}
+ #pathChooser .flip-card,#pathChooser .visual-choice{width:100%!important}
+ #pathChooser .visual-choice,#pathChooser .flip-front{height:auto!important;min-height:min(520px,78vh)!important}
  #pathChooser .visual-art-home{width:42%!important;height:44%!important;right:2%!important;top:9%!important}
  #pathChooser .visual-art-layers{width:40%!important;height:44%!important;right:3%!important;top:9%!important}
 }
 @media(max-width:520px){
- #pathChooser .visual-choice{height:560px!important;min-height:560px!important;padding:24px 20px 22px!important}
- #pathChooser .visual-copy{max-width:64%!important}
- #pathChooser .visual-title{font-size:35px!important}
+ #pathChooser .visual-choice,#pathChooser .flip-front{height:auto!important;min-height:min(480px,72vh)!important;padding:24px 20px 22px!important}
+ #pathChooser .visual-copy,#pathChooser .flip-front .visual-copy{max-width:100%!important}
+ #pathChooser .visual-title,#pathChooser .flip-front .visual-title{font-size:clamp(30px,9vw,36px)!important}
  #pathChooser .visual-subtitle{font-size:12px!important}
- #pathChooser .visual-price{font-size:43px!important}
+ #pathChooser .visual-price{font-size:40px!important}
  #pathChooser .visual-art-home{width:42%!important;height:38%!important;right:0!important;top:15%!important}
  #pathChooser .visual-art-layers{width:39%!important;height:40%!important;right:2%!important;top:13%!important}
  #pathChooser .included-strip,#pathChooser .manual-feature-strip{min-height:78px!important;margin-bottom:18px!important;padding:9px 0!important}
  #pathChooser .included-strip svg,#pathChooser .manual-feature-strip svg{width:23px!important;height:23px!important;flex-basis:23px!important}
- #pathChooser .included-strip small,#pathChooser .manual-feature-strip small{font-size:8px!important;white-space:normal!important}
+ #pathChooser .included-strip small,#pathChooser .manual-feature-strip small{font-size:9px!important;white-space:normal!important}
  #pathChooser .visual-cta-bottom{font-size:9px!important;letter-spacing:.07em!important}
 }
 

@@ -306,10 +306,50 @@ body.cotizador-app #pathChooser.path-chooser-visual:not(.hidden){
   width:100%!important;
   max-width:none!important;
   margin-inline:0!important;
+  gap:16px!important;
 }
 body.cotizador-app #pathChooser .flip-card{
   min-width:0!important;
   width:100%!important;
+}
+/* Cel: una debajo de la otra, ancho completo y proporciones legibles */
+@media (max-width:850px){
+  body.cotizador-app #pathChooser.path-chooser-visual:not(.hidden){
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:14px!important;
+  }
+  body.cotizador-app #pathChooser .flip-card,
+  body.cotizador-app #pathChooser .visual-choice,
+  body.cotizador-app #pathChooser .flip-front,
+  body.cotizador-app #pathChooser .flip-back{
+    width:100%!important;
+    max-width:none!important;
+  }
+  body.cotizador-app #pathChooser .visual-choice,
+  body.cotizador-app #pathChooser .flip-front{
+    height:auto!important;
+    min-height:min(520px,78vh)!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .visual-copy{
+    max-width:100%!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .visual-title{
+    font-size:clamp(32px,9vw,42px)!important;
+    overflow-wrap:anywhere;
+  }
+  body.cotizador-app #pathChooser .flip-front .visual-subtitle{
+    max-width:36ch!important;
+    margin-bottom:28px!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .included-strip,
+  body.cotizador-app #pathChooser .flip-front .manual-feature-strip{
+    min-height:72px!important;
+  }
+  body.cotizador-app #pathChooser .included-strip small,
+  body.cotizador-app #pathChooser .manual-feature-strip small{
+    white-space:normal!important;
+    font-size:9px!important;
+  }
 }
 
 /* Shell: profundidad con sombra/inset, sin tinte café */
