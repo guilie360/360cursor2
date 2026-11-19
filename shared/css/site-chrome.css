@@ -11,6 +11,8 @@
   --chrome-side:max(22px,4vw);
   --chrome-top:max(22px,calc(var(--safe-top) + 22px));
   --chrome-rail:calc(var(--chrome-side) + var(--chrome-btn) + var(--chrome-gap));
+  --chrome-rail-left:var(--chrome-rail);
+  --chrome-rail-right:var(--chrome-rail);
   --chrome-header-h:50px;
   --chrome-max:1480px;
   --chrome-line:rgba(255,255,255,.12);
@@ -45,6 +47,24 @@
   right:var(--chrome-side)!important;
   left:auto!important;
   bottom:auto!important;
+}
+
+/* Regla fija: fullscreen SOLO desktop — en móvil no existe */
+@media (max-width:760px){
+  .fullscreen-toggle,
+  .global-fullscreen-btn,
+  #fullscreenToggle,
+  #globalFullscreenBtn{
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+    opacity:0!important;
+  }
+  :root{
+    /* Sin FS a la izquierda: el riel izquierdo es solo margen */
+    --chrome-rail-left:var(--chrome-side);
+    --chrome-rail-right:calc(var(--chrome-side) + var(--chrome-btn) + var(--chrome-gap));
+  }
 }
 
 /* ——— Shell de header: siempre entre FS y MENÚ ——— */
@@ -82,7 +102,7 @@ body:not(.cotizador-app):not(.portal-mode) .topbar{
   margin:0!important;
   box-sizing:border-box;
   min-height:calc(var(--chrome-top) + var(--chrome-header-h));
-  padding:var(--chrome-top) var(--chrome-rail) 12px!important;
+  padding:var(--chrome-top) var(--chrome-rail-right) 12px var(--chrome-rail-left)!important;
   display:flex!important;
   flex-wrap:nowrap!important;
   align-items:center!important;
@@ -92,7 +112,7 @@ body:not(.cotizador-app):not(.portal-mode) .topbar{
 }
 body:not(.cotizador-app):not(.portal-mode) .topbar{
   min-height:calc(var(--chrome-top) + var(--chrome-header-h));
-  padding:var(--chrome-top) var(--chrome-rail) 0!important;
+  padding:var(--chrome-top) var(--chrome-rail-right) 0 var(--chrome-rail-left)!important;
   border-bottom:0!important;
   display:flex!important;
   align-items:center!important;
@@ -178,25 +198,25 @@ body.cotizador-app main{
   width:auto!important;
   max-width:none!important;
   margin:0!important;
-  padding-left:var(--chrome-rail)!important;
-  padding-right:var(--chrome-rail)!important;
+  padding-left:var(--chrome-rail-left)!important;
+  padding-right:var(--chrome-rail-right)!important;
   box-sizing:border-box
 }
 .portal .portal-wrap{
   padding-bottom:90px!important
 }
 #hunterGoalFooter.hunter-goal-footer{
-  left:var(--chrome-rail)!important;
-  right:var(--chrome-rail)!important;
+  left:var(--chrome-rail-left)!important;
+  right:var(--chrome-rail-right)!important;
   width:auto!important;
   max-width:none!important;
   transform:none!important
 }
 
-/* Quitar huecos viejos que descuadraban el menú */
+/* Hueco derecho solo para el menú */
 body.has-global-nav .portal .portal-head-inner,
 body.has-global-nav.cotizador-app .topbar .topinner{
-  padding-right:var(--chrome-rail)!important
+  padding-right:var(--chrome-rail-right)!important
 }
 
 /* ——— Móvil: el slot no puede llevar 4 controles; prioridad = precio + 1 acción ——— */
