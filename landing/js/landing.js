@@ -180,11 +180,10 @@ document.addEventListener('boxies:fullscreen',fsLabel);
 fsLabel();
 
 /* MENÚ */
-const mt=$('#menuToggle'),mp=$('#menuPanel'),mo=$('#menuOverlay'),mc=$('#menuClose');
+const mt=$('#menuToggle'),mp=$('#menuPanel'),mo=$('#menuOverlay');
 function setMenu(o){mp.classList.toggle('open',o);mo.classList.toggle('open',o);mt.classList.toggle('active',o);mt.setAttribute('aria-expanded',o);mt.setAttribute('aria-label',o?'Cerrar menú':'Abrir menú');document.body.style.overflow=o?'hidden':''}
 mt.addEventListener('click',()=>setMenu(!mp.classList.contains('open')));
 mo.addEventListener('click',()=>setMenu(false));
-mc?.addEventListener('click',()=>setMenu(false));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false)});
 /* Menú / anclas internas: transición con logo (sin scrub del scroll) */
 document.querySelectorAll('a[href^="#"]').forEach(a=>{

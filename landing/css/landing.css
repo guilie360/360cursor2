@@ -13,7 +13,7 @@ button{font:inherit}
 :focus-visible{outline:1px solid var(--bronze);outline-offset:4px}
 
 /* HEADER */
-.topbar{position:fixed;z-index:50;top:34px;left:4vw;width:92vw;height:48px;display:flex;align-items:center;justify-content:space-between;pointer-events:none}
+.topbar{position:fixed;z-index:60;top:34px;left:4vw;width:92vw;height:48px;display:flex;align-items:center;justify-content:space-between;pointer-events:none}
 .header-logo{width:44px;height:44px;display:flex;align-items:center;pointer-events:none;opacity:0;will-change:opacity,transform}
 .header-logo img{width:100%;height:100%;object-fit:contain}
 .header-actions{display:flex;align-items:center;gap:9px;pointer-events:auto}
@@ -28,17 +28,24 @@ button{font:inherit}
     opacity:1;
   }
 }
-/* Menú: arriba-derecha (en el header), con glow */
+/* Menú: arriba-derecha, siempre visible; se anima a X al abrir */
 .menu-toggle{
-  position:relative;z-index:52;
+  position:relative;z-index:60;
   width:44px;height:44px;padding:0;border:0;border-radius:0;background:transparent;
   display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;
   cursor:pointer;pointer-events:auto;
   animation:menuBreath 2s ease-in-out infinite;
   transition:opacity .35s var(--ease),visibility .35s,transform .35s var(--ease);
 }
-.menu-toggle span{display:block;width:22px;height:2px;background:#efeae3;border-radius:1px;transition:transform .35s var(--ease),opacity .25s,background .25s}
-.menu-toggle.active{animation:none;filter:none;opacity:1}
+.menu-toggle span{
+  display:block;width:22px;height:2px;background:#efeae3;border-radius:1px;
+  transform-origin:center;
+  transition:transform .4s var(--ease),opacity .25s,background .25s,width .35s var(--ease);
+}
+.menu-toggle.active{
+  animation:none;filter:none;opacity:1;
+}
+.menu-toggle.active span{background:#fff}
 .menu-toggle.active span:first-child{transform:translateY(4.5px) rotate(45deg)}
 .menu-toggle.active span:last-child{transform:translateY(-4.5px) rotate(-45deg)}
 /* Fullscreen: abajo-derecha (posición unificada en shared/safe-area.css) */
