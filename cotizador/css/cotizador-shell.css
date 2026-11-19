@@ -484,6 +484,60 @@ body.cotizador-app #pathChooser .flip-card{
   }
 }
 
+/* Reverso: imagen entre Volver y CTA, sin taparlos (equilibrio frente corto / dorso usable) */
+@media (max-width:850px){
+  body.cotizador-app #pathChooser .flip-card.flipped{
+    min-height:380px!important;
+  }
+  body.cotizador-app #pathChooser .flip-card.flipped .flip-inner,
+  body.cotizador-app #pathChooser .flip-card.flipped .flip-back{
+    min-height:380px!important;
+    height:auto!important;
+  }
+  body.cotizador-app #pathChooser .flip-back{
+    justify-content:flex-start!important;
+    align-items:center!important;
+    padding:52px 16px 96px!important;
+    overflow:hidden!important;
+  }
+  body.cotizador-app #pathChooser .flip-back .visual-art{
+    position:relative!important;
+    z-index:1!important;
+    flex:0 1 auto!important;
+    width:min(92%,300px)!important;
+    max-width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:min(42vw,210px)!important;
+    margin:12px auto 0!important;
+    object-fit:contain!important;
+    object-position:center!important;
+  }
+  body.cotizador-app #pathChooser .flip-return{
+    position:absolute!important;
+    top:14px!important;
+    left:14px!important;
+    z-index:5!important;
+  }
+  body.cotizador-app #pathChooser .flip-back > .flip-cta{
+    z-index:5!important;
+  }
+}
+@media (max-width:520px){
+  body.cotizador-app #pathChooser .flip-card.flipped,
+  body.cotizador-app #pathChooser .flip-card.flipped .flip-inner,
+  body.cotizador-app #pathChooser .flip-card.flipped .flip-back{
+    min-height:360px!important;
+  }
+  body.cotizador-app #pathChooser .flip-back{
+    padding:48px 14px 90px!important;
+  }
+  body.cotizador-app #pathChooser .flip-back .visual-art{
+    max-height:min(40vw,180px)!important;
+    width:min(88%,260px)!important;
+  }
+}
+
 /* Shell: profundidad con sombra/inset, sin tinte café */
 body.cotizador-app #packageChooser,
 body.cotizador-app #manualConfigurator{
