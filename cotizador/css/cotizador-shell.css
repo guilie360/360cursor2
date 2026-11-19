@@ -74,12 +74,17 @@ body.cotizador-app .quote-footer-back svg{
   stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
   pointer-events:none;
 }
+/* Mismo hover que el botón de mensaje del panel */
 body.cotizador-app .quote-footer-back:hover,
-body.cotizador-app .quote-footer-back:focus-visible{
-  background:#3b3b3b;color:#fff;border-color:#fff;outline:none;
+body.cotizador-app .quote-footer-back:focus-visible,
+body.cotizador-app .quote-footer-reset:hover,
+body.cotizador-app .quote-footer-reset:focus-visible{
+  background:#3b3b3b!important;color:#fff!important;border:1px solid #fff!important;
+  outline:none;box-shadow:none!important;transform:none!important;
 }
-body.cotizador-app .quote-footer-back:active{
-  background:#4a4a4a;border-color:#fff;
+body.cotizador-app .quote-footer-back:active,
+body.cotizador-app .quote-footer-reset:active{
+  background:#4a4a4a!important;border:1px solid #fff!important;
 }
 body.cotizador-app .quote-footer-back.portal-hidden{
   display:grid!important;
@@ -133,10 +138,6 @@ body.cotizador-app .quote-footer-reset svg{
   width:18px;height:18px;stroke:currentColor;fill:none;
   stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
 }
-body.cotizador-app .quote-footer-reset:hover{
-  background:#3b3b3b!important;color:#fff!important;border-color:#fff!important;
-}
-
 /* Mini alerta reinicio — mismo lenguaje visual que payments-gate */
 body.cotizador-app .quote-reset-backdrop{
   position:fixed;inset:0;z-index:10090;
