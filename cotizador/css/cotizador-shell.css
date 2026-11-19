@@ -178,8 +178,16 @@ body.cotizador-app .interno-commission-card{
   right:max(16px,var(--chrome-side,22px))!important;
   left:auto!important;
   bottom:calc(var(--quote-footer-clearance) + 12px)!important;
-  z-index:90!important;
   width:min(310px,calc(100vw - 32px));
+}
+/* Paquete completo debajo; comisión Hunter encima al abrirse */
+body.cotizador-app #manualUpsell,
+body.cotizador-app .manual-upsell:not(.interno-commission-card){
+  z-index:90!important;
+}
+body.cotizador-app #internoCommissionCard,
+body.cotizador-app .interno-commission-card{
+  z-index:120!important;
 }
 .interno-commission-hint{
   display:block;margin-top:4px;font-size:11px;line-height:1.45;color:#a7a198;
