@@ -12,7 +12,8 @@
 }
 #teamChatFloat.footer-chat-btn:hover,
 #hunterGoalFooter #teamChatFloat:hover{background:#3b3b3b;color:#fff;border-color:#fff}
-#teamChatPopup{position:fixed;right:16px;bottom:72px;z-index:10003;width:min(560px,calc(100vw - 28px));height:min(760px,calc(100dvh - 100px));min-height:420px;display:flex;flex-direction:column;overflow:hidden;background:#151515;border:1px solid #555;border-radius:16px;padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.72)}
+/* Por encima del menú (10060) y del panel (10051); cursor custom sigue a 10070+ */
+#teamChatPopup{position:fixed;right:16px;bottom:72px;z-index:10080!important;width:min(560px,calc(100vw - 28px));height:min(760px,calc(100dvh - 100px));min-height:420px;display:flex;flex-direction:column;overflow:hidden;background:#151515;border:1px solid #555;border-radius:16px;padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.72)}
 #teamChatPopup.portal-hidden{display:none!important}
 .chat-popup-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;flex:0 0 auto}.chat-popup-head h3{margin:0;font:26px Italiana,Georgia,serif}.chat-popup-close{border:1px solid #444;background:#111;color:#eee;width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer}
 #teamChatPopup .portal-toolbar{display:none!important}#teamChatPopup .chat-current-thread{display:none!important}
