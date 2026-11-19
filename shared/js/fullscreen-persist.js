@@ -154,11 +154,16 @@
     intentionalExit = false;
     setWanted(true);
     saveUrl(location.href);
-    ensureShell(location.href);
+    // Pedir FS primero (mientras el gesto del usuario sigue vivo).
+    // Crear el shell después: si se crea antes, Chrome/Safari invalidan el gesto.
     return requestFs()
-      .then(function () { dispatch(true); return true; })
+      .then(function () {
+        ensureShell(location.href);
+        dispatch(true);
+        return true;
+      })
       .catch(function () {
-        // Gesto inválido: el shell queda listo; un clic posterior pedirá FS
+        ensureShell(location.href);
         armOneShotEnter();
         dispatch(false);
         return false;
@@ -179,15 +184,17 @@
   }
 
   function toggle() {
-    if (isFs() || getShell()) {
-      // Si hay shell pero no FS (Esc), el botón también sale del modo
-      if (isFs()) return leave();
-      intentionalExit = true;
-      setWanted(false);
-      destroyShell();
-      intentionalExit = false;
-      dispatch(false);
-      return Promise.resolve(false);
+    if (isFs()) return leave();
+    // Shell sin FS (p. ej. Esc o gesto fallido): reintentar FS, no destruir
+    if (getShell()) {
+      setWanted(true);
+      return requestFs()
+        .then(function () { dispatch(true); return true; })
+        .catch(function () {
+          armOneShotEnter();
+          dispatch(false);
+          return false;
+        });
     }
     return enter();
   }

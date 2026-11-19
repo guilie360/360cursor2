@@ -199,21 +199,26 @@
     }
 
     function doFullscreen() {
-      close();
-      var run = function () {
+      // Toggle FS en el mismo gesto del clic; cerrar el menú después.
+      // Si se cierra antes, el navegador pierde el user-gesture y hace falta un 2º clic.
+      var p;
+      try {
         if (window.BoxiesFullscreen && window.BoxiesFullscreen.toggle) {
-          return window.BoxiesFullscreen.toggle();
-        }
-        if (document.fullscreenElement || document.webkitFullscreenElement) {
+          p = window.BoxiesFullscreen.toggle();
+        } else if (document.fullscreenElement || document.webkitFullscreenElement) {
           var exit = document.exitFullscreen || document.webkitExitFullscreen;
-          return exit ? exit.call(document) : Promise.resolve();
+          p = exit ? exit.call(document) : Promise.resolve();
+        } else {
+          var el = document.documentElement;
+          var req = el.requestFullscreen || el.webkitRequestFullscreen;
+          p = req ? req.call(el) : Promise.resolve();
         }
-        var el = document.documentElement;
-        var req = el.requestFullscreen || el.webkitRequestFullscreen;
-        return req ? req.call(el) : Promise.resolve();
-      };
-      Promise.resolve(run()).catch(function () {}).then(function () {
-        setTimeout(renderLinks, 120);
+      } catch (err) {
+        p = Promise.reject(err);
+      }
+      close();
+      Promise.resolve(p).catch(function () {}).then(function () {
+        setTimeout(renderLinks, 160);
       });
     }
 
