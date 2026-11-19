@@ -58,17 +58,10 @@
   bottom:var(--float-bottom)!important;
 }
 
-/* Fullscreen: espejo del menú (menú arriba-derecha → FS arriba-izquierda), toda la web */
+/* Fullscreen look; posición la unifica site-chrome.css */
 .fullscreen-toggle,
 .global-fullscreen-btn{
   position:fixed!important;
-  top:max(22px,calc(var(--safe-top) + 34px))!important;
-  left:max(22px,4vw)!important;
-  right:auto!important;
-  bottom:auto!important;
-  z-index:10000!important;
-  width:44px!important;
-  height:44px!important;
   margin:0!important;
   padding:0!important;
   display:grid!important;
@@ -90,13 +83,4 @@
   stroke:currentColor!important;
   stroke-width:1.25!important;
   stroke-linecap:square!important;
-}
-@media (max-width:650px){
-  .fullscreen-toggle,
-  .global-fullscreen-btn{
-    top:max(16px,calc(var(--safe-top) + 22px))!important;
-    left:max(16px,22px)!important;
-    width:42px!important;
-    height:42px!important;
-  }
 }

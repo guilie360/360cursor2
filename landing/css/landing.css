@@ -12,11 +12,8 @@ a{color:inherit;text-decoration:none}
 button{font:inherit}
 :focus-visible{outline:1px solid var(--bronze);outline-offset:4px}
 
-/* HEADER */
-.topbar{position:fixed;z-index:60;top:34px;left:4vw;width:92vw;height:48px;display:flex;align-items:center;justify-content:space-between;pointer-events:none}
-/* Hueco a la izquierda para el FS (espejo del menú) */
-.header-logo{width:44px;height:44px;margin-left:52px;display:flex;align-items:center;pointer-events:none;opacity:0;will-change:opacity,transform}
-.header-logo img{width:100%;height:100%;object-fit:contain}
+/* HEADER — geometría en shared/css/site-chrome.css */
+.header-logo{pointer-events:none;opacity:0;will-change:opacity,transform}
 .mag{transition:transform .35s var(--ease)}
 /* Fullscreen: arriba-izquierda (espejo del menú; posición en shared/safe-area.css) */
 .fullscreen-toggle{
@@ -89,8 +86,6 @@ body:has(.page-transit.on) .fullscreen-toggle{
 @keyframes lineMove{0%,100%{opacity:.35;transform:scaleY(.7)}50%{opacity:1;transform:scaleY(1)}}
 @keyframes ul{from{transform:scaleX(0)}}
 @media(max-width:650px){
- .header-logo{margin-left:48px;width:40px;height:40px}
- .topbar{top:22px;left:22px;width:calc(100% - 44px);height:44px}
  .intro-logo{width:108px;height:108px}.intro h1{font-size:48px;letter-spacing:3px}
  .experience{height:420vh}.experience-sticky{min-height:550px}
  .sequence{width:84vw;height:410px}.message{padding:30px}.message h2{font-size:40px}.message p{font-size:12px}

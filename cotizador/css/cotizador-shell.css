@@ -9,43 +9,10 @@ body.cotizador-app .pricebox span,
 body.cotizador-app #fullscreenBtn{
   display:none!important;
 }
-body.cotizador-app .topinner{
-  padding-top:12px!important;
-  padding-bottom:12px!important;
-}
-body.cotizador-app .brand-logo{
-  width:46px!important;
-  height:46px!important;
-  flex-basis:46px!important;
-}
-body.cotizador-app .pricebox strong{
-  font-size:clamp(26px,4.8vw,34px)!important;
-}
-body.cotizador-app #headerReset{
-  width:50px!important;
-  height:50px!important;
-  min-width:50px!important;
-  flex-basis:50px!important;
-}
+/* Tamaños de logo/reset los unifica site-chrome (--chrome-header-h) */
 body.cotizador-app #headerReset svg{
-  width:22px;
-  height:22px;
-}
-@media (max-width:520px){
-  body.cotizador-app .brand-logo{
-    width:37px!important;
-    height:37px!important;
-    flex-basis:37px!important;
-  }
-  body.cotizador-app .pricebox strong{
-    font-size:23px!important;
-  }
-  body.cotizador-app #headerReset{
-    width:43px!important;
-    height:43px!important;
-    min-width:43px!important;
-    flex-basis:43px!important;
-  }
+  width:20px;
+  height:20px;
 }
 body.cotizador-app .chooser-intro{
   margin-bottom:18px;

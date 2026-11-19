@@ -1,0 +1,204 @@
+/**
+ * Site chrome — 3 piezas siempre alineadas:
+ *   [FS]  ———  HEADER (logo + slot variable)  ———  [MENÚ]
+ *
+ * El header cambia de contenido por página; la geometría no.
+ */
+:root{
+  --safe-top:env(safe-area-inset-top,0px);
+  --chrome-btn:44px;
+  --chrome-gap:14px;
+  --chrome-side:max(22px,4vw);
+  --chrome-top:max(22px,calc(var(--safe-top) + 22px));
+  --chrome-rail:calc(var(--chrome-side) + var(--chrome-btn) + var(--chrome-gap));
+  --chrome-header-h:50px;
+  --chrome-max:1480px;
+  --chrome-line:rgba(255,255,255,.12);
+  --chrome-ease:cubic-bezier(.2,.8,.2,1);
+}
+@media (max-width:650px){
+  :root{
+    --chrome-btn:42px;
+    --chrome-gap:10px;
+    --chrome-side:max(16px,22px);
+    --chrome-top:max(16px,calc(var(--safe-top) + 16px));
+    --chrome-header-h:44px;
+  }
+}
+
+/* ——— Controles fijos de esquina (misma Y, espejo X) ——— */
+.fullscreen-toggle,
+.global-fullscreen-btn,
+.menu-toggle{
+  top:var(--chrome-top)!important;
+  width:var(--chrome-btn)!important;
+  height:var(--chrome-btn)!important;
+  z-index:10060!important;
+}
+.fullscreen-toggle,
+.global-fullscreen-btn{
+  left:var(--chrome-side)!important;
+  right:auto!important;
+  bottom:auto!important;
+}
+.menu-toggle{
+  right:var(--chrome-side)!important;
+  left:auto!important;
+  bottom:auto!important;
+}
+
+/* ——— Shell de header: siempre entre FS y MENÚ ——— */
+.chrome-header,
+.portal .portal-head,
+body.cotizador-app .topbar,
+body:not(.cotizador-app):not(.portal-mode) .topbar{
+  position:sticky;
+  top:0;
+  z-index:40;
+  margin:0;
+  padding:0;
+  border:0;
+  background:rgba(11,11,11,.72);
+  -webkit-backdrop-filter:blur(16px) saturate(120%);
+  backdrop-filter:blur(16px) saturate(120%);
+  box-sizing:border-box;
+}
+/* Landing: header fijo transparente (solo logo), sin barra opaca */
+body:not(.cotizador-app):not(.portal-mode) .topbar{
+  position:fixed;
+  left:0;right:0;
+  background:transparent;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+  pointer-events:none;
+}
+
+.chrome-header__inner,
+.portal .portal-head-inner,
+body.cotizador-app .topbar .topinner,
+body:not(.cotizador-app):not(.portal-mode) .topbar{
+  width:auto!important;
+  max-width:none!important;
+  margin:0!important;
+  box-sizing:border-box;
+  min-height:calc(var(--chrome-top) + var(--chrome-header-h));
+  padding:var(--chrome-top) var(--chrome-rail) 12px!important;
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:16px!important;
+  border-bottom:1px solid var(--chrome-line);
+}
+body:not(.cotizador-app):not(.portal-mode) .topbar{
+  min-height:calc(var(--chrome-top) + var(--chrome-header-h));
+  padding:var(--chrome-top) var(--chrome-rail) 0!important;
+  border-bottom:0!important;
+  display:flex!important;
+  align-items:center!important;
+}
+
+/* Marca izquierda */
+.chrome-header__brand,
+.portal .portal-brand,
+body.cotizador-app .topbar .brand,
+body:not(.cotizador-app):not(.portal-mode) .header-logo{
+  flex:0 0 auto!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:0!important;
+  margin:0!important;
+  margin-right:auto!important;
+  height:var(--chrome-header-h);
+  pointer-events:auto;
+}
+.portal .portal-brand-logo,
+body.cotizador-app .topbar .brand-logo,
+body:not(.cotizador-app):not(.portal-mode) .header-logo{
+  width:var(--chrome-header-h)!important;
+  height:var(--chrome-header-h)!important;
+  flex:0 0 var(--chrome-header-h)!important;
+  object-fit:contain!important;
+  display:block!important;
+  margin:0!important;
+}
+body:not(.cotizador-app):not(.portal-mode) .header-logo img{
+  width:100%;height:100%;object-fit:contain
+}
+.portal .portal-brand-copy,
+body.cotizador-app .topbar .brand-copy{
+  display:none!important
+}
+
+/* Slot derecha: precio | search+logout | vacío */
+.chrome-header__slot,
+.portal .portal-head-right,
+body.cotizador-app .topbar .topright{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  margin-left:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:10px!important;
+  height:var(--chrome-header-h);
+  pointer-events:auto;
+}
+
+/* Controles del slot: misma altura que el chrome */
+.portal .portal-search{
+  flex:1 1 auto;
+  width:auto!important;
+  max-width:min(440px,52vw)!important;
+  min-width:120px;
+  height:var(--chrome-header-h)!important;
+  padding:0 16px!important;
+  border-radius:12px;
+  box-sizing:border-box
+}
+.portal .portal-head .portal-logout-icon,
+body.cotizador-app .topbar #headerReset{
+  flex:0 0 var(--chrome-header-h)!important;
+  width:var(--chrome-header-h)!important;
+  height:var(--chrome-header-h)!important;
+  min-width:var(--chrome-header-h)!important;
+  padding:0!important;
+  border-radius:12px;
+  display:inline-flex!important;
+  align-items:center;justify-content:center
+}
+body.cotizador-app .topbar .pricebox strong{
+  font-size:clamp(24px,3.6vw,32px)!important;
+  line-height:1!important
+}
+
+/* Contenido bajo el chrome: mismo riel lateral */
+.portal .portal-wrap,
+body.cotizador-app main{
+  width:auto!important;
+  max-width:none!important;
+  margin:0!important;
+  padding-left:var(--chrome-rail)!important;
+  padding-right:var(--chrome-rail)!important;
+  box-sizing:border-box
+}
+.portal .portal-wrap{
+  padding-bottom:90px!important
+}
+#hunterGoalFooter.hunter-goal-footer{
+  left:var(--chrome-rail)!important;
+  right:var(--chrome-rail)!important;
+  width:auto!important;
+  max-width:none!important;
+  transform:none!important
+}
+
+/* Quitar huecos viejos que descuadraban el menú */
+body.has-global-nav .portal .portal-head-inner,
+body.has-global-nav.cotizador-app .topbar .topinner{
+  padding-right:var(--chrome-rail)!important
+}
+
+@media (max-width:520px){
+  .portal .portal-search{max-width:none!important}
+}

@@ -11,15 +11,10 @@
   50%{filter:drop-shadow(0 0 12px rgba(214,210,204,.55)) drop-shadow(0 0 26px rgba(141,125,105,.32));opacity:1}
 }
 
-/* Espejo del fullscreen: arriba-derecha */
+/* Posición X/Y la fija site-chrome.css; aquí solo look + animación */
 .menu-toggle{
   position:fixed!important;
-  top:max(22px,calc(var(--safe-top,0px) + 34px))!important;
-  right:max(22px,4vw)!important;
-  left:auto!important;
-  bottom:auto!important;
-  z-index:10060!important;
-  width:44px;height:44px;padding:0;border:0;border-radius:0;background:transparent;
+  padding:0;border:0;border-radius:0;background:transparent;
   display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;
   cursor:pointer;pointer-events:auto;visibility:visible!important;
   animation:menuBreath 2s ease-in-out infinite;
@@ -94,12 +89,6 @@
   flex:0 0 auto;margin-left:14px;transition:transform .4s var(--nav-ease)
 }
 
-/* Hueco en headers de página para no chocar con el toggle */
-body.has-global-nav .portal .portal-head-inner,
-body.has-global-nav.cotizador-app .topbar .topinner{
-  padding-right:56px!important
-}
-
 @media (hover:hover){
   .menu-toggle:not(.active):hover span:first-child{transform:translateY(-2px)}
   .menu-toggle:not(.active):hover span:last-child{transform:translateY(2px)}
@@ -112,15 +101,6 @@ body.has-global-nav.cotizador-app .topbar .topinner{
 .menu-panel button.menu-link:active{color:var(--nav-bronze)}
 
 @media (max-width:650px){
-  .menu-toggle{
-    top:max(16px,calc(var(--safe-top,0px) + 22px))!important;
-    right:max(16px,22px)!important;
-    width:42px;height:42px
-  }
   .menu-toggle span{width:20px}
   .menu-panel{padding:115px 30px 40px}
-  body.has-global-nav .portal .portal-head-inner,
-  body.has-global-nav.cotizador-app .topbar .topinner{
-    padding-right:48px!important
-  }
 }
