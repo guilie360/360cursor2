@@ -59,20 +59,14 @@
     return !isPhone();
   }
 
-  /** Links según pantalla — FS solo PC/tablet */
+  /** Links principales (FS va aparte, en el footer del menú) */
   function linksForContext() {
     if (isPanelAuthed()) {
-      var panel = [
+      return [
         { href: '/#inicio', label: 'Inicio', n: '01' },
-        { href: '/#demo', label: 'Ver demo', n: '02' }
+        { href: '/#demo', label: 'Ver demo', n: '02' },
+        { action: 'logout', label: 'Salir', n: '03' }
       ];
-      if (canOfferFullscreen()) {
-        panel.push({ action: 'fullscreen', label: fullscreenLabel(), n: '03' });
-        panel.push({ action: 'logout', label: 'Salir', n: '04' });
-      } else {
-        panel.push({ action: 'logout', label: 'Salir', n: '03' });
-      }
-      return panel;
     }
     var links = [
       { href: '/#inicio', label: 'Inicio', n: '01' },
@@ -84,9 +78,6 @@
       links.push({ href: '/panel_gestion/', label: 'Panel', n: '05' });
     } else {
       links.push({ href: '/panel_gestion/', label: 'Ingresar', n: '05' });
-    }
-    if (canOfferFullscreen()) {
-      links.push({ action: 'fullscreen', label: fullscreenLabel(), n: '06' });
     }
     return links;
   }
@@ -136,18 +127,19 @@
         className: 'menu-caption',
         text: isPanelAuthed() ? '360PREVENTA / PANEL' : '360PREVENTA / NAVEGACIÓN'
       }));
+
+      var list = el('div', { className: 'menu-panel-list' });
       linksForContext().forEach(function (item, i) {
         var delay = (0.12 + i * 0.07).toFixed(2) + 's';
-        if (item.action === 'logout' || item.action === 'fullscreen') {
+        if (item.action === 'logout') {
           var btn = el('button', {
             className: 'menu-link',
             type: 'button',
-            'data-cursor': item.action === 'logout' ? 'SALIR' : 'PANTALLA'
+            'data-nav-logout': '1',
+            'data-cursor': 'SALIR'
           }, item.label + ' <span>' + item.n + '</span>');
-          if (item.action === 'logout') btn.setAttribute('data-nav-logout', '1');
-          if (item.action === 'fullscreen') btn.setAttribute('data-nav-fullscreen', '1');
           btn.style.setProperty('--dl', delay);
-          panel.appendChild(btn);
+          list.appendChild(btn);
           return;
         }
         var a = el('a', {
@@ -160,8 +152,23 @@
           a.setAttribute('rel', 'noopener');
           a.id = 'contacto';
         }
-        panel.appendChild(a);
+        list.appendChild(a);
       });
+      panel.appendChild(list);
+
+      /* Footer: pantalla completa (solo PC/tablet), más pequeño */
+      if (canOfferFullscreen()) {
+        var foot = el('div', { className: 'menu-panel-footer' });
+        var fsBtn = el('button', {
+          className: 'menu-fs-link',
+          type: 'button',
+          'data-nav-fullscreen': '1',
+          'data-cursor': 'PANTALLA'
+        }, fullscreenLabel());
+        foot.appendChild(fsBtn);
+        panel.appendChild(foot);
+      }
+
       document.body.classList.toggle('nav-panel-authed', isPanelAuthed());
       if (wasOpen) setOpen(true);
     }
