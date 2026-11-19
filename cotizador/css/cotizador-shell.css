@@ -74,16 +74,16 @@ body.cotizador-app .quote-footer-back svg{
   stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
   pointer-events:none;
 }
-/* Mismo hover que el botón de mensaje del panel */
-body.cotizador-app .quote-footer-back:hover,
-body.cotizador-app .quote-footer-back:focus-visible,
-body.cotizador-app .quote-footer-reset:hover,
-body.cotizador-app .quote-footer-reset:focus-visible{
+/* Mismo hover que el botón de mensaje del panel — al final del bloque para ganar al estado base */
+body.cotizador-app .quote-goal-footer .quote-footer-back:hover,
+body.cotizador-app .quote-goal-footer .quote-footer-back:focus-visible,
+body.cotizador-app .quote-goal-footer .quote-footer-reset:hover,
+body.cotizador-app .quote-goal-footer .quote-footer-reset:focus-visible{
   background:#3b3b3b!important;color:#fff!important;border:1px solid #fff!important;
   outline:none;box-shadow:none!important;transform:none!important;
 }
-body.cotizador-app .quote-footer-back:active,
-body.cotizador-app .quote-footer-reset:active{
+body.cotizador-app .quote-goal-footer .quote-footer-back:active,
+body.cotizador-app .quote-goal-footer .quote-footer-reset:active{
   background:#4a4a4a!important;border:1px solid #fff!important;
 }
 body.cotizador-app .quote-footer-back.portal-hidden{

@@ -10,9 +10,13 @@
  display:grid;place-items:center;font-size:18px;cursor:pointer;
  box-shadow:none;backdrop-filter:none
 }
-/* Hover unificado footer: back = chat = reset */
+/* Hover unificado footer: back = chat (misma fuerza que el estado base) */
 #teamChatFloat.footer-chat-btn:hover,
 #hunterGoalFooter #teamChatFloat:hover,
+body.portal-mode #hunterGoalFooter #portalBack:hover,
+body.portal-mode #hunterGoalFooter #portalBack:focus-visible,
+body.workspace-authenticated #hunterGoalFooter #portalBack:hover,
+body.workspace-authenticated #hunterGoalFooter #portalBack:focus-visible,
 #hunterGoalFooter #portalBack:hover,
 #hunterGoalFooter #portalBack:focus-visible,
 #hunterGoalFooter .footer-back:hover,
@@ -754,7 +758,7 @@ body.hunter-mode .portal{min-height:0}
  padding:10px max(16px,var(--chrome-side,22px));
 }
 /* Anula por completo el .portal-back flotante/gold si alguien lo reusa */
-body.portal-mode #hunterGoalFooter #portalBack,
+/* Estado base: sin body.* para no ganar al :hover */
 #hunterGoalFooter #portalBack,
 #hunterGoalFooter .footer-back{
  position:static!important;
