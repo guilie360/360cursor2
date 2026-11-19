@@ -40,15 +40,39 @@
     return isFullscreenOn() ? 'Salir de pantalla completa' : 'Ver pantalla completa';
   }
 
-  /** Links según pantalla — siempre incluye pantalla completa */
+  /** Celular: sin FS en menú. PC y tablet: sí. */
+  function isPhone() {
+    try {
+      var narrow = window.matchMedia('(max-width: 760px)').matches;
+      var coarse = window.matchMedia('(pointer: coarse)').matches;
+      var noHover = window.matchMedia('(hover: none)').matches;
+      /* Teléfono: pantalla estrecha + táctil. Tablets suelen ir ≥768px. */
+      if (narrow && (coarse || noHover)) return true;
+      if (window.matchMedia('(max-width: 480px)').matches) return true;
+      return false;
+    } catch (e) {
+      return window.innerWidth <= 760;
+    }
+  }
+
+  function canOfferFullscreen() {
+    return !isPhone();
+  }
+
+  /** Links según pantalla — FS solo PC/tablet */
   function linksForContext() {
     if (isPanelAuthed()) {
-      return [
+      var panel = [
         { href: '/#inicio', label: 'Inicio', n: '01' },
-        { href: '/#demo', label: 'Ver demo', n: '02' },
-        { action: 'fullscreen', label: fullscreenLabel(), n: '03' },
-        { action: 'logout', label: 'Salir', n: '04' }
+        { href: '/#demo', label: 'Ver demo', n: '02' }
       ];
+      if (canOfferFullscreen()) {
+        panel.push({ action: 'fullscreen', label: fullscreenLabel(), n: '03' });
+        panel.push({ action: 'logout', label: 'Salir', n: '04' });
+      } else {
+        panel.push({ action: 'logout', label: 'Salir', n: '03' });
+      }
+      return panel;
     }
     var links = [
       { href: '/#inicio', label: 'Inicio', n: '01' },
@@ -61,7 +85,9 @@
     } else {
       links.push({ href: '/panel_gestion/', label: 'Ingresar', n: '05' });
     }
-    links.push({ action: 'fullscreen', label: fullscreenLabel(), n: '06' });
+    if (canOfferFullscreen()) {
+      links.push({ action: 'fullscreen', label: fullscreenLabel(), n: '06' });
+    }
     return links;
   }
 
@@ -226,6 +252,9 @@
     document.addEventListener('fullscreenchange', renderLinks);
     document.addEventListener('webkitfullscreenchange', renderLinks);
     document.addEventListener('boxies:fullscreen', renderLinks);
+    var onViewport = function () { renderLinks(); };
+    window.addEventListener('resize', onViewport, { passive: true });
+    window.addEventListener('orientationchange', onViewport);
 
     window.BoxiesGlobalNav = {
       open: function () { setOpen(true); },
