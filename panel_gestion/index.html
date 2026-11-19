@@ -10,13 +10,12 @@
 
   <link rel="stylesheet" href="/shared/css/scrollbar.css?v=1">
   <link rel="stylesheet" href="/shared/css/safe-area.css?v=8">
-  <link rel="stylesheet" href="/shared/css/site-chrome.css?v=6">
+  <link rel="stylesheet" href="/shared/css/site-chrome.css?v=7">
   <link rel="stylesheet" href="/shared/css/global-nav.css?v=4">
-  <link rel="stylesheet" href="css/base.css?v=panel5">
-  <link rel="stylesheet" href="css/patches.css?v=panel5">
+  <link rel="stylesheet" href="css/base.css?v=panel6">
+  <link rel="stylesheet" href="css/patches.css?v=panel6">
 </head>
 <body class="portal-mode">
-<button id="teamChatFloat" type="button" aria-label="Abrir chat del equipo" title="Chat del equipo">✉<span id="chatUnreadBadge" class="chat-unread-badge">0</span></button>
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat del equipo">
  <div class="chat-popup-head"><h3 id="chatPopupTitle">Equipo</h3><button class="chat-popup-close" id="teamChatPopupClose" type="button" aria-label="Cerrar chat">×</button></div>
  <div id="teamChatMessages" class="team-chat-messages" aria-live="polite"></div>
@@ -64,7 +63,6 @@
  <div class="portal-wrap">
   <section id="portalHome">
    <div class="portal-home-intro">
-    <p class="portal-hello">Operaciones</p>
     <h1 class="portal-title">Panel de gestión</h1>
    </div>
    <div class="portal-grid">
@@ -145,13 +143,15 @@
 
  </div>
 </section>
-<footer class="hunter-goal-footer" id="hunterGoalFooter" aria-label="Progreso de meta mensual Hunter">
+ </div>
+ <footer class="hunter-goal-footer" id="hunterGoalFooter" aria-label="Progreso de meta mensual Hunter">
+  <div class="hunter-goal-footer-inner">
    <span class="goal-caption" id="hunterGoalCaption">Meta · 5 proyectos</span>
    <div class="hunter-goal-track" id="hunterGoalTrack" style="--goal-step:20%" role="progressbar" aria-label="Progreso de ventas" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0"><span class="hunter-goal-fill" id="hunterGoalFill"></span><span class="hunter-goal-ticks" aria-hidden="true"></span></div>
    <span class="hunter-goal-bonus" id="hunterGoalBonus"><small>Bono meta</small>+170 €</span>
-  </footer>
-
- </div>
+   <button id="teamChatFloat" class="footer-chat-btn" type="button" aria-label="Abrir chat del equipo" title="Chat del equipo">✉<span id="chatUnreadBadge" class="chat-unread-badge">0</span></button>
+  </div>
+ </footer>
 </div>
 <div id="paymentsGateBackdrop" class="payments-gate-backdrop portal-hidden" role="dialog" aria-modal="true" aria-labelledby="paymentsGateTitle">
  <div class="payments-gate">

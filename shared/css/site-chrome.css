@@ -220,14 +220,8 @@ body.cotizador-app main{
   padding-right:var(--chrome-rail-right)!important;
   box-sizing:border-box!important
 }
-.portal .portal-wrap{padding-bottom:90px!important}
-#hunterGoalFooter.hunter-goal-footer{
-  left:var(--chrome-rail-left)!important;
-  right:var(--chrome-rail-right)!important;
-  width:auto!important;
-  max-width:none!important;
-  transform:none!important
-}
+.portal .portal-wrap{padding-bottom:72px!important}
+/* Footer meta: full-bleed; no hereda rieles del chrome */
 
 body.has-global-nav .portal .portal-head-inner,
 body.has-global-nav.cotizador-app .topbar .topinner{

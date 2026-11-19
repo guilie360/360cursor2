@@ -1,9 +1,18 @@
 .team-chat-messages{display:flex;flex-direction:column;gap:10px;min-height:220px;max-height:440px;overflow:auto;padding:14px;border:1px solid var(--edge,#444);background:#141414;border-radius:12px;margin:14px 0}.team-chat-message{max-width:82%;padding:10px 13px;border:1px solid #444;border-radius:10px;background:#202020;color:#fff}.team-chat-message strong{display:block;font-size:11px;color:#ccc;margin-bottom:4px}.team-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}.team-chat-message time{display:block;font-size:9px;color:#888;margin-top:5px}.team-chat-form{display:flex;gap:10px;align-items:flex-end}.team-chat-form textarea{flex:1;min-width:0;background:#171717;color:#fff;border:1px solid #444;border-radius:9px;padding:12px;font:inherit}.team-chat-form textarea:focus{outline:2px solid #fff;outline-offset:1px}@media(max-width:600px){.team-chat-form{flex-direction:column;align-items:stretch}.team-chat-message{max-width:96%}}
 
-/* Chat flotante sobre el control de pantalla completa */
-#teamChatFloat{position:fixed;right:22px;bottom:82px;z-index:10002;width:48px;height:48px;border:1px solid var(--line);border-radius:14px;background:rgba(17,17,17,.9);color:#eee;display:grid;place-items:center;font-size:20px;cursor:pointer;backdrop-filter:blur(10px);box-shadow:0 10px 28px -10px #000}
-#teamChatFloat:hover{background:#3b3b3b;color:#fff;border:2px solid #fff}
-#teamChatPopup{position:fixed;right:22px;bottom:140px;z-index:10003;width:min(560px,calc(100vw - 28px));height:min(760px,calc(100dvh - 170px));min-height:420px;display:flex;flex-direction:column;overflow:hidden;background:#151515;border:1px solid #555;border-radius:16px;padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.72)}
+/* Chat: botón vive en el footer de meta; popup anclado encima */
+#teamChatFloat.footer-chat-btn,
+#hunterGoalFooter #teamChatFloat{
+ position:relative!important;right:auto!important;bottom:auto!important;left:auto!important;top:auto!important;
+ width:40px;height:40px;flex:0 0 40px;margin:0;
+ border:1px solid rgba(255,255,255,.16);border-radius:12px;
+ background:rgba(255,255,255,.04);color:#eee;
+ display:grid;place-items:center;font-size:18px;cursor:pointer;
+ box-shadow:none;backdrop-filter:none
+}
+#teamChatFloat.footer-chat-btn:hover,
+#hunterGoalFooter #teamChatFloat:hover{background:#3b3b3b;color:#fff;border-color:#fff}
+#teamChatPopup{position:fixed;right:16px;bottom:72px;z-index:10003;width:min(560px,calc(100vw - 28px));height:min(760px,calc(100dvh - 100px));min-height:420px;display:flex;flex-direction:column;overflow:hidden;background:#151515;border:1px solid #555;border-radius:16px;padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.72)}
 #teamChatPopup.portal-hidden{display:none!important}
 .chat-popup-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;flex:0 0 auto}.chat-popup-head h3{margin:0;font:26px Italiana,Georgia,serif}.chat-popup-close{border:1px solid #444;background:#111;color:#eee;width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer}
 #teamChatPopup .portal-toolbar{display:none!important}#teamChatPopup .chat-current-thread{display:none!important}
@@ -13,8 +22,10 @@
 #teamChatPopup .chat-bottom-tabs{flex:0 0 auto;margin:0;padding-top:10px}
 #teamChatPopup .chat-recipient-panel{flex:0 0 auto;padding:10px 0 0}#teamChatPopup .chat-recipient-label{margin:0;font-size:12px}#teamChatPopup .chat-recipient-label select{font-size:14px;padding:11px}
 #teamChatPopup>small{display:none!important}
-@media(max-width:600px){#teamChatFloat{right:15px;bottom:70px;width:44px;height:44px}#teamChatPopup{right:10px;bottom:122px;width:calc(100vw - 20px);height:calc(100dvh - 145px);max-height:none;min-height:360px;padding:13px}}
-#teamChatFloat{position:fixed;right:22px;bottom:82px;z-index:10002}
+@media(max-width:600px){
+ #teamChatFloat.footer-chat-btn,#hunterGoalFooter #teamChatFloat{width:36px;height:36px;flex-basis:36px;font-size:16px}
+ #teamChatPopup{right:10px;bottom:64px;width:calc(100vw - 20px);height:calc(100dvh - 90px);max-height:none;min-height:360px;padding:13px}
+}
 
 /* Acceso flotante a Mi perfil, encima del chat */
 #profileFloat{position:fixed;right:22px;bottom:140px;z-index:10002;width:48px;height:48px;border:1px solid var(--line);border-radius:14px;background:rgba(17,17,17,.92);color:#eee;display:grid;place-items:center;font-size:22px;cursor:pointer;backdrop-filter:blur(10px);box-shadow:0 10px 28px -10px #000}
@@ -286,10 +297,6 @@ body.hunter-mode .portal{min-height:0}
 
 /* Home: primarias Cotizar/Pagos/Contratos por profundidad negra (sin acento dorado) */
 .portal #portalHome .portal-home-intro{margin:4px 0 22px}
-.portal #portalHome .portal-hello{
-  margin:0 0 8px;color:#8f8980;font:11px/1.3 Manrope,Arial,sans-serif;
-  letter-spacing:.16em;text-transform:uppercase
-}
 .portal #portalHome .portal-title{
   margin:0;font:clamp(32px,4.6vw,48px)/1.05 Italiana,Georgia,serif;font-weight:400;color:#f0ebe3
 }
@@ -722,21 +729,28 @@ body.hunter-mode .portal{min-height:0}
 
 /* ===== patch ===== */
 
-.portal-wrap{padding-bottom:58px}
+.portal-wrap{padding-bottom:72px!important}
+/* Footer meta: ancho completo del dispositivo */
 #hunterGoalFooter.hunter-goal-footer{
- position:fixed!important;left:50%;right:auto;bottom:0;transform:translateX(-50%);
- width:min(1480px,calc(100% - 48px));max-width:1480px;z-index:80;
- display:flex!important;align-items:center;gap:14px;margin:0;padding:7px 2px 9px;
+ position:fixed!important;left:0!important;right:0!important;bottom:0!important;
+ width:100%!important;max-width:none!important;transform:none!important;z-index:80;
+ display:block!important;margin:0!important;padding:0!important;
  border-top:1px solid rgba(255,255,255,.14);
- background:rgba(10,10,10,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+ background:rgba(10,10,10,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+ padding-bottom:env(safe-area-inset-bottom,0px)!important;
+}
+#hunterGoalFooter .hunter-goal-footer-inner{
+ width:100%;max-width:none;margin:0;box-sizing:border-box;
+ display:flex;align-items:center;gap:14px;
+ padding:10px max(16px,var(--chrome-side,22px));
 }
 #hunterGoalFooter .goal-caption{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#aaa;white-space:nowrap}
 #hunterGoalFooter .hunter-goal-track{height:6px;flex:1;min-width:60px}
 #hunterGoalFooter .hunter-goal-bonus{font-size:11px;white-space:nowrap}
 #hunterGoalFooter .hunter-goal-bonus small{font-size:8px;display:block;color:#aaa;text-transform:uppercase;letter-spacing:.08em}
 @media(max-width:600px){
- .portal-wrap{padding-bottom:54px}
- #hunterGoalFooter.hunter-goal-footer{width:calc(100% - 24px);gap:8px;padding:7px 0}
+ .portal-wrap{padding-bottom:68px!important}
+ #hunterGoalFooter .hunter-goal-footer-inner{gap:8px;padding:9px 14px}
  #hunterGoalFooter .goal-caption{font-size:8px;letter-spacing:.04em}
  #hunterGoalFooter .hunter-goal-bonus{font-size:10px}
 }
