@@ -15,33 +15,46 @@ button{font:inherit}
 /* Acciones flotantes: chat + cotizar, abajo-derecha */
 .float-actions{
   position:fixed;z-index:45;right:max(22px,4vw);bottom:max(22px,3.5vh);
-  display:flex;flex-direction:column;align-items:flex-end;gap:12px;
+  display:flex;flex-direction:column;align-items:flex-end;gap:28px;
   pointer-events:none;
 }
 .quote-float{
   display:inline-flex;align-items:center;gap:14px;
-  padding:0;border:0;background:transparent;color:var(--white);
+  padding:10px 2px;border:0;background:transparent;color:var(--white);
   text-decoration:none;cursor:pointer;pointer-events:auto;
+  border-radius:999px;
   transition:opacity .35s var(--ease),transform .35s var(--ease),color .25s;
+  animation:quoteBreath 2s ease-in-out infinite;
 }
 .quote-float-label{
-  font:400 11px/1 var(--sans);letter-spacing:.22em;text-transform:uppercase;color:rgba(214,210,204,.88);
+  font:400 11px/1 var(--sans);letter-spacing:.22em;text-transform:uppercase;color:rgba(214,210,204,.92);
   transition:color .25s;
 }
 .quote-float-mark{
-  width:36px;height:1px;background:var(--bronze);
+  width:36px;height:1px;background:rgba(214,210,204,.78);
   transform-origin:right center;transition:transform .45s var(--ease),background .25s;
+  box-shadow:0 0 10px rgba(214,210,204,.35);
+}
+@keyframes quoteBreath{
+  0%,100%{
+    filter:drop-shadow(0 0 0 rgba(214,210,204,0));
+    opacity:.82;
+  }
+  50%{
+    filter:drop-shadow(0 0 10px rgba(214,210,204,.45)) drop-shadow(0 0 22px rgba(141,125,105,.28));
+    opacity:1;
+  }
 }
 .chat-float{
-  width:44px;height:44px;display:grid;place-items:center;
-  margin-right:-4px;
-  border:1px solid rgba(214,210,204,.28);border-radius:999px;
-  background:rgba(10,10,10,.35);color:rgba(214,210,204,.92);
+  width:48px;height:48px;display:grid;place-items:center;
+  margin:0 -2px 6px 0;
+  border:0;border-radius:0;background:transparent;
+  color:rgba(214,210,204,.9);
   cursor:pointer;pointer-events:auto;
-  transition:opacity .35s var(--ease),transform .35s var(--ease),color .25s,border-color .25s,background .25s;
+  transition:opacity .35s var(--ease),transform .35s var(--ease),color .25s;
 }
 .chat-float svg{
-  width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.35;
+  width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.35;
   stroke-linecap:round;stroke-linejoin:round;
 }
 body:has(.menu-panel.open) .float-actions,
@@ -120,19 +133,19 @@ body:has(.page-transit.on) .float-actions{
  .quote-float:hover{color:#fff}
  .quote-float:hover .quote-float-label{color:#fff}
  .quote-float:hover .quote-float-mark{transform:scaleX(1.35);background:#d6d2cc}
- .chat-float:hover{color:#fff;border-color:rgba(214,210,204,.7);background:rgba(255,255,255,.06)}
+ .chat-float:hover{color:#fff}
  .menu-panel a:hover{color:var(--bronze);padding-left:12px}
  .menu-panel a:hover span{transform:translateX(-4px)}
 }
 
 .menu-panel a:active{color:var(--bronze)}
 @media(max-width:640px){
- .float-actions{right:18px;bottom:18px;gap:10px}
- .quote-float{gap:10px}
+ .float-actions{right:18px;bottom:18px;gap:24px}
+ .quote-float{gap:10px;padding:8px 0}
  .quote-float-label{font-size:10px;letter-spacing:.18em}
  .quote-float-mark{width:28px}
- .chat-float{width:40px;height:40px;margin-right:-2px}
- .chat-float svg{width:18px;height:18px}
+ .chat-float{width:46px;height:46px;margin:0 -1px 4px 0}
+ .chat-float svg{width:24px;height:24px}
 }
 
 @keyframes appear{from{opacity:0;transform:translateY(18px)}}
