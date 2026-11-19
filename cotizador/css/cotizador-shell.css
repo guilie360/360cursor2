@@ -410,11 +410,11 @@ body.cotizador-app #pathChooser .flip-card{
   min-width:0!important;
   width:100%!important;
 }
-/* Cel: una debajo de la otra, ancho completo y proporciones legibles */
+/* Cel: apiladas, altura al contenido (sin hueco vacío alargado) */
 @media (max-width:850px){
   body.cotizador-app #pathChooser.path-chooser-visual:not(.hidden){
     grid-template-columns:minmax(0,1fr)!important;
-    gap:14px!important;
+    gap:12px!important;
   }
   body.cotizador-app #pathChooser .flip-card,
   body.cotizador-app #pathChooser .visual-choice,
@@ -426,10 +426,16 @@ body.cotizador-app #pathChooser .flip-card{
   body.cotizador-app #pathChooser .visual-choice,
   body.cotizador-app #pathChooser .flip-front{
     height:auto!important;
-    min-height:min(520px,78vh)!important;
+    min-height:0!important;
+    padding:20px 18px 16px!important;
+  }
+  body.cotizador-app #pathChooser .flip-front{
+    grid-template-rows:auto auto auto!important;
+    gap:0!important;
   }
   body.cotizador-app #pathChooser .flip-front .visual-copy{
     max-width:100%!important;
+    margin:0 0 4px!important;
   }
   body.cotizador-app #pathChooser .flip-front .visual-title{
     font-size:var(--t-lg)!important;
@@ -437,16 +443,44 @@ body.cotizador-app #pathChooser .flip-card{
   }
   body.cotizador-app #pathChooser .flip-front .visual-subtitle{
     max-width:36ch!important;
-    margin-bottom:28px!important;
+    margin:8px 0 10px!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .visual-price{
+    margin-top:4px!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .visual-saving{
+    min-height:0!important;
+    margin-top:6px!important;
   }
   body.cotizador-app #pathChooser .flip-front .included-strip,
   body.cotizador-app #pathChooser .flip-front .manual-feature-strip{
-    min-height:72px!important;
+    min-height:0!important;
+    margin:10px 0 8px!important;
+    padding:8px 0!important;
   }
   body.cotizador-app #pathChooser .included-strip small,
   body.cotizador-app #pathChooser .manual-feature-strip small{
     white-space:normal!important;
     font-size:var(--t-xs)!important;
+  }
+  body.cotizador-app #pathChooser .visual-cta-bottom{
+    margin-top:4px!important;
+    min-height:0!important;
+  }
+}
+@media (max-width:520px){
+  body.cotizador-app #pathChooser .visual-choice,
+  body.cotizador-app #pathChooser .flip-front{
+    padding:18px 16px 14px!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .visual-subtitle{
+    margin:6px 0 8px!important;
+    font-size:var(--t-sm)!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .included-strip,
+  body.cotizador-app #pathChooser .flip-front .manual-feature-strip{
+    margin:8px 0 6px!important;
+    padding:6px 0!important;
   }
 }
 

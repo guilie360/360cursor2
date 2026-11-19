@@ -264,24 +264,29 @@ body:not(.workspace-authenticated) #teamChatFloat,body:not(.workspace-authentica
 }
 @media(max-width:850px){
  #pathChooser.path-chooser-visual,
- #pathChooser.path-chooser-visual:not(.hidden){grid-template-columns:minmax(0,1fr)!important;gap:14px!important}
+ #pathChooser.path-chooser-visual:not(.hidden){grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
  #pathChooser .flip-card,#pathChooser .visual-choice{width:100%!important}
- #pathChooser .visual-choice,#pathChooser .flip-front{height:auto!important;min-height:min(520px,78vh)!important}
+ #pathChooser .visual-choice,#pathChooser .flip-front{height:auto!important;min-height:0!important;padding:20px 18px 16px!important}
+ #pathChooser .flip-front{grid-template-rows:auto auto auto!important}
+ #pathChooser .flip-front .visual-subtitle{margin-bottom:10px!important}
+ #pathChooser .flip-front .visual-price{margin-top:4px!important}
+ #pathChooser .flip-front .included-strip,#pathChooser .flip-front .manual-feature-strip{min-height:0!important;margin:10px 0 8px!important;padding:8px 0!important}
  #pathChooser .visual-art-home{width:42%!important;height:44%!important;right:2%!important;top:9%!important}
  #pathChooser .visual-art-layers{width:40%!important;height:44%!important;right:3%!important;top:9%!important}
 }
 @media(max-width:520px){
- #pathChooser .visual-choice,#pathChooser .flip-front{height:auto!important;min-height:min(480px,72vh)!important;padding:24px 20px 22px!important}
+ #pathChooser .visual-choice,#pathChooser .flip-front{height:auto!important;min-height:0!important;padding:18px 16px 14px!important}
  #pathChooser .visual-copy,#pathChooser .flip-front .visual-copy{max-width:100%!important}
- #pathChooser .visual-title,#pathChooser .flip-front .visual-title{font-size:clamp(30px,9vw,36px)!important}
- #pathChooser .visual-subtitle{font-size:12px!important}
- #pathChooser .visual-price{font-size:40px!important}
+ #pathChooser .visual-title,#pathChooser .flip-front .visual-title{font-size:clamp(28px,8vw,34px)!important}
+ #pathChooser .visual-subtitle,#pathChooser .flip-front .visual-subtitle{font-size:12px!important;margin:6px 0 8px!important}
+ #pathChooser .visual-price,#pathChooser .flip-front .visual-price{font-size:36px!important;margin-top:4px!important}
  #pathChooser .visual-art-home{width:42%!important;height:38%!important;right:0!important;top:15%!important}
  #pathChooser .visual-art-layers{width:39%!important;height:40%!important;right:2%!important;top:13%!important}
- #pathChooser .included-strip,#pathChooser .manual-feature-strip{min-height:78px!important;margin-bottom:18px!important;padding:9px 0!important}
- #pathChooser .included-strip svg,#pathChooser .manual-feature-strip svg{width:23px!important;height:23px!important;flex-basis:23px!important}
+ #pathChooser .included-strip,#pathChooser .manual-feature-strip,
+ #pathChooser .flip-front .included-strip,#pathChooser .flip-front .manual-feature-strip{min-height:0!important;margin:8px 0 6px!important;padding:6px 0!important}
+ #pathChooser .included-strip svg,#pathChooser .manual-feature-strip svg{width:22px!important;height:22px!important;flex-basis:22px!important}
  #pathChooser .included-strip small,#pathChooser .manual-feature-strip small{font-size:9px!important;white-space:normal!important}
- #pathChooser .visual-cta-bottom{font-size:9px!important;letter-spacing:.07em!important}
+ #pathChooser .visual-cta-bottom{font-size:9px!important;letter-spacing:.07em!important;margin-top:4px!important}
 }
 
 /* ===== patch ===== */
