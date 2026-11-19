@@ -770,14 +770,13 @@ body.hunter-mode .portal{min-height:0}
  box-shadow:none!important;filter:none!important;
  transition:background .18s ease,border-color .18s ease,color .18s ease!important;
 }
-body.portal-mode #hunterGoalFooter #portalBack.portal-hidden,
 #hunterGoalFooter #portalBack.portal-hidden,
 #hunterGoalFooter .footer-back.portal-hidden,
 body:not(.workspace-authenticated) #hunterGoalFooter #portalBack{
  display:none!important;
 }
-/* Autenticado: flecha siempre en el footer de todas las secciones */
-body.workspace-authenticated #hunterGoalFooter #portalBack{
+/* Solo visible dentro de secciones (subpágina / Hunter), no en el inicio del panel */
+body.workspace-authenticated #hunterGoalFooter #portalBack:not(.portal-hidden){
  display:grid!important;
 }
 #hunterGoalFooter #portalBack svg,

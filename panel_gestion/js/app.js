@@ -190,6 +190,7 @@ document.querySelectorAll('input[name="hunterPriceMode"]').forEach(x=>x.addEvent
 $('portalHunterOpen').addEventListener('click',()=>{
  document.body.classList.add('hunter-mode');
  $('hunter').style.display='block';
+ $('portalBack').classList.remove('portal-hidden');
  initHunterProfile();
  updateHunter();
  window.scrollTo(0,0);
@@ -1129,8 +1130,8 @@ function restoreOrderModal(){
 }
 function portalShowHome(){
  $('portalHome').classList.remove('portal-hidden');$('portalSubpage').classList.add('portal-hidden');
- // Flecha siempre visible en el footer del panel (todas las secciones).
- $('portalBack').classList.remove('portal-hidden');
+ // En el inicio del panel no hay atrás: solo se sale con «Salir» del menú.
+ $('portalBack').classList.add('portal-hidden');
  document.body.classList.add('portal-mode');$('portal').classList.remove('portal-hidden');window.scrollTo(0,0);
 }
 function hunterGoalSettings(){
@@ -1336,17 +1337,17 @@ $('portalBack').addEventListener('click',(e)=>{
  // En cotizador el boot.js maneja el atrás (capture). Aquí solo panel.
  if(document.body.classList.contains('cotizador-app')||document.body.dataset.app==='cotizador')return;
  e.preventDefault();
- // Hunter: salir al panel
+ // Hunter → inicio del panel
  if(document.body.classList.contains('hunter-mode')){
   document.body.classList.remove('hunter-mode');
   if($('hunter'))$('hunter').style.display='none';
   portalShowHome();
   return;
  }
- if(!document.body.classList.contains('portal-mode')){portalShowHome();return;}
- // Subpágina → inicio del panel
- if($('portalSubpage')&&!$('portalSubpage').classList.contains('portal-hidden')){portalShowHome();return;}
- window.scrollTo({top:0,behavior:'smooth'});
+ // Solo en secciones internas: volver al inicio del panel
+ if($('portalSubpage')&&!$('portalSubpage').classList.contains('portal-hidden')){
+  portalShowHome();
+ }
 });
 $('portalSubpage').addEventListener('click',e=>{
  const b=e.target.closest('[data-demo]');if(!b)return;
