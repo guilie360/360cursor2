@@ -49,8 +49,6 @@
 }
 
 /* Controles flotantes inferiores: por encima de la toolbar del browser */
-.fullscreen-toggle,
-.global-fullscreen-btn,
 .float-actions,
 .portal-back,
 .chat-float,
@@ -58,4 +56,42 @@
 #teamChatFloat,
 #profileFloat{
   bottom:var(--float-bottom)!important;
+}
+
+/* Fullscreen PC: misma esquina en landing + panel (todas las secciones) */
+.fullscreen-toggle,
+.global-fullscreen-btn{
+  position:fixed!important;
+  right:max(22px,4vw)!important;
+  bottom:max(22px,3.5vh)!important;
+  top:auto!important;
+  left:auto!important;
+  z-index:10000!important;
+  width:44px!important;
+  height:44px!important;
+  margin:0!important;
+  padding:0!important;
+  display:grid!important;
+  place-items:center!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:rgba(214,210,204,.78)!important;
+  opacity:.72!important;
+}
+.fullscreen-toggle svg,
+.global-fullscreen-btn svg{
+  width:18px!important;
+  height:18px!important;
+  fill:none!important;
+  stroke:currentColor!important;
+  stroke-width:1.25!important;
+  stroke-linecap:square!important;
+}
+@media (max-width:760px){
+  .fullscreen-toggle,
+  .global-fullscreen-btn{
+    display:none!important;
+  }
 }

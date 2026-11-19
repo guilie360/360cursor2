@@ -279,18 +279,13 @@ a.portal-card{appearance:none}
 
 /* Control global de pantalla completa — estilo landing: sin borde, fondo transparente */
 #fullscreenBtn{display:none!important}
+/* Fullscreen PC: posición compartida vía shared/css/safe-area.css */
 .global-fullscreen-btn{
- position:fixed;right:max(18px,3vw);bottom:max(16px,2.4vh);top:auto;z-index:10000;
- width:34px;height:34px;padding:0;display:grid;place-items:center;
- border:0;border-radius:0;background:transparent;box-shadow:none;
- color:#cfc9bd;opacity:.72;
  cursor:pointer;backdrop-filter:none;-webkit-backdrop-filter:none;
  transition:color .2s,opacity .2s,transform .35s ease
 }
-.global-fullscreen-btn:hover{border:0;background:transparent;color:#fff;opacity:1;transform:scale(1.08)}
-.global-fullscreen-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.15;stroke-linecap:square;stroke-linejoin:miter}
+.global-fullscreen-btn:hover{border:0!important;background:transparent!important;color:#fff!important;opacity:1!important;transform:scale(1.08)}
 .global-fullscreen-btn:focus-visible{outline:2px solid #cfc9bd;outline-offset:3px}
-@media(max-width:600px){.global-fullscreen-btn{right:16px;bottom:14px;width:32px;height:32px}}
 
 
 /* ==========================================================

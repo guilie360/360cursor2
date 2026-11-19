@@ -41,24 +41,18 @@ button{font:inherit}
 .menu-toggle.active{animation:none;filter:none;opacity:1}
 .menu-toggle.active span:first-child{transform:translateY(4.5px) rotate(45deg)}
 .menu-toggle.active span:last-child{transform:translateY(-4.5px) rotate(-45deg)}
-/* Fullscreen: abajo-derecha en todas las secciones */
+/* Fullscreen: abajo-derecha (posición unificada en shared/safe-area.css) */
 .fullscreen-toggle{
-  position:fixed;z-index:45;
-  right:max(18px,4vw);bottom:var(--float-bottom, max(16px,2.4vh));
-  width:44px;height:44px;border:0;background:transparent;
-  color:rgba(214,210,204,.78);opacity:.72;display:grid;place-items:center;cursor:pointer;
+  cursor:pointer;
   transition:color .2s,opacity .2s,transform .35s var(--ease),visibility .35s;
 }
-.fullscreen-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.25;stroke-linecap:square;transition:transform .35s var(--ease)}
+.fullscreen-toggle svg{transition:transform .35s var(--ease)}
 body.demo-open .menu-toggle,
 body:has(.page-transit.on) .menu-toggle,
 body.demo-open .fullscreen-toggle,
 body:has(.page-transit.on) .fullscreen-toggle,
 body:has(.menu-panel.open) .fullscreen-toggle{
-  opacity:0;visibility:hidden;pointer-events:none;
-}
-@media(max-width:760px){
-  .fullscreen-toggle{display:none!important}
+  opacity:0!important;visibility:hidden;pointer-events:none;
 }
 .menu-close{
   margin-top:auto;align-self:center;
@@ -143,8 +137,6 @@ body:has(.menu-panel.open) .fullscreen-toggle{
  :root{--float-safe:calc(96px + env(safe-area-inset-bottom,0px))}
  .menu-toggle{width:42px;height:42px}
  .menu-toggle span{width:20px}
- .fullscreen-toggle{right:16px;width:42px;height:42px}
- .fullscreen-toggle svg{width:17px;height:17px}
 }
 
 @keyframes appear{from{opacity:0;transform:translateY(18px)}}
