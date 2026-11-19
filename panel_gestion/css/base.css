@@ -1,4 +1,6 @@
 :root{--bg:#0b0b0b;--panel:#151515;--panel2:#101010;--line:#40382d;--ink:#f1eee8;--muted:#b2a797;--accent:#c5a675;--danger:#d99a8d;--gold:#c5a675;--gold-soft:#d0b88f;--ease:cubic-bezier(.2,.8,.2,1);--bronze:#8d7d69;--white:#d6d2cc}
+html.boxies-fs-shell-on,html.boxies-fs-shell-on body{overflow:hidden!important;height:100%!important;overscroll-behavior:none}
+html.boxies-fs-shell-on body>*:not(#boxies-fs-shell){visibility:hidden!important;pointer-events:none!important}
 .mag{transition:transform .35s var(--ease)}
 /* Cursor custom (paridad con landing) */
 html.has-cur,html.has-cur *{cursor:none!important}

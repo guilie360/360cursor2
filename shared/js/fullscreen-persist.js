@@ -1,12 +1,18 @@
 /**
- * Persistencia de pantalla completa en toda la plataforma 360Preventa.
- * El navegador sale del FS al navegar; guardamos la intención y la
- * restauramos en cada página hasta que el usuario pulse “salir”.
+ * Fullscreen persistente en 360Preventa.
+ *
+ * El navegador SALE del Fullscreen API al navegar de página.
+ * Solución: al activarlo, la ventana top crea un shell con iframe;
+ * la navegación ocurre DENTRO del iframe y el FS se mantiene en el padre
+ * hasta que el usuario pulse de nuevo el botón (salida explícita).
  */
 (function (global) {
   var KEY = 'boxiesKeepFullscreen';
-  var intentionalExit = false;
-  var restoring = false;
+  var URL_KEY = 'boxiesFsUrl';
+  var SHELL_ID = 'boxies-fs-shell';
+  var FRAME_ID = 'boxies-fs-frame';
+  var inIframe = false;
+  try { inIframe = window.self !== window.top; } catch (e) { inIframe = true; }
 
   function wanted() {
     try { return sessionStorage.getItem(KEY) === '1'; } catch (e) { return false; }
@@ -17,93 +23,244 @@
       else sessionStorage.removeItem(KEY);
     } catch (e) {}
   }
+  function savedUrl(fallback) {
+    try { return sessionStorage.getItem(URL_KEY) || fallback || location.href; } catch (e) { return fallback || location.href; }
+  }
+  function saveUrl(href) {
+    try { sessionStorage.setItem(URL_KEY, href); } catch (e) {}
+  }
   function isFs() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
   }
   function requestFs() {
     var el = document.documentElement;
     var fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-    if (!fn) return Promise.reject(new Error('fullscreen unsupported'));
+    if (!fn) return Promise.reject(new Error('unsupported'));
     return Promise.resolve(fn.call(el));
   }
   function exitFs() {
     var fn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-    if (!fn) return Promise.reject(new Error('fullscreen unsupported'));
+    if (!fn) return Promise.reject(new Error('unsupported'));
     return Promise.resolve(fn.call(document));
   }
+  function dispatch(active) {
+    try {
+      global.dispatchEvent(new CustomEvent('boxies:fullscreen', { detail: { active: !!active, wanted: wanted() } }));
+    } catch (e) {}
+  }
 
-  function restore() {
-    if (!wanted() || isFs() || restoring) return Promise.resolve(false);
-    restoring = true;
+  /* ---------- Dentro del iframe: relé al padre, sin segundo shell ---------- */
+  if (inIframe) {
+    saveUrl(location.href);
+    window.addEventListener('pagehide', function () { saveUrl(location.href); });
+    document.addEventListener('click', function () { saveUrl(location.href); }, true);
+
+    function parentApi() {
+      try { return window.top && window.top.BoxiesFullscreen; } catch (e) { return null; }
+    }
+
+    global.BoxiesFullscreen = {
+      toggle: function () {
+        var api = parentApi();
+        if (api && api.toggle) return api.toggle();
+        return Promise.resolve(false);
+      },
+      restore: function () { return Promise.resolve(false); },
+      wanted: function () {
+        var api = parentApi();
+        return api && api.wanted ? api.wanted() : wanted();
+      },
+      isActive: function () {
+        var api = parentApi();
+        return api && api.isActive ? api.isActive() : false;
+      }
+    };
+
+    // Si el padre debería estar en FS y se perdió, avisar
+    try {
+      if (wanted() && window.top.BoxiesFullscreen && window.top.BoxiesFullscreen.ensureShell) {
+        window.top.BoxiesFullscreen.ensureShell();
+      }
+    } catch (e) {}
+    return;
+  }
+
+  /* ---------- Ventana top ---------- */
+  var intentionalExit = false;
+
+  function getShell() { return document.getElementById(SHELL_ID); }
+  function getFrame() { return document.getElementById(FRAME_ID); }
+
+  function ensureShell(href) {
+    var url = href || savedUrl(location.href);
+    var shell = getShell();
+    if (shell) {
+      var frame = getFrame();
+      if (frame) {
+        try {
+          var cur = frame.contentWindow && frame.contentWindow.location.href;
+          if (cur && url && cur.split('#')[0] !== url.split('#')[0] && !href) {
+            /* keep current iframe location */
+          } else if (href) {
+            frame.src = url;
+          }
+        } catch (e) {
+          if (href) frame.src = url;
+        }
+      }
+      return shell;
+    }
+
+    shell = document.createElement('div');
+    shell.id = SHELL_ID;
+    shell.setAttribute('aria-hidden', 'false');
+    shell.style.cssText = [
+      'position:fixed', 'inset:0', 'z-index:2147483000',
+      'width:100vw', 'height:100vh', 'margin:0', 'padding:0',
+      'background:#0b0b0b', 'border:0'
+    ].join(';');
+
+    var frame = document.createElement('iframe');
+    frame.id = FRAME_ID;
+    frame.title = '360Preventa';
+    frame.allow = 'fullscreen';
+    frame.src = url;
+    frame.style.cssText = 'border:0;width:100%;height:100%;display:block;background:#0b0b0b';
+    frame.addEventListener('load', function () {
+      try { saveUrl(frame.contentWindow.location.href); } catch (e) {}
+    });
+
+    shell.appendChild(frame);
+    document.body.appendChild(shell);
+    document.documentElement.classList.add('boxies-fs-shell-on');
+    return shell;
+  }
+
+  function destroyShell(navigateTo) {
+    var frame = getFrame();
+    var next = navigateTo || savedUrl(null);
+    try {
+      if (frame && frame.contentWindow) next = frame.contentWindow.location.href || next;
+    } catch (e) {}
+    var shell = getShell();
+    if (shell) shell.remove();
+    document.documentElement.classList.remove('boxies-fs-shell-on');
+    if (next && next.split('#')[0] !== location.href.split('#')[0]) {
+      location.replace(next);
+    }
+  }
+
+  function enter() {
+    intentionalExit = false;
+    setWanted(true);
+    saveUrl(location.href);
+    ensureShell(location.href);
     return requestFs()
-      .then(function () { restoring = false; return true; })
-      .catch(function () { restoring = false; return false; });
+      .then(function () { dispatch(true); return true; })
+      .catch(function () {
+        // Gesto inválido: el shell queda listo; un clic posterior pedirá FS
+        armOneShotEnter();
+        dispatch(false);
+        return false;
+      });
+  }
+
+  function leave() {
+    intentionalExit = true;
+    setWanted(false);
+    return exitFs()
+      .catch(function () {})
+      .then(function () {
+        destroyShell();
+        intentionalExit = false;
+        dispatch(false);
+        return false;
+      });
   }
 
   function toggle() {
-    if (isFs()) {
+    if (isFs() || getShell()) {
+      // Si hay shell pero no FS (Esc), el botón también sale del modo
+      if (isFs()) return leave();
       intentionalExit = true;
       setWanted(false);
-      return exitFs()
-        .catch(function () { intentionalExit = false; })
-        .then(function () { return false; });
+      destroyShell();
+      intentionalExit = false;
+      dispatch(false);
+      return Promise.resolve(false);
     }
-    intentionalExit = false;
-    setWanted(true);
-    return requestFs()
-      .then(function () { return true; })
-      .catch(function () { return false; });
+    return enter();
   }
 
   function onFsChange() {
     if (isFs()) {
       setWanted(true);
       intentionalExit = false;
-      global.dispatchEvent(new CustomEvent('boxies:fullscreen', { detail: { active: true } }));
+      if (wanted()) ensureShell();
+      dispatch(true);
       return;
     }
+    // Salida de FS
     if (intentionalExit) {
       intentionalExit = false;
       setWanted(false);
+      destroyShell();
+      dispatch(false);
+      return;
     }
-    // Salida involuntaria (navegación, Esc del sistema, etc.):
-    // mantenemos wanted=true para restaurar en la siguiente página/gesto.
-    global.dispatchEvent(new CustomEvent('boxies:fullscreen', { detail: { active: false, wanted: wanted() } }));
+    // Esc u otra salida involuntaria: mantener modo shell + wanted
+    // y rearmar el gesto para volver a FS sin perder la sesión del iframe.
+    if (wanted()) {
+      ensureShell();
+      armOneShotEnter();
+      dispatch(false);
+    }
   }
 
   document.addEventListener('fullscreenchange', onFsChange);
   document.addEventListener('webkitfullscreenchange', onFsChange);
 
-  function armGestureRestore() {
-    if (!wanted()) return;
-    var events = ['pointerdown', 'keydown', 'touchstart'];
-    function tryRestore() {
-      if (!wanted() || isFs()) return;
-      restore();
+  var oneShotArmed = false;
+  function armOneShotEnter() {
+    if (oneShotArmed || isFs() || !wanted()) return;
+    oneShotArmed = true;
+    function handler(e) {
+      if (!wanted()) { cleanup(); return; }
+      if (isFs()) { cleanup(); return; }
+      // Consumir el primer gesto solo para recuperar FS
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+      cleanup();
+      ensureShell();
+      requestFs().then(function () { dispatch(true); }).catch(function () { armOneShotEnter(); });
     }
-    events.forEach(function (ev) {
-      document.addEventListener(ev, tryRestore, { capture: true, passive: true });
+    function cleanup() {
+      oneShotArmed = false;
+      ['pointerdown', 'click', 'touchstart', 'keydown'].forEach(function (ev) {
+        document.removeEventListener(ev, handler, true);
+      });
+    }
+    ['pointerdown', 'click', 'touchstart', 'keydown'].forEach(function (ev) {
+      document.addEventListener(ev, handler, true);
     });
   }
 
   function boot() {
     if (!wanted()) return;
-    restore();
-    armGestureRestore();
+    ensureShell(savedUrl(location.href));
+    if (!isFs()) armOneShotEnter();
+    else dispatch(true);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot);
-  } else {
-    boot();
-  }
-  window.addEventListener('pageshow', function () {
-    if (wanted()) restore();
-  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+  window.addEventListener('pageshow', function () { if (wanted()) boot(); });
 
   global.BoxiesFullscreen = {
     toggle: toggle,
-    restore: restore,
+    restore: function () { return wanted() ? enter() : Promise.resolve(false); },
+    ensureShell: ensureShell,
     wanted: wanted,
     isActive: isFs
   };
