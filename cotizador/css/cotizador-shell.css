@@ -389,50 +389,73 @@ body.cotizador-app .manual-details{
   padding:0!important;
   gap:12px!important;
 }
-/* Header compacto del flujo: título + precio + volver */
+/* Header del flujo: título a la izquierda, precio+volver a la derecha (con aire) */
 body.cotizador-app .shell-head.quote-flow-head,
 body.cotizador-app .package-top.quote-flow-head,
 body.cotizador-app .quote-flow-head{
-  display:flex!important;
-  align-items:flex-start!important;
-  justify-content:space-between!important;
-  gap:14px!important;
-  padding:4px 0 12px!important;
-  border-bottom:1px solid rgba(255,255,255,.08)!important;
-  margin:0 0 12px!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:start!important;
+  column-gap:28px!important;
+  row-gap:14px!important;
+  padding:8px 0 20px!important;
+  border-bottom:1px solid rgba(255,255,255,.10)!important;
+  margin:0 0 18px!important;
   background:transparent!important;
 }
-body.cotizador-app .quote-flow-head-main{
-  display:flex;
-  flex-wrap:wrap;
-  align-items:flex-end;
-  gap:10px 22px;
+body.cotizador-app .quote-flow-head-copy{
   min-width:0;
-  flex:1;
+  padding-top:4px;
 }
 body.cotizador-app .quote-flow-head h2{
   margin:0!important;
-  font:400 var(--t-lg)/1.1 var(--font-display)!important;
+  max-width:16ch;
+  font:400 var(--t-lg)/1.08 var(--font-display)!important;
   color:#f3f3f1!important;
+}
+body.cotizador-app .quote-flow-head-aside{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:12px;
+  min-width:min(220px,100%);
+}
+body.cotizador-app .quote-flow-head-aside > .btn{
+  flex:none;
 }
 body.cotizador-app .quote-flow-price{
   display:flex;
   flex-direction:column;
-  align-items:flex-start;
-  gap:2px;
+  align-items:flex-end;
+  gap:4px;
+  min-width:200px;
+  padding:14px 16px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:14px;
+  background:linear-gradient(180deg,#171717 0%,#101010 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 12px 28px -18px rgba(0,0,0,.9);
+  text-align:right;
 }
 body.cotizador-app .quote-flow-price small{
-  color:#7e7e7e!important;
+  color:#8a8a8a!important;
   font-size:var(--t-xs)!important;
-  letter-spacing:.08em;
+  letter-spacing:.1em;
   text-transform:uppercase;
+  font-weight:600!important;
+}
+body.cotizador-app .quote-flow-price small:last-child{
+  letter-spacing:.02em;
+  text-transform:none;
+  font-weight:400!important;
+  color:#7a7a7a!important;
+  max-width:22ch;
 }
 body.cotizador-app .quote-flow-price strong{
-  font:400 1.35em/1 var(--font-display)!important;
+  font:400 var(--t-lg)/1 var(--font-display)!important;
   color:#f3f3f1!important;
 }
 body.cotizador-app .quote-flow-tip{
-  margin:0 0 12px!important;
+  margin:0 0 14px!important;
   color:#8f8f8f!important;
   font-size:var(--t-sm)!important;
   line-height:1.45!important;
@@ -442,25 +465,34 @@ body.cotizador-app #baseStep .quote-flow-tip{
   margin:0 0 10px!important;
 }
 body.cotizador-app .package-detail-price strong{
-  font:400 1.35em/1 var(--font-display)!important;
+  font:400 var(--t-lg)/1 var(--font-display)!important;
   color:#f3f3f1!important;
 }
 body.cotizador-app .package-detail-price small{
-  color:#7e7e7e!important;
+  color:#8a8a8a!important;
   font-size:var(--t-xs)!important;
 }
 @media (max-width:760px){
   body.cotizador-app .quote-flow-head{
-    flex-direction:column!important;
-    align-items:stretch!important;
-    gap:10px!important;
-    padding:10px 0 12px!important;
+    grid-template-columns:1fr!important;
+    padding:6px 0 16px!important;
+    margin-bottom:14px!important;
   }
-  body.cotizador-app .quote-flow-head .btn{
+  body.cotizador-app .quote-flow-head h2{
+    max-width:none;
+  }
+  body.cotizador-app .quote-flow-head-aside{
+    align-items:stretch;
+    width:100%;
+  }
+  body.cotizador-app .quote-flow-head-aside > .btn{
     align-self:flex-start;
   }
-  body.cotizador-app .quote-flow-head-main{
-    gap:8px 16px;
+  body.cotizador-app .quote-flow-price{
+    align-items:flex-start;
+    text-align:left;
+    width:100%;
+    min-width:0;
   }
   body.cotizador-app #packageChooser,
   body.cotizador-app #manualConfigurator{
@@ -759,10 +791,9 @@ body.cotizador-app .total-line strong{
   font-weight:400!important;
   line-height:1!important;
 }
-/* Precio embebido en header: un pelín menor vía em, sin 5º token */
 body.cotizador-app .quote-flow-price strong,
 body.cotizador-app .package-detail-price strong{
-  font-size:1.15em!important;
+  font-size:var(--t-lg)!important;
 }
 
 body.cotizador-app,

@@ -8,13 +8,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel19">
-<link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel19">
+<link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel20">
+<link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel20">
 <link rel="stylesheet" href="/shared/css/scrollbar.css?v=1">
 <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
 <link rel="stylesheet" href="/shared/css/site-chrome.css?v=9">
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=4">
-<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=36">
+<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=37">
 </head>
 <body data-app="cotizador" class="cotizador-app">
 <header class="topbar"><div class="topinner">
@@ -124,10 +124,12 @@
 
 <section id="packageChooser" class="package-chooser hidden">
  <div class="package-top quote-flow-head">
-  <div class="quote-flow-head-main">
+  <div class="quote-flow-head-copy">
    <h2>Showroom completo</h2>
   </div>
-  <button class="btn" id="backToPaths" type="button">← Volver</button>
+  <div class="quote-flow-head-aside">
+   <button class="btn" id="backToPaths" type="button">← Volver</button>
+  </div>
  </div>
  <p class="quote-flow-tip">Elige la tipología para ver qué incluye y el precio del paquete.</p>
  <div class="package-types">
@@ -164,15 +166,17 @@
  </aside>
  </div>
   <div class="shell-head manual-shell-head quote-flow-head">
-   <div class="quote-flow-head-main">
+   <div class="quote-flow-head-copy">
     <h2>Showroom personalizado</h2>
+   </div>
+   <div class="quote-flow-head-aside">
+    <button class="btn" id="manualBackToStart" type="button">← Volver</button>
     <div class="package-detail-price quote-flow-price">
-     <small>PRESUPUESTO ACTUAL</small>
+     <small>Presupuesto actual</small>
      <strong id="manualHeadTotal">490 €</strong>
      <small>100 m² incluidos · +7 €/m² adicional</small>
     </div>
    </div>
-   <button class="btn" id="manualBackToStart" type="button">← Volver</button>
   </div>
   <div class="package-details manual-details" id="manualDetails">
    <div class="package-accordion-list manual-step-list">

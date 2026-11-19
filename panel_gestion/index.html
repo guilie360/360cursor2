@@ -12,8 +12,8 @@
   <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
   <link rel="stylesheet" href="/shared/css/site-chrome.css?v=9">
   <link rel="stylesheet" href="/shared/css/global-nav.css?v=4">
-  <link rel="stylesheet" href="css/base.css?v=panel19">
-  <link rel="stylesheet" href="css/patches.css?v=panel19">
+  <link rel="stylesheet" href="css/base.css?v=panel20">
+  <link rel="stylesheet" href="css/patches.css?v=panel20">
 </head>
 <body class="portal-mode">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat del equipo">
@@ -245,10 +245,12 @@
 
 <section id="packageChooser" class="package-chooser hidden">
  <div class="package-top quote-flow-head">
-  <div class="quote-flow-head-main">
+  <div class="quote-flow-head-copy">
    <h2>Showroom completo</h2>
   </div>
-  <button class="btn" id="backToPaths" type="button">← Volver</button>
+  <div class="quote-flow-head-aside">
+   <button class="btn" id="backToPaths" type="button">← Volver</button>
+  </div>
  </div>
  <p class="quote-flow-tip">Elige la tipología para ver qué incluye y el precio del paquete.</p>
  <div class="package-types">
@@ -285,15 +287,17 @@
  </aside>
  </div>
   <div class="shell-head manual-shell-head quote-flow-head">
-   <div class="quote-flow-head-main">
+   <div class="quote-flow-head-copy">
     <h2>Showroom personalizado</h2>
+   </div>
+   <div class="quote-flow-head-aside">
+    <button class="btn" id="manualBackToStart" type="button">← Volver</button>
     <div class="package-detail-price quote-flow-price">
-     <small>PRESUPUESTO ACTUAL</small>
+     <small>Presupuesto actual</small>
      <strong id="manualHeadTotal">490 €</strong>
      <small>100 m² incluidos · +7 €/m² adicional</small>
     </div>
    </div>
-   <button class="btn" id="manualBackToStart" type="button">← Volver</button>
   </div>
   <div class="package-details manual-details" id="manualDetails">
    <div class="package-accordion-list manual-step-list">
