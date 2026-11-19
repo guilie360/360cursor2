@@ -42,7 +42,6 @@
 
   /** Links según pantalla — siempre incluye pantalla completa */
   function linksForContext() {
-    var fs = { action: 'fullscreen', label: fullscreenLabel(), n: '00' };
     if (isPanelAuthed()) {
       return [
         { href: '/#inicio', label: 'Inicio', n: '01' },
