@@ -897,10 +897,11 @@ body.workspace-authenticated #hunterGoalFooter #portalBack:not(.portal-hidden){
   font:700 12px/1.3 'Manrope',Arial,sans-serif!important;
   letter-spacing:.12em!important;
   text-transform:uppercase!important;
-  cursor:pointer!important;
+  cursor:none!important;
   transform:none!important;
   transition:background .22s ease,border-color .22s ease,box-shadow .22s ease,color .22s ease!important;
 }
+html:not(.has-cur) #pathChooser .flip-back>.flip-cta{cursor:pointer!important}
 #pathChooser .flip-back>.flip-cta:hover{
   background:linear-gradient(180deg,#242424 0%,#111 100%)!important;
   color:#fff!important;
@@ -1455,4 +1456,18 @@ body:not(.hunter-mode) .topbar button,
 
 /* V95: toda la cara posterior de las tarjetas actúa como zona de selección */
 #pathChooser .flip-back{cursor:pointer}
+html.has-cur #pathChooser .flip-back,
+html.has-cur #pathChooser .flip-back *{cursor:none!important}
 #pathChooser .flip-back:focus-visible{outline:2px solid #cfc9bd;outline-offset:4px}
+
+/* Con cursor custom: nunca mostrar el puntero del sistema (gana a cursor:pointer!important previos) */
+html.has-cur,
+html.has-cur *,
+html.has-cur a,
+html.has-cur button,
+html.has-cur [role="button"],
+html.has-cur summary,
+html.has-cur label,
+html.has-cur .btn{
+  cursor:none!important;
+}

@@ -229,3 +229,20 @@ body.cotizador-app main{
     padding-bottom:calc(84px + var(--safe-bottom,0px))
   }
 }
+
+/* Cierre: con cursor custom activo, ningún control muestra el puntero de Windows */
+html.has-cur,
+html.has-cur *,
+html.has-cur a,
+html.has-cur button,
+html.has-cur [role="button"],
+html.has-cur summary,
+html.has-cur label,
+html.has-cur .btn,
+html.has-cur .quote-footer-back,
+html.has-cur .quote-footer-reset,
+html.has-cur .flip-front,
+html.has-cur .flip-cta,
+html.has-cur .flip-return{
+  cursor:none!important;
+}

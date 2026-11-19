@@ -3,7 +3,20 @@ html.boxies-fs-shell-on,html.boxies-fs-shell-on body{overflow:hidden!important;h
 html.boxies-fs-shell-on body>*:not(#boxies-fs-shell){visibility:hidden!important;pointer-events:none!important}
 .mag{transition:transform .35s var(--ease)}
 /* Cursor custom (paridad con landing) */
-html.has-cur,html.has-cur *{cursor:none!important}
+/* Cursor custom: ocultar puntero del sistema en TODO (botones incluidos) */
+html.has-cur,
+html.has-cur *,
+html.has-cur a,
+html.has-cur button,
+html.has-cur [role="button"],
+html.has-cur summary,
+html.has-cur label,
+html.has-cur .btn,
+html.has-cur input,
+html.has-cur select,
+html.has-cur textarea{
+  cursor:none!important
+}
 .cur{position:fixed;left:0;top:0;width:34px;height:34px;border:1px solid rgba(214,210,204,.38);border-radius:50%;pointer-events:none;z-index:100000;opacity:0;display:grid;place-items:center;background:rgba(214,210,204,0);transition:width .5s var(--ease),height .5s var(--ease),border-color .3s,background .4s,opacity .3s,backdrop-filter .4s}
 .cur span{font:400 8px/1 Manrope,Arial,sans-serif;letter-spacing:2.6px;text-indent:2.6px;color:var(--white);opacity:0;transform:translateY(4px);transition:opacity .3s,transform .5s var(--ease);white-space:nowrap}
 .cur.big{width:54px;height:54px;border-color:var(--bronze)}
