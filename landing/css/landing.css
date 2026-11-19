@@ -1,4 +1,4 @@
-:root{--bg:#0b0b0b;--white:#d6d2cc;--muted:#96918a;--bronze:#8d7d69;--serif:'Italiana',Georgia,serif;--sans:'DM Sans',Arial,sans-serif;--ease:cubic-bezier(.2,.8,.2,1)}
+:root{--bg:#0b0b0b;--white:#d6d2cc;--muted:#96918a;--bronze:#8d7d69;--serif:'Italiana',Georgia,serif;--sans:'DM Sans',Arial,sans-serif;--ease:cubic-bezier(.2,.8,.2,1);--float-safe:92px}
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:var(--bg);scroll-behavior:smooth}
 body{background:var(--bg);color:var(--white);font:300 16px/1.5 var(--sans);overflow-x:hidden;-webkit-font-smoothing:antialiased}
@@ -12,17 +12,18 @@ button{font:inherit}
 .header-logo img{width:100%;height:100%;object-fit:contain}
 .header-actions{display:flex;align-items:center;gap:9px;pointer-events:auto}
 .mag{transition:transform .35s var(--ease)}
-/* Acciones flotantes: chat + cotizar, abajo-derecha */
+/* Acciones flotantes: barra inferior tipo footer (Cotizar izq · Chat der) */
 .float-actions{
-  position:fixed;z-index:45;right:max(22px,4vw);bottom:max(22px,3.5vh);
-  display:flex;flex-direction:column;align-items:flex-end;gap:28px;
-  pointer-events:none;
+  position:fixed;z-index:45;
+  left:max(18px,4vw);right:max(18px,4vw);bottom:max(16px,2.4vh);
+  height:52px;
+  display:flex;flex-direction:row;align-items:center;justify-content:space-between;
+  gap:20px;pointer-events:none;
 }
 .quote-float{
   display:inline-flex;align-items:center;gap:14px;
   padding:10px 2px;border:0;background:transparent;color:var(--white);
   text-decoration:none;cursor:pointer;pointer-events:auto;
-  border-radius:999px;
   transition:opacity .35s var(--ease),transform .35s var(--ease),color .25s;
   animation:quoteBreath 2s ease-in-out infinite;
 }
@@ -32,7 +33,7 @@ button{font:inherit}
 }
 .quote-float-mark{
   width:36px;height:1px;background:rgba(214,210,204,.78);
-  transform-origin:right center;transition:transform .45s var(--ease),background .25s;
+  transform-origin:left center;transition:transform .45s var(--ease),background .25s;
   box-shadow:0 0 10px rgba(214,210,204,.35);
 }
 @keyframes quoteBreath{
@@ -47,8 +48,7 @@ button{font:inherit}
 }
 .chat-float{
   width:48px;height:48px;display:grid;place-items:center;
-  margin:0 -2px 6px 0;
-  border:0;border-radius:0;background:transparent;
+  margin:0;border:0;background:transparent;
   color:rgba(214,210,204,.9);
   cursor:pointer;pointer-events:auto;
   transition:opacity .35s var(--ease),transform .35s var(--ease),color .25s;
@@ -80,13 +80,13 @@ body:has(.page-transit.on) .float-actions{
 .menu-panel a span{font:400 9px var(--sans);letter-spacing:2px;color:var(--bronze);transition:transform .4s var(--ease)}
 
 /* INTRO */
-.intro{height:100svh;min-height:650px;display:flex;align-items:center;justify-content:center;text-align:center;position:relative;padding:100px 24px}
+.intro{height:100svh;min-height:650px;display:flex;align-items:center;justify-content:center;text-align:center;position:relative;padding:100px 24px var(--float-safe)}
 .intro-content{max-width:850px;will-change:opacity,transform}
 .intro-content>*{animation:appear 1.1s var(--ease) backwards}
 .intro-logo{display:block;width:clamp(100px,10vw,132px);height:clamp(100px,10vw,132px);object-fit:contain;margin:0 auto 30px}
 .intro h1{font:400 clamp(48px,8vw,100px)/1 var(--serif);letter-spacing:5px;animation-delay:.15s}
 .intro-subtitle{margin-top:22px;color:var(--bronze);font-size:11px;letter-spacing:4px;text-transform:uppercase;animation-delay:.3s}
-.scroll-hint{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);color:rgba(238,234,228,.45);font-size:9px;letter-spacing:3px;text-transform:uppercase;white-space:nowrap}
+.scroll-hint{position:absolute;bottom:calc(var(--float-safe) + 8px);left:50%;transform:translateX(-50%);color:rgba(238,234,228,.45);font-size:9px;letter-spacing:3px;text-transform:uppercase;white-space:nowrap}
 .scroll-hint::after{content:"";display:block;height:34px;width:1px;margin:13px auto 0;background:linear-gradient(var(--bronze),transparent);animation:lineMove 1.8s infinite}
 
 /* EXPERIENCIA: todo se anima según el progreso del scroll */
@@ -111,7 +111,7 @@ body:has(.page-transit.on) .float-actions{
 .message.on .w>span{transform:none;transition:transform .9s var(--ease) var(--d)}
 .message.on .message-number,.message.on p{opacity:1;transform:none;transition:opacity .8s .3s,transform .9s var(--ease) .3s}
 .message.on .message-line{transform:none;transition:transform 1s var(--ease) .55s}
-.experience-label{position:absolute;z-index:3;bottom:38px;left:50%;transform:translateX(-50%);color:rgba(238,234,228,.35);font-size:9px;letter-spacing:3px;white-space:nowrap}
+.experience-label{position:absolute;z-index:3;bottom:calc(var(--float-safe) + 10px);left:50%;transform:translateX(-50%);color:rgba(238,234,228,.35);font-size:9px;letter-spacing:3px;white-space:nowrap}
 
 /* FINAL */
 .final{height:100svh;min-height:700px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center;isolation:isolate;background:#171715}
@@ -140,11 +140,12 @@ body:has(.page-transit.on) .float-actions{
 
 .menu-panel a:active{color:var(--bronze)}
 @media(max-width:640px){
- .float-actions{right:18px;bottom:18px;gap:24px}
+ :root{--float-safe:86px}
+ .float-actions{left:16px;right:16px;bottom:14px;height:48px}
  .quote-float{gap:10px;padding:8px 0}
  .quote-float-label{font-size:10px;letter-spacing:.18em}
  .quote-float-mark{width:28px}
- .chat-float{width:46px;height:46px;margin:0 -1px 4px 0}
+ .chat-float{width:46px;height:46px}
  .chat-float svg{width:24px;height:24px}
 }
 
@@ -238,7 +239,7 @@ body:has(.page-transit.on) .float-actions{
 
 /* FINAL — composición editorial */
 .final{
-  min-height:100svh;height:auto;padding:clamp(110px,13vh,160px) 0 86px;
+  min-height:100svh;height:auto;padding:clamp(110px,13vh,160px) 0 calc(var(--float-safe) + 36px);
   display:flex;align-items:center;justify-content:center;text-align:left;
 }
 .final-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,7,7,.76),rgba(7,7,7,.52) 55%,rgba(7,7,7,.68));}
@@ -284,8 +285,9 @@ body:has(.page-transit.on) .float-actions{
 .showroom-arrow{display:block;color:var(--bronze);font-size:16px;transition:transform .35s var(--ease)}
 .showroom small{display:none}
 .final-footer{
-  position:absolute;bottom:24px;left:8vw;width:84vw;
-  display:flex;justify-content:flex-start;gap:15px;text-align:left;
+  position:absolute;bottom:calc(var(--float-safe) + 6px);left:50%;
+  width:auto;max-width:70vw;transform:translateX(-50%);
+  display:flex;justify-content:center;gap:15px;text-align:center;
   color:rgba(255,255,255,.38);font-size:8px;letter-spacing:1.8px;
   pointer-events:none;
 }
@@ -294,7 +296,7 @@ body:has(.page-transit.on) .float-actions{
   .showroom:hover .showroom-arrow{transform:translate(3px,-3px)}
 }
 @media(max-width:760px){
-  .final{min-height:100svh;padding:110px 0 95px}
+  .final{min-height:100svh;padding:110px 0 calc(var(--float-safe) + 28px)}
   .final-content{width:86vw;grid-template-columns:1fr;gap:42px;padding:10px 0}
   .final-copy{max-width:100%}
   .final-copy h2{max-width:14ch;font-size:clamp(38px,10vw,52px)}
