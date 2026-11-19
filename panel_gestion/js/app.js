@@ -1503,6 +1503,7 @@ syncGlobalFullscreenControl();
     }else if(abrir==='hunter'){
       document.body.classList.add('hunter-mode');
       $('hunter').style.display='block';
+      $('portalBack').classList.remove('portal-hidden');
       try{initHunterProfile();updateHunter();}catch(e){}
       window.scrollTo(0,0);
     }
