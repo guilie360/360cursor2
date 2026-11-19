@@ -1,9 +1,9 @@
 .team-chat-messages{display:flex;flex-direction:column;gap:10px;min-height:220px;max-height:440px;overflow:auto;padding:14px;border:1px solid var(--edge,#444);background:#141414;border-radius:12px;margin:14px 0}.team-chat-message{max-width:82%;padding:10px 13px;border:1px solid #444;border-radius:10px;background:#202020;color:#fff}.team-chat-message strong{display:block;font-size:11px;color:#ccc;margin-bottom:4px}.team-chat-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}.team-chat-message time{display:block;font-size:9px;color:#888;margin-top:5px}.team-chat-form{display:flex;gap:10px;align-items:flex-end}.team-chat-form textarea{flex:1;min-width:0;background:#171717;color:#fff;border:1px solid #444;border-radius:9px;padding:12px;font:inherit}.team-chat-form textarea:focus{outline:2px solid #fff;outline-offset:1px}@media(max-width:600px){.team-chat-form{flex-direction:column;align-items:stretch}.team-chat-message{max-width:96%}}
 
 /* Chat flotante sobre el control de pantalla completa */
-#teamChatFloat{position:fixed;right:22px;bottom:108px;z-index:10002;width:48px;height:48px;border:1px solid var(--line);border-radius:14px;background:rgba(17,17,17,.9);color:#eee;display:grid;place-items:center;font-size:20px;cursor:pointer;backdrop-filter:blur(10px);box-shadow:0 10px 28px -10px #000}
+#teamChatFloat{position:fixed;right:22px;bottom:82px;z-index:10002;width:48px;height:48px;border:1px solid var(--line);border-radius:14px;background:rgba(17,17,17,.9);color:#eee;display:grid;place-items:center;font-size:20px;cursor:pointer;backdrop-filter:blur(10px);box-shadow:0 10px 28px -10px #000}
 #teamChatFloat:hover{background:#3b3b3b;color:#fff;border:2px solid #fff}
-#teamChatPopup{position:fixed;right:22px;bottom:168px;z-index:10003;width:min(560px,calc(100vw - 28px));height:min(760px,calc(100dvh - 200px));min-height:420px;display:flex;flex-direction:column;overflow:hidden;background:#151515;border:1px solid #555;border-radius:16px;padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.72)}
+#teamChatPopup{position:fixed;right:22px;bottom:140px;z-index:10003;width:min(560px,calc(100vw - 28px));height:min(760px,calc(100dvh - 170px));min-height:420px;display:flex;flex-direction:column;overflow:hidden;background:#151515;border:1px solid #555;border-radius:16px;padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.72)}
 #teamChatPopup.portal-hidden{display:none!important}
 .chat-popup-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;flex:0 0 auto}.chat-popup-head h3{margin:0;font:26px Italiana,Georgia,serif}.chat-popup-close{border:1px solid #444;background:#111;color:#eee;width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer}
 #teamChatPopup .portal-toolbar{display:none!important}#teamChatPopup .chat-current-thread{display:none!important}
@@ -13,8 +13,8 @@
 #teamChatPopup .chat-bottom-tabs{flex:0 0 auto;margin:0;padding-top:10px}
 #teamChatPopup .chat-recipient-panel{flex:0 0 auto;padding:10px 0 0}#teamChatPopup .chat-recipient-label{margin:0;font-size:12px}#teamChatPopup .chat-recipient-label select{font-size:14px;padding:11px}
 #teamChatPopup>small{display:none!important}
-@media(max-width:600px){#teamChatFloat{right:15px;bottom:96px;width:44px;height:44px}#teamChatPopup{right:10px;bottom:152px;width:calc(100vw - 20px);height:calc(100dvh - 175px);max-height:none;min-height:360px;padding:13px}}
-#teamChatFloat{position:fixed;right:22px;bottom:108px;z-index:10002}
+@media(max-width:600px){#teamChatFloat{right:15px;bottom:70px;width:44px;height:44px}#teamChatPopup{right:10px;bottom:122px;width:calc(100vw - 20px);height:calc(100dvh - 145px);max-height:none;min-height:360px;padding:13px}}
+#teamChatFloat{position:fixed;right:22px;bottom:82px;z-index:10002}
 
 /* Acceso flotante a Mi perfil, encima del chat */
 #profileFloat{position:fixed;right:22px;bottom:140px;z-index:10002;width:48px;height:48px;border:1px solid var(--line);border-radius:14px;background:rgba(17,17,17,.92);color:#eee;display:grid;place-items:center;font-size:22px;cursor:pointer;backdrop-filter:blur(10px);box-shadow:0 10px 28px -10px #000}
@@ -288,13 +288,12 @@ body:not(.workspace-authenticated) #teamChatFloat,body:not(.workspace-authentica
 }
 /* Igual que Cotizar: solo marca, sin texto de marca en el header */
 .portal .portal-brand-copy{display:none!important}
-.portal .portal-brand{margin-right:auto}
 .portal .portal-head-right{
   display:flex;align-items:center;justify-content:flex-end;gap:10px;
-  flex:0 1 auto;min-width:0;margin-left:0;white-space:nowrap
+  flex:1 1 auto;min-width:0;margin-left:auto;white-space:nowrap
 }
 .portal .portal-search{
-  width:min(380px,42vw);max-width:380px;min-width:140px;
+  flex:1 1 auto;width:auto;max-width:min(420px,48vw);min-width:0;
   height:50px;padding:0 18px;border-radius:12px;
   background:#0a0a0a;border:1px solid var(--edge);color:var(--ink);
   font:13px/1.2 'Manrope',Arial
@@ -303,101 +302,27 @@ body:not(.workspace-authenticated) #teamChatFloat,body:not(.workspace-authentica
 .portal .portal-search:focus{
   outline:none;border-color:rgba(205,178,138,.55);background:#0c0c0c
 }
-.portal .portal-head .portal-logout-icon{
-  flex:0 0 50px;width:50px;height:50px;min-width:50px;padding:0;
-  border-radius:12px;border:1px solid var(--line);background:transparent;
-  color:var(--ink);display:inline-flex;align-items:center;justify-content:center
+.portal .portal-head .portal-logout{
+  flex:0 0 auto;height:50px;min-width:50px;padding:0 16px;border-radius:12px;
+  font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  border:1px solid var(--line);background:transparent;color:var(--ink);white-space:nowrap
 }
-.portal .portal-head .portal-logout-icon svg{
-  width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;
-  stroke-linecap:round;stroke-linejoin:round
-}
-.portal .portal-head .portal-logout-icon:hover{background:rgba(255,255,255,.055);border-color:#5a5a5a;color:#fff}
+.portal .portal-head .portal-logout:hover{background:rgba(255,255,255,.055);border-color:#5a5a5a}
 /* Hunter es una página más del panel: lleva el mismo encabezado */
 body.hunter-mode .portal .portal-head{display:block!important}
 body.hunter-mode .portal{min-height:0}
 @media(max-width:760px){
  .portal .portal-head-inner{flex-wrap:nowrap;gap:12px}
- .portal .portal-head-right{flex:1 1 auto;min-width:0}
- .portal .portal-search{flex:1 1 auto;width:auto;max-width:none}
+ .portal .portal-head-right{flex:1 1 auto;width:auto;margin-left:0;min-width:0}
+ .portal .portal-search{flex:1 1 auto;max-width:none}
 }
 @media(max-width:520px){
  .portal .portal-head-inner,.portal .portal-wrap{width:calc(100% - 20px)}
  .portal .portal-brand-logo{width:37px;height:37px;flex-basis:37px}
  .portal .portal-search{height:43px;padding:0 12px;font-size:12px}
- .portal .portal-head .portal-logout-icon{flex-basis:43px;width:43px;height:43px;min-width:43px}
- .portal .portal-head .portal-logout-icon svg{width:18px;height:18px}
-}
-
-/* Home del panel: intro limpia + KPIs + jerarquía de cards */
-.portal #portalHome .portal-home-intro{margin:4px 0 18px}
-.portal #portalHome .portal-hello{
-  margin:0 0 8px;color:#9a948a;font:11px/1.3 Manrope,Arial,sans-serif;
-  letter-spacing:.16em;text-transform:uppercase
-}
-.portal #portalHome .portal-title{
-  margin:0;font:clamp(32px,4.6vw,48px)/1.05 Italiana,Georgia,serif;font-weight:400;color:#f0ebe3
-}
-.portal #portalHome .portal-home-kpis{
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 26px
-}
-.portal #portalHome .portal-home-kpi{
-  padding:16px 18px;border:1px solid rgba(255,255,255,.10);border-radius:14px;
-  background:linear-gradient(180deg,#171717,#121212)
-}
-.portal #portalHome .portal-home-kpi small{
-  display:block;color:#8f8980;font:10px/1.3 Manrope,Arial,sans-serif;
-  letter-spacing:.1em;text-transform:uppercase
-}
-.portal #portalHome .portal-home-kpi strong{
-  display:block;margin-top:8px;font:28px/1 Italiana,Georgia,serif;font-weight:400;color:#eee9df
-}
-.portal #portalHome .portal-home-kpi--accent{
-  border-color:rgba(205,178,138,.42);
-  background:linear-gradient(180deg,#1c1914,#141210)
-}
-.portal #portalHome .portal-home-kpi--accent strong{color:#e8d7b8}
-.portal #portalHome .portal-grid{
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:0
-}
-.portal #portalHome .portal-card{
-  min-height:168px;padding:22px 22px 20px;border-radius:16px;
-  border:1px solid rgba(255,255,255,.11);gap:12px
-}
-.portal #portalHome .portal-card .picon{
-  width:44px;height:44px;border-radius:12px;color:#d8cbb6
-}
-.portal #portalHome .portal-card .picon svg{
-  width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;
-  stroke-linecap:round;stroke-linejoin:round
-}
-.portal #portalHome .portal-card b{font:24px/1.1 Italiana,Georgia,serif;font-weight:400}
-.portal #portalHome .portal-card small{font-size:12px;line-height:1.55;color:#a8a198}
-.portal #portalHome .portal-card--primary{
-  border-color:rgba(205,178,138,.38);
-  background:linear-gradient(180deg,#1d1a16 0%,#141210 100%);
-  box-shadow:0 18px 40px -28px rgba(0,0,0,.95)
-}
-.portal #portalHome .portal-card--primary .picon{
-  border-color:rgba(205,178,138,.35);background:rgba(205,178,138,.08);color:#e4d2b4
-}
-.portal #portalHome .portal-card-chip{
-  margin-top:auto;align-self:flex-start;padding:6px 10px;border-radius:999px;
-  border:1px solid rgba(205,178,138,.4);color:#e4d2b4;
-  font:9px/1 Manrope,Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase
-}
-.portal #portalHome .portal-card:not(.portal-card--primary){
-  opacity:.92;background:linear-gradient(180deg,#181818,#121212)
-}
-@media(max-width:760px){
- .portal #portalHome .portal-home-kpis{grid-template-columns:1fr 1fr}
- .portal #portalHome .portal-home-kpi--accent{grid-column:1/-1}
- .portal #portalHome .portal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
-@media(max-width:430px){
- .portal #portalHome .portal-home-kpis,.portal #portalHome .portal-grid{grid-template-columns:1fr}
- .portal #portalHome .portal-home-kpi--accent{grid-column:auto}
- .portal #portalHome .portal-card{min-height:140px}
+ .portal .portal-head .portal-logout{
+   height:43px;min-width:43px;padding:0 10px;font-size:8px;letter-spacing:.04em
+ }
 }
 
 /* ===== patch ===== */
