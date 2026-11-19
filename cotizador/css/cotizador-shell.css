@@ -280,6 +280,15 @@ body.cotizador-app h1{color:#f3f3f1}
 body.cotizador-app .chooser-intro,
 body.cotizador-app .eyebrow{color:#8a8a8a!important}
 
+/* Cartas de path: columnas iguales y bloque centrado (sin sesgo por riel del menú) */
+body.cotizador-app #pathChooser.path-chooser-visual:not(.hidden){
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  justify-content:center!important;
+  width:100%!important;
+  max-width:1120px;
+  margin-inline:auto!important;
+}
+
 /* Shell: profundidad con sombra/inset, sin tinte café */
 body.cotizador-app #packageChooser,
 body.cotizador-app #manualConfigurator{

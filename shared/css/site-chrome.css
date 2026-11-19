@@ -197,14 +197,23 @@ body.nav-panel-authed .portal .portal-search{
 }
 /* Cotizador: precio + reset viven en .quote-goal-footer */
 
-/* Contenido: mismos rieles que el header */
-.portal .portal-wrap,
-body.cotizador-app main{
+/* Contenido: mismos rieles que el header.
+   Cotizador: riel simétrico L/R (el menú flota a la derecha; sin esto las cartas
+   quedan corridas a la izquierda y el borde derecho “sobra”). */
+.portal .portal-wrap{
   width:auto!important;
   max-width:none!important;
   margin:0!important;
   padding-left:var(--chrome-rail-left)!important;
   padding-right:var(--chrome-rail-right)!important;
+  box-sizing:border-box!important
+}
+body.cotizador-app main{
+  width:auto!important;
+  max-width:none!important;
+  margin:0 auto!important;
+  padding-left:var(--chrome-rail)!important;
+  padding-right:var(--chrome-rail)!important;
   box-sizing:border-box!important
 }
 .portal .portal-wrap{padding-bottom:72px!important}
