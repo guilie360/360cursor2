@@ -232,25 +232,14 @@ body.cotizador-app main{
   padding-top:12px;
   padding-bottom:88px;
 }
-/* Espacio extra bajo la lista para que la última ficha no quede bajo el upsell + footer */
+/* Solo al final de la lista: aire para pasar la última ficha por encima del upsell */
 body.cotizador-app:has(#manualConfigurator:not(.hidden)) main,
 body.cotizador-app:has(#packageChooser:not(.hidden)) main{
-  padding-bottom:calc(var(--quote-footer-clearance) + 150px)!important;
-}
-body.cotizador-app:has(#manualConfigurator:not(.hidden)) #manualConfigurator,
-body.cotizador-app:has(#packageChooser:not(.hidden)) #packageChooser{
-  padding-bottom:calc(28px + 120px)!important;
+  padding-bottom:calc(var(--quote-footer-clearance) + 24px)!important;
 }
 body.cotizador-app .manual-step-list,
 body.cotizador-app .package-accordion-list{
-  padding-bottom:24px;
-}
-body.cotizador-app .manual-step-list::after,
-body.cotizador-app .package-accordion-list::after{
-  content:"";
-  display:block;
-  height:calc(var(--quote-footer-clearance) + 110px);
-  pointer-events:none;
+  padding-bottom:0;
 }
 
 @media(max-width:760px){
@@ -284,17 +273,13 @@ body.cotizador-app .package-accordion-list::after{
   }
   body.cotizador-app:has(#manualConfigurator:not(.hidden)) main,
   body.cotizador-app:has(#packageChooser:not(.hidden)) main{
-    padding-bottom:calc(var(--quote-footer-clearance) + 168px + var(--safe-bottom,0px))!important;
+    padding-bottom:calc(var(--quote-footer-clearance) + 28px + var(--safe-bottom,0px))!important;
   }
-  body.cotizador-app:has(#manualConfigurator:not(.hidden)) #manualConfigurator,
-  body.cotizador-app:has(#packageChooser:not(.hidden)) #packageChooser{
-    padding-bottom:24px!important;
+  /* Hueco solo al final de las fichas (no entre ellas) */
+  body.cotizador-app .manual-step-list,
+  body.cotizador-app .package-accordion-list{
+    padding-bottom:calc(var(--quote-footer-clearance) + 120px)!important;
   }
-  body.cotizador-app .manual-step-list::after,
-  body.cotizador-app .package-accordion-list::after{
-    height:calc(var(--quote-footer-clearance) + 128px);
-  }
-  /* Upsell más compacto en cel para tapar menos */
   body.cotizador-app #manualUpsell:not(.hidden){
     width:min(300px,calc(100vw - 24px))!important;
     padding:12px 12px 11px!important;
