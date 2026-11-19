@@ -331,10 +331,12 @@ body.cotizador-app .package-accordion-list{
   body.cotizador-app:has(#packageChooser:not(.hidden)) main{
     padding-bottom:calc(var(--quote-footer-clearance) + 28px + var(--safe-bottom,0px))!important;
   }
-  /* Hueco solo al final (upsell ya es una pastilla baja) */
-  body.cotizador-app .manual-step-list,
-  body.cotizador-app .package-accordion-list{
+  /* Hueco solo al final de la lista (personalizado: pastilla; completo: footer) */
+  body.cotizador-app .manual-step-list{
     padding-bottom:calc(var(--quote-footer-clearance) + 64px)!important;
+  }
+  body.cotizador-app .package-accordion-list{
+    padding-bottom:calc(var(--quote-footer-clearance) + 28px)!important;
   }
   body.cotizador-app #manualUpsell.manual-upsell--compact:not(.hidden){
     right:12px!important;

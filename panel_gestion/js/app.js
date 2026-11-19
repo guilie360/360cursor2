@@ -785,7 +785,6 @@ function renderPackage(key){
      <div class="actions"><button type="button" class="btn primary" data-package-next="packageFloorsAccordion">Continuar</button></div>
     </div>
    </details>
-  </div>
 
   <details class="package-accordion package-multi-property clean-floor-accordion" id="packageFloorsAccordion">
    <summary>
@@ -846,7 +845,7 @@ function renderPackage(key){
 
   <details class="package-accordion package-resources-accordion" id="packageResourcesAccordion">
    <summary>
-    <span class="accordion-index">04</span>
+    <span class="accordion-index">06</span>
     <span class="accordion-title">Recursos adicionales</span>
     <span class="accordion-meta">Incluidos + opcionales</span>
     <span class="accordion-plus" aria-hidden="true">+</span>
@@ -900,9 +899,9 @@ function renderPackage(key){
    </summary>
    <div class="accordion-content">
     <div class="breakdown"><h3>Desglose del proyecto</h3><div id="packageQuoteRows"></div><div class="price-line total-line"><span>Total estimado</span><strong id="packageGrandTotal">1970 €</strong></div><p class="desc" id="packageDiscountExplanation" style="margin:12px 0 0"></p></div>
-    
    </div>
   </details>
+  </div>
 
   <section class="package-savings-compact" id="packageSavingsComparison"></section>
   <section class="showroom-visual-delivery" aria-label="Experiencia Showroom en todos tus dispositivos">
