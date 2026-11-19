@@ -1,20 +1,12 @@
 /**
  * Menú global 360Preventa — presente en toda la web.
- * Inyecta toggle (hamburguesa → X), overlay y panel de navegación.
+ * El contenido cambia según contexto (landing / cotizador / panel).
  */
 (function () {
   if (window.__boxiesGlobalNav) return;
   window.__boxiesGlobalNav = true;
 
   var WA = 'https://wa.me/573226834084';
-  var LINKS = [
-    { href: '/#inicio', label: 'Inicio', n: '01' },
-    { href: '/cotizar', label: 'Cotizar mi showroom', n: '02' },
-    { href: WA, label: 'Chatear con asesor', n: '03', external: true },
-    { href: '/#demo', label: 'Ver demo', n: '04' },
-    { href: '/panel_gestion/', label: 'Ingresar', n: '05' },
-    { action: 'refresh', label: 'Refrescar', n: '06' }
-  ];
 
   function el(tag, attrs, html) {
     var node = document.createElement(tag);
@@ -25,6 +17,41 @@
     });
     if (html != null) node.innerHTML = html;
     return node;
+  }
+
+  function isPanelAuthed() {
+    return document.body.classList.contains('workspace-authenticated');
+  }
+
+  function isCotizador() {
+    return document.body.classList.contains('cotizador-app') ||
+      document.body.getAttribute('data-app') === 'cotizador';
+  }
+
+  /** Links según pantalla */
+  function linksForContext() {
+    if (isPanelAuthed()) {
+      return [
+        { href: '/#inicio', label: 'Inicio', n: '01' },
+        { href: '/#demo', label: 'Ver demo', n: '02' },
+        { action: 'logout', label: 'Salir', n: '03' }
+      ];
+    }
+    /* Landing, login, cotizador (público o interno): sin Refrescar */
+    var links = [
+      { href: '/#inicio', label: 'Inicio', n: '01' },
+      { href: '/cotizar', label: 'Cotizar mi showroom', n: '02' },
+      { href: WA, label: 'Chatear con asesor', n: '03', external: true },
+      { href: '/#demo', label: 'Ver demo', n: '04' }
+    ];
+    if (isCotizador() && document.body.classList.contains('modo-interno')) {
+      links.push({ href: '/panel_gestion/', label: 'Panel', n: '05' });
+    } else if (!isCotizador() || document.body.classList.contains('modo-publico')) {
+      links.push({ href: '/panel_gestion/', label: 'Ingresar', n: '05' });
+    } else {
+      links.push({ href: '/panel_gestion/', label: 'Ingresar', n: '05' });
+    }
+    return links;
   }
 
   function mount() {
@@ -48,33 +75,6 @@
       id: 'globalMenuPanel',
       'aria-label': 'Navegación 360Preventa'
     });
-    panel.appendChild(el('div', { className: 'menu-caption', text: '360PREVENTA / NAVEGACIÓN' }));
-
-    LINKS.forEach(function (item, i) {
-      var delay = (0.12 + i * 0.07).toFixed(2) + 's';
-      if (item.action === 'refresh') {
-        var btn = el('button', {
-          className: 'menu-link',
-          type: 'button',
-          'data-nav-refresh': '1',
-          'data-cursor': 'REFRESCAR'
-        }, item.label + ' <span>' + item.n + '</span>');
-        btn.style.setProperty('--dl', delay);
-        panel.appendChild(btn);
-        return;
-      }
-      var a = el('a', {
-        href: item.href,
-        'data-cursor': item.label.toUpperCase().split(' ')[0]
-      }, item.label + ' <span>' + item.n + '</span>');
-      a.style.setProperty('--dl', delay);
-      if (item.external) {
-        a.setAttribute('target', '_blank');
-        a.setAttribute('rel', 'noopener');
-        a.id = 'contacto';
-      }
-      panel.appendChild(a);
-    });
 
     document.body.appendChild(toggle);
     document.body.appendChild(overlay);
@@ -91,6 +91,54 @@
 
     function close() { setOpen(false); }
 
+    function renderLinks() {
+      var wasOpen = panel.classList.contains('open');
+      panel.innerHTML = '';
+      panel.appendChild(el('div', {
+        className: 'menu-caption',
+        text: isPanelAuthed() ? '360PREVENTA / PANEL' : '360PREVENTA / NAVEGACIÓN'
+      }));
+      linksForContext().forEach(function (item, i) {
+        var delay = (0.12 + i * 0.07).toFixed(2) + 's';
+        if (item.action === 'logout') {
+          var btn = el('button', {
+            className: 'menu-link',
+            type: 'button',
+            'data-nav-logout': '1',
+            'data-cursor': 'SALIR'
+          }, item.label + ' <span>' + item.n + '</span>');
+          btn.style.setProperty('--dl', delay);
+          panel.appendChild(btn);
+          return;
+        }
+        var a = el('a', {
+          href: item.href,
+          'data-cursor': item.label.toUpperCase().split(' ')[0]
+        }, item.label + ' <span>' + item.n + '</span>');
+        a.style.setProperty('--dl', delay);
+        if (item.external) {
+          a.setAttribute('target', '_blank');
+          a.setAttribute('rel', 'noopener');
+          a.id = 'contacto';
+        }
+        panel.appendChild(a);
+      });
+      document.body.classList.toggle('nav-panel-authed', isPanelAuthed());
+      if (wasOpen) setOpen(true);
+    }
+
+    function doLogout() {
+      close();
+      var btn = document.getElementById('logoutBtn');
+      if (btn) btn.click();
+      else {
+        try {
+          document.body.classList.remove('workspace-authenticated');
+          location.href = '/panel_gestion/';
+        } catch (err) {}
+      }
+    }
+
     toggle.addEventListener('click', function () {
       setOpen(!panel.classList.contains('open'));
     });
@@ -100,11 +148,9 @@
     });
 
     panel.addEventListener('click', function (e) {
-      var refresh = e.target.closest('[data-nav-refresh]');
-      if (refresh) {
+      if (e.target.closest('[data-nav-logout]')) {
         e.preventDefault();
-        close();
-        location.reload();
+        doLogout();
         return;
       }
       var a = e.target.closest('a');
@@ -114,7 +160,6 @@
         close();
         return;
       }
-      /* Hash en la misma landing: usar salto suave si existe */
       var hash = '';
       if (href.charAt(0) === '#') hash = href.slice(1);
       else if (/^\/#/.test(href)) hash = href.slice(2);
@@ -137,10 +182,17 @@
       close();
     });
 
+    renderLinks();
+
+    /* Reconstruir al login / logout / cambio de modo cotizador */
+    var mo = new MutationObserver(function () { renderLinks(); });
+    mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
     window.BoxiesGlobalNav = {
       open: function () { setOpen(true); },
       close: close,
-      toggle: function () { setOpen(!panel.classList.contains('open')); }
+      toggle: function () { setOpen(!panel.classList.contains('open')); },
+      refresh: renderLinks
     };
   }
 

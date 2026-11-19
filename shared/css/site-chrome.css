@@ -187,6 +187,15 @@ body.cotizador-app .topbar #headerReset{
   display:inline-flex!important;
   align-items:center;justify-content:center
 }
+/* En panel autenticado el logout vive en el menú → liberar el header */
+body.workspace-authenticated .portal .portal-logout-icon,
+body.nav-panel-authed .portal .portal-logout-icon{
+  display:none!important
+}
+body.workspace-authenticated .portal .portal-search,
+body.nav-panel-authed .portal .portal-search{
+  max-width:min(520px,100%)!important
+}
 body.cotizador-app .topbar .pricebox strong{
   font-size:clamp(24px,3.6vw,32px)!important;
   line-height:1!important
