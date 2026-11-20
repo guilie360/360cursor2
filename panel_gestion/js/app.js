@@ -189,15 +189,17 @@ function applyFieldMap(checks,values){
   if(el) el.value=val;
  });
 }
+function collapseAllQuoteSteps(root){
+ const scope=root||document;
+ scope.querySelectorAll('details.step, details.package-accordion').forEach(d=>{ d.open=false; });
+}
 function applyManualDraft(draft){
  if(!draft?.manual) return;
  applyFieldMap(draft.manual.checks,draft.manual.values);
- (draft.manual.openSteps||[]).forEach(id=>{ const s=$(id); if(s) s.open=true; });
 }
 function applyPackageDraft(draft){
  if(!draft?.package) return;
  applyFieldMap(draft.package.checks,draft.package.values);
- (draft.package.openAccordions||[]).forEach(id=>{ const s=$(id); if(s) s.open=true; });
  if(typeof updatePackagePrice==='function'&&$('packageDetails')?.innerHTML.trim()) updatePackagePrice();
 }
 function restoreQuoteSession(){
@@ -725,6 +727,7 @@ function renderPackage(key){
    </div>
   </div>
 
+  <p class="quote-flow-tip quote-steps-hint">Completa cada apartado en orden. Puedes volver a abrir cualquier paso para editarlo.</p>
   <div class="package-accordion-list">
   <details class="package-accordion package-includes-accordion" id="packageStep1">
     <summary>
@@ -1018,12 +1021,15 @@ function showConfiguratorScreen(screen){
    applyPackageDraft(draft);
   }else{
    try{ document.querySelectorAll('.package-type').forEach(b=>b.classList.toggle('active',b.dataset.package===activePackage)); }catch(e){}
+   applyPackageDraft(draft);
    updatePackagePrice();
   }
+  collapseAllQuoteSteps(packageView);
  }else if(screen==='manual'){
   manualView.classList.remove('hidden');
   if(upsell) upsell.classList.remove('hidden');
   applyManualDraft(draft);
+  collapseAllQuoteSteps(manualView);
   $('packageSelectedNote').textContent='';
   update();
   const liveQuote=$('manualLiveQuote');
@@ -1045,6 +1051,7 @@ $('packageBack')?.addEventListener('click',()=>showConfiguratorScreen('paths'));
 
 document.querySelectorAll('.package-type').forEach(b=>b.addEventListener('click',()=>{
  renderPackage(b.dataset.package);
+ collapseAllQuoteSteps($('packageChooser')||document);
  saveQuoteDraftSoon();
 }));
 document.addEventListener('input',e=>{

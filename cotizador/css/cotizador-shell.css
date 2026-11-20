@@ -796,8 +796,12 @@ body.cotizador-app .quote-flow-tip{
   line-height:1.45!important;
   max-width:46ch;
 }
-body.cotizador-app #baseStep .quote-flow-tip{
-  margin:0 0 10px!important;
+body.cotizador-app .quote-steps-hint{
+  margin:0 0 12px!important;
+  color:#6f6f6f!important;
+  font:400 var(--t-xs)/1.45 var(--font-ui)!important;
+  letter-spacing:.01em;
+  max-width:52ch;
 }
 body.cotizador-app .package-detail-price{
   display:flex!important;

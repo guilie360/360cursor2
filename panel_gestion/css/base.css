@@ -41,6 +41,7 @@ main{max-width:960px;margin:0 auto;padding:34px 22px 70px}.eyebrow{color:#aaa;fo
 .quote-flow-price small:last-child{letter-spacing:.02em;text-transform:none;font-weight:400;max-width:100%}
 .quote-flow-price strong{font-size:clamp(24px,4vw,32px);line-height:1;color:var(--ink,#eee);white-space:nowrap}
 .quote-flow-tip{margin:0 0 14px;color:var(--muted);font-size:12px;line-height:1.45;max-width:46ch}
+.quote-steps-hint{margin:0 0 12px;color:#6f6f6f;font-size:11px;line-height:1.45;max-width:52ch;letter-spacing:.01em}
 @media(max-width:900px){.quote-flow-head{grid-template-columns:1fr;gap:12px}.quote-flow-head-aside{max-width:none;margin-left:0}.quote-flow-price{align-items:flex-start;text-align:left}}
 body:has(#manualConfigurator:not(.hidden)) main>h1,
 body:has(#packageChooser:not(.hidden)) main>h1,
