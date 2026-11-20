@@ -1515,8 +1515,25 @@ body.hunter-mode main {
 /* ===== patch ===== */
 
 #downloadImage,#shareQuote,#quoteToProject,#shareFormats,#sharePdf,#shareImage {display:none!important}
-.summary-actions{display:flex!important;justify-content:flex-end!important;gap:12px!important;flex-wrap:wrap!important}
-.summary-actions #modalClose,.summary-actions #downloadPdf{display:inline-flex!important}
+.summary-actions{display:flex!important;justify-content:center!important;gap:12px!important;flex-wrap:wrap!important;margin-top:18px!important}
+.summary-actions #downloadPdf,
+.summary-actions .final-quote-whatsapp{
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ min-height:52px!important;padding:14px 18px!important;border-radius:15px!important;
+ text-decoration:none!important;text-align:center!important;line-height:1.2!important;
+}
+.summary-actions .final-quote-whatsapp{color:#e5d0aa!important;border:1px solid rgba(255,255,255,.22)!important;background:rgba(0,0,0,.25)!important}
+#orderModal .order-dialog{border:1px solid rgba(255,255,255,.14)!important;background:linear-gradient(180deg,#171717 0%,#101010 100%)!important;box-shadow:0 30px 70px -28px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.05)!important}
+#orderModal .eyebrow{color:#8a8a8a!important;letter-spacing:.12em}
+#orderModal .field input{border:1px solid rgba(255,255,255,.14)!important;border-radius:12px!important;background:#0a0a0a!important}
+#orderModal .order-details{border-color:rgba(255,255,255,.1)!important}
+#orderModal .order-detail-row,#orderModal .price-line{border-bottom-color:rgba(255,255,255,.08)!important}
+#orderModal .total-line{border-top-color:rgba(255,255,255,.16)!important}
+#orderModal .total-line strong{font-family:'Italiana',Georgia,serif!important;color:#f3f3f1!important}
+@media(max-width:620px){
+ .summary-actions{flex-direction:column!important;align-items:stretch!important}
+ .summary-actions #downloadPdf,.summary-actions .final-quote-whatsapp{width:100%!important}
+}
 
 /* ===== patch ===== */
 

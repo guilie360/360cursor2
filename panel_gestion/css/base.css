@@ -63,8 +63,10 @@ table{width:100%;border-collapse:collapse;font-size:12px;margin-top:15px}td,th{p
 .price-mode input{accent-color:var(--gold)}
 .order-modal{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.84);display:flex;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
 .order-modal.hidden{display:none}
-.order-dialog{width:min(680px,100%);max-height:min(90dvh,calc(100svh - 48px));overflow:auto;background:#151515;border:1px solid var(--gold);padding:25px;-webkit-overflow-scrolling:touch}
-.order-dialog h2{font:32px Georgia,serif;font-weight:400;margin:8px 0}
+.order-dialog{position:relative;width:min(680px,100%);max-height:min(90dvh,calc(100svh - 48px));overflow:auto;background:#151515;border:1px solid rgba(255,255,255,.14);padding:25px;border-radius:18px;-webkit-overflow-scrolling:touch}
+.order-dialog-close{position:absolute;top:12px;right:12px;border:0;background:transparent;color:#9a9a9a;font-size:22px;line-height:1;padding:6px 8px;cursor:pointer}
+.order-dialog-close:hover{color:#eee}
+.order-dialog h2{font:32px 'Italiana',Georgia,serif;font-weight:400;margin:8px 0;color:#f3f3f1}
 .order-details{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:18px 0;padding:10px 0}
 .order-detail-row{display:flex;justify-content:space-between;gap:18px;padding:7px 0;color:var(--muted);font-size:13px}
 .order-detail-row strong{color:var(--ink);text-align:right;font-weight:500}

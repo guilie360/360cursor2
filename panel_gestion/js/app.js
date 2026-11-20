@@ -394,10 +394,16 @@ async function buildSummaryCanvas(forPdf){
  ]);
  const name=$('customerName').value.trim(),email=$('customerEmail').value.trim();
  const logo=new Image();
- logo.src='assets/logo-pdf.png';
- await new Promise((resolve,reject)=>{
-  if(logo.complete&&logo.naturalWidth)return resolve();
-  logo.onload=resolve;logo.onerror=()=>reject(new Error('No se pudo cargar el logo 360 Showroom.'));
+ const logoCandidates=['/panel_gestion/assets/logo-pdf.png','/panel_gestion/assets/logo.png','assets/logo-pdf.png','assets/logo.png'];
+ await new Promise((resolve)=>{
+  let i=0;
+  const tryNext=()=>{
+   if(i>=logoCandidates.length){logo.removeAttribute('src');return resolve();}
+   logo.onload=()=>resolve();
+   logo.onerror=()=>{i+=1;tryNext();};
+   logo.src=logoCandidates[i++];
+  };
+  tryNext();
  });
 
  const css=getComputedStyle(document.documentElement),tk=(n,d)=>css.getPropertyValue(n).trim()||d;
@@ -472,13 +478,17 @@ async function buildSummaryCanvas(forPdf){
  rr(cx,cy,cw,ch,22);c.fillStyle=card;c.fill();c.restore();
  rr(cx,cy,cw,ch,22);c.strokeStyle='rgba(205,178,138,.20)';c.lineWidth=1.5;c.stroke();
 
- // Cabecera de marca: logo real integrado con transparencia.
- const logoH=82,logoW=logoH*logo.naturalWidth/logo.naturalHeight;
- c.save();c.shadowColor='rgba(0,0,0,.35)';c.shadowBlur=14;c.shadowOffsetY=4;
- c.drawImage(logo,pad,70,logoW,logoH);c.restore();
+ // Cabecera de marca: logo real si está disponible.
+ let logoW=0;
+ if(logo.naturalWidth){
+  const logoH=82;logoW=logoH*logo.naturalWidth/logo.naturalHeight;
+  c.save();c.shadowColor='rgba(0,0,0,.35)';c.shadowBlur=14;c.shadowOffsetY=4;
+  c.drawImage(logo,pad,70,logoW,logoH);c.restore();
+  logoW+=24;
+ }
  c.textAlign='left';c.textBaseline='alphabetic';
  c.fillStyle=T.acc;c.font='700 15px '+SANS;c.letterSpacing='3px';
- c.fillText('360 SHOWROOM  ·  PROPUESTA COMERCIAL',pad+logoW+24,111);
+ c.fillText('360 SHOWROOM  ·  PROPUESTA COMERCIAL',pad+logoW,111);
  c.letterSpacing='0px';
  c.fillStyle=T.ink;c.font='400 58px '+SERIF;
  c.fillText('Resumen de tu showroom',pad,222);
@@ -655,7 +665,7 @@ $('downloadPdf').addEventListener('click',async()=>{
   $('confirmStatus').textContent='No se pudo generar el PDF. Inténtalo de nuevo.';
  }finally{
   $('downloadPdf').disabled=false;
-  $('downloadPdf').textContent='Descargar PDF';
+  $('downloadPdf').textContent='DESCARGAR COTIZACIÓN';
  }
 });
 
@@ -1047,6 +1057,7 @@ document.addEventListener('toggle',e=>{
  if(e.target&&e.target.closest&&e.target.closest('#manualConfigurator,#packageDetails')) saveQuoteDraftSoon();
 },true);
 $('packageSelect').addEventListener('click',()=>{
+ restoreOrderModal();
  const p=packageCatalog[activePackage],area=packageAreaValue(),q=packageTotalPrice();
  const rows=[['Paquete',p.title],['Superficie total del inmueble',area+' m²'],['Base completa del showroom','Incluida'],['Todos los espacios interiores existentes','Incluidos sin límite'],['Plantas 3D del inmueble',(1+packageExtraFloors())+' planta(s) · '+money(q.main.floorCost)+' en plantas adicionales'],['Reel Ads promocional','Incluido'],['Pack de imágenes verticales','Incluido']];
  if(q.main.extra)rows.push([`Superficie adicional · ${q.main.extra} m² × 7 €`,money(q.main.extra*7)]);
@@ -1242,8 +1253,9 @@ function openSaleOrder(id){
  $('orderSummary').innerHTML=sale.quoteRows.map(([a,b])=>`<div class="order-detail-row"><span>${a}</span><strong>${b}</strong></div>`).join('');
  $('orderSummary').innerHTML+=`<div class="price-line"><span>Comisión generada · 7,874 %</span><strong>${demoMoney(sale.commission)}</strong></div>`;
  $('orderTotal').textContent=demoMoney(sale.amount);
- $('modalClose').textContent='Cerrar';
- ['downloadImage','downloadPdf','shareQuote','quoteToProject','shareFormats'].forEach(id=>$(id).style.display='none');
+ ['downloadImage','downloadPdf','shareQuote','quoteToProject','shareFormats'].forEach(id=>{const el=$(id);if(el)el.style.display='none';});
+ const wa=$('orderModal')?.querySelector('.summary-actions .final-quote-whatsapp');if(wa)wa.style.display='none';
+ const emailField=$('customerEmail')?.parentElement;if(emailField)emailField.style.display='none';
  $('confirmStatus').textContent='Registro demostrativo. El pedido y la comisión se vincularán a los datos reales al conectar Supabase.';
  $('orderModal').classList.remove('hidden');
 }
@@ -1251,8 +1263,10 @@ function restoreOrderModal(){
  $('orderTitle').textContent='Resumen de configuración';
  $('orderModal').querySelector('.order-dialog > .desc').textContent='Ingresa tu nombre para identificar esta cotización.';
  $('customerName').parentElement.style.display='';
- $('modalClose').textContent='Volver a editar';
- ['downloadImage','downloadPdf','shareQuote','quoteToProject','shareFormats'].forEach(id=>$(id).style.display='');
+ const emailField=$('customerEmail')?.parentElement;if(emailField)emailField.style.display='';
+ if($('downloadPdf')){$('downloadPdf').style.display='';$('downloadPdf').textContent='DESCARGAR COTIZACIÓN';}
+ const wa=$('orderModal')?.querySelector('.summary-actions .final-quote-whatsapp');if(wa)wa.style.display='';
+ ['downloadImage','shareQuote','quoteToProject','shareFormats'].forEach(id=>{const el=$(id);if(el)el.style.display='';});
 }
 function portalShowHome(){
  $('portalHome').classList.remove('portal-hidden');$('portalSubpage').classList.add('portal-hidden');

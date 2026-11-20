@@ -8,13 +8,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel35">
-<link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel35">
+<link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel36">
+<link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel36">
 <link rel="stylesheet" href="/shared/css/scrollbar.css?v=1">
 <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
 <link rel="stylesheet" href="/shared/css/site-chrome.css?v=9">
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=4">
-<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=56">
+<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=57">
 </head>
 <body data-app="cotizador" class="cotizador-app">
 <header class="topbar"><div class="topinner">
@@ -387,6 +387,7 @@
 
 <div class="order-modal hidden" id="orderModal" role="dialog" aria-modal="true" aria-labelledby="orderTitle">
  <div class="order-dialog">
+  <button class="order-dialog-close" id="modalClose" type="button" aria-label="Cerrar">×</button>
   <div class="eyebrow">Cotización 360Preventa · Showroom</div><h2 id="orderTitle">Resumen de configuración</h2>
   <p class="desc">Ingresa tu nombre para identificar esta cotización.</p>
   <div class="field name-field"><label for="customerName">Nombre de la persona</label><input id="customerName" type="text" placeholder="Escribe tu nombre" autocomplete="name" required></div>
@@ -395,8 +396,8 @@
   <div id="orderSummary" class="order-details"></div>
   <div class="price-line total-line"><span>Total estimado</span><strong id="orderTotal">—</strong></div>
   <div class="actions summary-actions">
-   <button class="btn" id="modalClose" type="button">Volver a editar</button>
-   <button class="btn primary" id="downloadPdf" type="button">Descargar PDF</button>
+   <button class="btn primary final-quote-download" id="downloadPdf" type="button">DESCARGAR COTIZACIÓN</button>
+   <a class="btn final-quote-whatsapp" href="https://wa.me/573226834084" target="_blank" rel="noopener noreferrer" aria-label="Chatear con asesor">CHATEAR CON ASESOR</a>
   </div>
   <div id="shareFormats" class="share-formats hidden" aria-label="Formato para compartir" style="display:none">
    <button class="btn" id="downloadImage" type="button" tabindex="-1">Descargar imagen</button>
@@ -468,7 +469,7 @@
 
 <script src="/shared/js/fullscreen-persist.js?v=3"></script>
 <script src="/shared/js/global-nav.js?v=7"></script>
-<script src="/panel_gestion/js/app.js?v=fs10"></script>
+<script src="/panel_gestion/js/app.js?v=fs11"></script>
 <script src="/shared/js/cursor-layer.js?v=2"></script>
 <script src="/panel_gestion/js/visual-layer.js"></script>
 <script src="/panel_gestion/js/lightbox.js"></script>
