@@ -131,12 +131,23 @@
     return result.data && result.data.session;
   }
 
+  async function resolveLoginEmail(emailOrLogin) {
+    if (window.LoginApi && typeof window.LoginApi.resolveLoginEmail === 'function') {
+      return window.LoginApi.resolveLoginEmail(emailOrLogin);
+    }
+    /* Fallback si el script de LoginApi no cargó */
+    var normalized = String(emailOrLogin || '').trim();
+    if (!normalized) throw new Error('Ingresa tu correo o usuario.');
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) return normalized.toLowerCase();
+    throw new Error('Ingresa tu correo electrónico.');
+  }
+
   async function loginWithPassword(emailOrLogin, password, remember) {
     AuthStoragePrefs.setRememberMe(!!remember);
     PlatformAuth.resetClient();
     PlatformAuth.createClient({ remember: !!remember });
 
-    var email = await LoginApi.resolveLoginEmail(emailOrLogin);
+    var email = await resolveLoginEmail(emailOrLogin);
     var result = await PlatformAuth.getClient().auth.signInWithPassword({
       email: email,
       password: password
