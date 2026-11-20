@@ -84,14 +84,16 @@
 
   async function createCheckout(payload) {
     var token = await getAccessToken();
-    var base = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) || '';
-    var anon = (typeof SUPABASE_ANON_KEY !== 'undefined' && SUPABASE_ANON_KEY) || '';
+    var base = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) ||
+      'https://emefdwzdfnqgjohbtvvn.supabase.co';
+    var anon = (typeof SUPABASE_ANON_KEY !== 'undefined' && SUPABASE_ANON_KEY) ||
+      'sb_publishable_GmJNU3DZQqPgNBi6QVa5bA_2h--bgKz';
     var headers = {
       'Content-Type': 'application/json',
       apikey: anon
     };
     if (token) headers.Authorization = 'Bearer ' + token;
-    else if (anon) headers.Authorization = 'Bearer ' + anon;
+    else headers.Authorization = 'Bearer ' + anon;
 
     var res = await fetch(base + FN_CREATE, {
       method: 'POST',
@@ -100,7 +102,16 @@
     });
     var data = {};
     try { data = await res.json(); } catch (e) {}
-    if (!res.ok) throw new Error(data.error || ('Error ' + res.status));
+    if (!res.ok) {
+      var msg = data.error || data.message || ('Error ' + res.status);
+      if (res.status === 404) {
+        msg = 'No se encontró la función de cobro (404). Recarga con Ctrl+F5.';
+      }
+      if (/secretos|PADDLE_API_KEY|Faltan secretos/i.test(msg)) {
+        msg = 'Falta configurar PADDLE_API_KEY en Supabase Edge Functions Secrets.';
+      }
+      throw new Error(msg);
+    }
     return data;
   }
 
