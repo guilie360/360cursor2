@@ -110,15 +110,6 @@
     document.body.appendChild(overlay);
     document.body.appendChild(panel);
 
-    function pinScroll(y) {
-      y = Math.max(0, Math.round(Number(y) || 0));
-      try {
-        window.scrollTo(0, y);
-        document.documentElement.scrollTop = y;
-        document.body.scrollTop = y;
-      } catch (err) {}
-    }
-
     function savedMenuScroll() {
       var fromPanel = parseInt(panel.getAttribute('data-scroll-y') || '', 10);
       if (isFinite(fromPanel) && fromPanel >= 0) return fromPanel;
@@ -126,7 +117,47 @@
         var fromStore = parseInt(sessionStorage.getItem('boxiesMenuScrollY') || '', 10);
         if (isFinite(fromStore) && fromStore >= 0) return fromStore;
       } catch (err) {}
+      if (typeof window.__boxiesLockY === 'number' && window.__boxiesLockY >= 0) return window.__boxiesLockY;
       return window.scrollY || document.documentElement.scrollTop || 0;
+    }
+
+    /* Lock real: position fixed. overflow:hidden pone scrollY=0 y rompe la landing. */
+    function lockPageScroll(y) {
+      y = Math.max(0, Math.round(Number(y) || 0));
+      window.__boxiesLockY = y;
+      document.documentElement.classList.add('nav-scroll-locked');
+      document.body.style.position = 'fixed';
+      document.body.style.top = '-' + y + 'px';
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      try {
+        sessionStorage.setItem('boxiesMenuScrollY', String(y));
+      } catch (err) {}
+      try {
+        if (window.BoxiesSnapLandingScroll) window.BoxiesSnapLandingScroll();
+      } catch (err2) {}
+    }
+
+    function unlockPageScroll() {
+      var y = savedMenuScroll();
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      document.documentElement.classList.remove('nav-scroll-locked');
+      window.__boxiesLockY = y;
+      try {
+        window.scrollTo(0, y);
+        document.documentElement.scrollTop = y;
+        document.body.scrollTop = y;
+      } catch (err) {}
+      try {
+        if (window.BoxiesSnapLandingScroll) window.BoxiesSnapLandingScroll();
+      } catch (err2) {}
     }
 
     function setOpen(open) {
@@ -140,17 +171,18 @@
             window.BoxiesFullscreen.captureView({ y: y });
           }
         } catch (err2) {}
+        lockPageScroll(y);
       }
       panel.classList.toggle('open', open);
       overlay.classList.toggle('open', open);
       toggle.classList.toggle('active', open);
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
       toggle.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
-      document.body.style.overflow = open ? 'hidden' : '';
-      // overflow:hidden a veces resetea el scroll: volver a la posición guardada.
-      var pinY = savedMenuScroll();
-      requestAnimationFrame(function () { pinScroll(pinY); });
-      setTimeout(function () { pinScroll(pinY); }, 30);
+      if (!open) {
+        unlockPageScroll();
+      } else if (alreadyOpen) {
+        lockPageScroll(savedMenuScroll());
+      }
     }
 
     function close() { setOpen(false); }
@@ -228,15 +260,17 @@
     }
 
     function doFullscreen() {
-      // Mantener el menú abierto y la posición exacta de scroll.
+      // Menú abierto + lock fijo: la vista no debe moverse al entrar en FS.
       var y = savedMenuScroll();
       panel.setAttribute('data-scroll-y', String(y));
       try { sessionStorage.setItem('boxiesMenuScrollY', String(y)); } catch (errS) {}
+      window.__boxiesLockY = y;
       try {
         if (window.BoxiesFullscreen && window.BoxiesFullscreen.captureView) {
           window.BoxiesFullscreen.captureView({ y: y });
         }
       } catch (err0) {}
+      lockPageScroll(y);
       var p;
       try {
         if (window.BoxiesFullscreen && window.BoxiesFullscreen.toggle) {
@@ -252,23 +286,25 @@
       } catch (err) {
         p = Promise.reject(err);
       }
-      var pin = function () {
-        pinScroll(y);
-        try {
-          if (window.BoxiesSnapLandingScroll) window.BoxiesSnapLandingScroll();
-        } catch (err2) {}
+      var hold = function () {
+        if (!panel.classList.contains('open')) return;
+        lockPageScroll(y);
       };
-      requestAnimationFrame(pin);
-      setTimeout(pin, 40);
-      setTimeout(pin, 120);
-      setTimeout(pin, 280);
+      requestAnimationFrame(hold);
+      setTimeout(hold, 40);
+      setTimeout(hold, 120);
+      setTimeout(hold, 280);
       Promise.resolve(p).catch(function () {}).then(function () {
-        pin();
-        // Re-pintar label FS sin cerrar el menú.
-        var keepOpen = panel.classList.contains('open');
+        hold();
+        var keepOpen = true;
         renderLinks();
-        if (keepOpen) setOpen(true);
-        pin();
+        if (keepOpen) {
+          panel.classList.add('open');
+          overlay.classList.add('open');
+          toggle.classList.add('active');
+          lockPageScroll(y);
+        }
+        hold();
       });
     }
 

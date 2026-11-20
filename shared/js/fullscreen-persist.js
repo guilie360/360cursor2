@@ -149,7 +149,24 @@
     return applied;
   }
 
+  function isScrollLocked() {
+    return !!(document.documentElement && document.documentElement.classList.contains('nav-scroll-locked'));
+  }
+
   function scheduleRestore(clearAfter) {
+    // Con menú/lock activo el body está fixed: no empujar scroll nativo.
+    if (isScrollLocked()) {
+      try {
+        var st = readViewState();
+        var y = st && typeof st.y === 'number' ? st.y : window.__boxiesLockY;
+        if (typeof y === 'number' && y >= 0) {
+          window.__boxiesLockY = y;
+          document.body.style.top = '-' + Math.round(y) + 'px';
+        }
+        if (typeof global.BoxiesSnapLandingScroll === 'function') global.BoxiesSnapLandingScroll();
+      } catch (e) {}
+      return;
+    }
     var n = 0;
     function tick() {
       restoreViewState();

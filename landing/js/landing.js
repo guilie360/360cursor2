@@ -12,11 +12,26 @@ msgs.forEach(m=>{const h=m.querySelector('h2');
 
 /* Progreso de scroll con inercia suave (el scroll nativo no se toca) */
 const tgt={intro:0,exp:0},cur={intro:0,exp:0};let raf=0;
+/* Con menú abierto body está position:fixed y scrollY=0; usar el lock real. */
+function pageScrollY(){
+  if(document.documentElement.classList.contains('nav-scroll-locked')){
+    if(typeof window.__boxiesLockY==='number'&&window.__boxiesLockY>=0) return window.__boxiesLockY;
+    const top=parseInt(document.body.style.top||'0',10);
+    if(isFinite(top)) return Math.abs(top);
+  }
+  return scrollY||document.documentElement.scrollTop||0;
+}
 function read(){
   const vh=innerHeight;
-  tgt.intro=clamp(scrollY/(vh*.7));
+  const y=pageScrollY();
+  tgt.intro=clamp(y/(vh*.7));
   const sc=exp.offsetHeight-vh;
-  tgt.exp=sc>0?clamp(-exp.getBoundingClientRect().top/sc):0;
+  if(document.documentElement.classList.contains('nav-scroll-locked')){
+    /* getBoundingClientRect ya refleja el offset fixed; no mezclar con scrollY=0 */
+    tgt.exp=sc>0?clamp(-exp.getBoundingClientRect().top/sc):0;
+  }else{
+    tgt.exp=sc>0?clamp(-exp.getBoundingClientRect().top/sc):0;
+  }
   if(!raf)raf=requestAnimationFrame(tick);
 }
 function tick(){
@@ -128,8 +143,9 @@ function mostVisibleLandingSection(){
   return best;
 }
 window.BoxiesCaptureLandingView=(override)=>{
+  const y=typeof override?.y==='number'?override.y:pageScrollY();
+  if(typeof override?.y==='number') window.__boxiesLockY=override.y;
   read();
-  const y=typeof override?.y==='number'?override.y:scrollY;
   return{
     intro:tgt.intro,
     exp:tgt.exp,
@@ -139,9 +155,15 @@ window.BoxiesCaptureLandingView=(override)=>{
     sh:document.documentElement.scrollHeight
   };
 };
-/* Restaura la posición exacta (ratio de documento). Nunca salta a inicio/demo. */
+/* Con lock activo no tocar scroll nativo (rompería la vista). */
 window.BoxiesRestoreLandingView=state=>{
   if(!state||typeof state.y!=='number') return false;
+  if(document.documentElement.classList.contains('nav-scroll-locked')){
+    window.__boxiesLockY=state.y;
+    document.body.style.top='-'+Math.round(state.y)+'px';
+    snapScrollState();
+    return true;
+  }
   const vh=innerHeight||1;
   const sh=document.documentElement.scrollHeight||0;
   let top=state.y;
@@ -157,8 +179,11 @@ window.BoxiesRestoreLandingView=state=>{
   return true;
 };
 document.addEventListener('boxies:fullscreen',()=>{
-  // Solo re-sincronizar el scrub con el scroll actual; no re-navegar.
-  requestAnimationFrame(()=>snapScrollState());
+  // Mantener scrub según lock/scroll real; no re-navegar.
+  requestAnimationFrame(()=>{
+    read();
+    snapScrollState();
+  });
 });
 function bootHashJump(){
   const raw=(location.hash||'').replace(/^#/,'');
