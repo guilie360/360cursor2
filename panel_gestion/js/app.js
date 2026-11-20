@@ -1644,7 +1644,9 @@ function runProjectSearch(value){
 }
 $('portalHome').addEventListener('keydown',e=>{if(e.target.id==='dashboardSearch'&&e.key==='Enter')runProjectSearch(e.target.value)});
 function enterWorkspace(){
- $('loginScreen').classList.add('portal-hidden');$('portal').classList.remove('portal-hidden');document.body.classList.add('portal-mode','workspace-authenticated');
+ $('loginScreen').classList.add('portal-hidden');$('portal').classList.remove('portal-hidden');
+ document.body.classList.add('portal-mode','workspace-authenticated');
+ document.body.classList.remove('auth-checking');
  try{sessionStorage.setItem('boxiesTeamSession','1');}catch(e){}
  portalShowHome();
  if(window.BoxiesGlobalNav?.refresh) window.BoxiesGlobalNav.refresh();
@@ -1656,7 +1658,7 @@ function leaveWorkspaceUi(){
  $('portalHome')?.classList.remove('portal-hidden');
  $('hunter')?.classList.add('portal-hidden');
  $('loginScreen')?.classList.remove('portal-hidden');
- document.body.classList.remove('workspace-authenticated','nav-panel-authed');
+ document.body.classList.remove('workspace-authenticated','nav-panel-authed','auth-checking');
  try{
   delete document.body.dataset.panelRole;
   sessionStorage.removeItem('boxiesPanelRole');
@@ -1672,9 +1674,20 @@ function leaveWorkspaceUi(){
  try{ $('loginEmail')?.focus?.(); }catch(e){}
 }
 window.leaveWorkspaceUi=leaveWorkspaceUi;
-/* Login/logout reales: panel-auth.js (Supabase). Aquí solo estado inicial de UI. */
+/* Login/logout reales: panel-auth.js (Supabase). Evitar flash de login si ya hay sesión de equipo. */
 if($('loginForm'))$('loginForm').noValidate=false;
-$('loginScreen').classList.remove('portal-hidden');$('portal').classList.add('portal-hidden');
+(function bootPanelUiGate(){
+  var team=false;
+  try{ team=sessionStorage.getItem('boxiesTeamSession')==='1'; }catch(e){}
+  if(team){
+    $('loginScreen')?.classList.add('portal-hidden');
+    $('portal')?.classList.remove('portal-hidden');
+    document.body.classList.add('portal-mode','workspace-authenticated','auth-checking');
+  }else{
+    $('loginScreen')?.classList.remove('portal-hidden');
+    $('portal')?.classList.add('portal-hidden');
+  }
+})();
 
 
 const globalFullscreenBtn=document.getElementById('globalFullscreenBtn');

@@ -100,9 +100,24 @@
   }
 
   function exitCotizador() {
-    // Navegación explícita: history.back() a veces no hace nada (stack corto / same-doc).
+    // Cotizador interno → panel directo (sin pedir login otra vez).
     if (modo === 'interno') {
-      location.href = '/panel_gestion/';
+      try { sessionStorage.setItem('boxiesTeamSession', '1'); } catch (e0) {}
+      var panelUrl = '/panel_gestion/';
+      try {
+        if (window.BoxiesFullscreen && typeof window.BoxiesFullscreen.navigate === 'function') {
+          var keepFs = false;
+          try {
+            keepFs = !!(window.BoxiesFullscreen.isActive && window.BoxiesFullscreen.isActive()) ||
+              sessionStorage.getItem('boxiesKeepFullscreen') === '1';
+          } catch (e1) {}
+          if (keepFs) {
+            window.BoxiesFullscreen.navigate(panelUrl);
+            return;
+          }
+        }
+      } catch (e2) {}
+      location.href = panelUrl;
       return;
     }
     var sameOrigin = false;
