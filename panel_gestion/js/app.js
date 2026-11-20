@@ -290,7 +290,29 @@ function updateHunter(){
 if($('sales'))$('sales').addEventListener('input',()=>{renderHunterPrices();updateHunter()});
 if($('hunterAverage'))$('hunterAverage').addEventListener('input',updateHunter);
 document.querySelectorAll('input[name="hunterPriceMode"]').forEach(x=>x.addEventListener('change',updateHunter));
-$('portalHunterOpen').addEventListener('click',()=>{
+/* Módulos congelados temporalmente en el home del panel (contenido intacto). */
+const PORTAL_LOCKED_PAGES=new Set(['tasks','database']);
+function portalModuleLocked(key){return PORTAL_LOCKED_PAGES.has(key)}
+function showPortalLockedToast(msg){
+ let toast=document.getElementById('portalLockToast');
+ if(!toast){
+  toast=document.createElement('div');
+  toast.id='portalLockToast';
+  toast.className='portal-lock-toast';
+  toast.setAttribute('role','status');
+  document.body.appendChild(toast);
+ }
+ toast.textContent=msg||'Acceso bloqueado temporalmente';
+ toast.classList.add('is-on');
+ clearTimeout(showPortalLockedToast._t);
+ showPortalLockedToast._t=setTimeout(()=>toast.classList.remove('is-on'),2400);
+}
+$('portalHunterOpen').addEventListener('click',e=>{
+ if($('portalHunterOpen').getAttribute('data-portal-locked')==='1'){
+  e.preventDefault();e.stopPropagation();
+  showPortalLockedToast('Acceso bloqueado temporalmente');
+  return;
+ }
  document.body.classList.add('hunter-mode');
  $('hunter').style.display='block';
  $('portalBack').classList.remove('portal-hidden');
@@ -1346,6 +1368,10 @@ function openEmbeddedQuote(){
 }
 
 function portalOpenPage(key){
+ if(portalModuleLocked(key)){
+  showPortalLockedToast('Acceso bloqueado temporalmente');
+  return;
+ }
  if(key==='payments' && !window.boxiesPaymentsUnlocked){
   $('paymentsGateBackdrop').classList.remove('portal-hidden');
   $('paymentsDynamicKey').value='';$('paymentsGateError').textContent='';
@@ -1650,11 +1676,7 @@ syncGlobalFullscreenControl();
     if(abrir==='cotizar'){
       openEmbeddedQuote();
     }else if(abrir==='hunter'){
-      document.body.classList.add('hunter-mode');
-      $('hunter').style.display='block';
-      $('portalBack').classList.remove('portal-hidden');
-      try{initHunterProfile();updateHunter();}catch(e){}
-      window.scrollTo(0,0);
+      showPortalLockedToast('Acceso bloqueado temporalmente');
     }
   }catch(e){}
 })();
