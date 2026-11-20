@@ -110,82 +110,35 @@
     document.body.appendChild(overlay);
     document.body.appendChild(panel);
 
-    function savedMenuScroll() {
-      var fromPanel = parseInt(panel.getAttribute('data-scroll-y') || '', 10);
-      if (isFinite(fromPanel) && fromPanel >= 0) return fromPanel;
-      try {
-        var fromStore = parseInt(sessionStorage.getItem('boxiesMenuScrollY') || '', 10);
-        if (isFinite(fromStore) && fromStore >= 0) return fromStore;
-      } catch (err) {}
-      if (typeof window.__boxiesLockY === 'number' && window.__boxiesLockY >= 0) return window.__boxiesLockY;
-      return window.scrollY || document.documentElement.scrollTop || 0;
+    /* Bloqueo suave: no mueve scrollY (evita el salto loco de la landing). */
+    var scrollBlocked = false;
+    function blockScrollEvent(e) {
+      if (e.target && e.target.closest && e.target.closest('.menu-panel')) return;
+      e.preventDefault();
     }
-
-    /* Lock real: position fixed. overflow:hidden pone scrollY=0 y rompe la landing. */
-    function lockPageScroll(y) {
-      y = Math.max(0, Math.round(Number(y) || 0));
-      window.__boxiesLockY = y;
+    function lockPageScroll() {
+      if (scrollBlocked) return;
+      scrollBlocked = true;
       document.documentElement.classList.add('nav-scroll-locked');
-      document.body.style.position = 'fixed';
-      document.body.style.top = '-' + y + 'px';
-      document.body.style.left = '0';
-      document.body.style.right = '0';
-      document.body.style.width = '100%';
-      document.body.style.overflow = 'hidden';
-      try {
-        sessionStorage.setItem('boxiesMenuScrollY', String(y));
-      } catch (err) {}
-      try {
-        if (window.BoxiesFreezeLandingScroll) window.BoxiesFreezeLandingScroll();
-        else if (window.BoxiesSnapLandingScroll) window.BoxiesSnapLandingScroll();
-      } catch (err2) {}
+      document.addEventListener('wheel', blockScrollEvent, { passive: false, capture: true });
+      document.addEventListener('touchmove', blockScrollEvent, { passive: false, capture: true });
     }
-
     function unlockPageScroll() {
-      var y = savedMenuScroll();
-      window.__boxiesLockY = y;
-      window.__boxiesUnlocking = true;
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.left = '';
-      document.body.style.right = '';
-      document.body.style.width = '';
-      document.body.style.overflow = '';
+      if (!scrollBlocked) return;
+      scrollBlocked = false;
       document.documentElement.classList.remove('nav-scroll-locked');
-      try {
-        window.scrollTo(0, y);
-        document.documentElement.scrollTop = y;
-        document.body.scrollTop = y;
-      } catch (err) {}
-      try {
-        if (window.BoxiesUnfreezeLandingScroll) window.BoxiesUnfreezeLandingScroll(y);
-        else if (window.BoxiesSnapLandingScroll) window.BoxiesSnapLandingScroll();
-      } catch (err2) {}
+      document.removeEventListener('wheel', blockScrollEvent, true);
+      document.removeEventListener('touchmove', blockScrollEvent, true);
     }
 
     function setOpen(open) {
-      var alreadyOpen = panel.classList.contains('open');
-      if (open && !alreadyOpen) {
-        var y = window.scrollY || document.documentElement.scrollTop || 0;
-        panel.setAttribute('data-scroll-y', String(y));
-        try { sessionStorage.setItem('boxiesMenuScrollY', String(y)); } catch (err) {}
-        try {
-          if (window.BoxiesFullscreen && window.BoxiesFullscreen.captureView) {
-            window.BoxiesFullscreen.captureView({ y: y });
-          }
-        } catch (err2) {}
-        lockPageScroll(y);
-      }
       panel.classList.toggle('open', open);
       overlay.classList.toggle('open', open);
       toggle.classList.toggle('active', open);
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
       toggle.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
-      if (!open) {
-        unlockPageScroll();
-      } else if (alreadyOpen) {
-        lockPageScroll(savedMenuScroll());
-      }
+      if (open) lockPageScroll();
+      else unlockPageScroll();
     }
 
     function close() { setOpen(false); }
@@ -263,17 +216,10 @@
     }
 
     function doFullscreen() {
-      // Menú abierto + lock fijo: la vista no debe moverse al entrar en FS.
-      var y = savedMenuScroll();
-      panel.setAttribute('data-scroll-y', String(y));
-      try { sessionStorage.setItem('boxiesMenuScrollY', String(y)); } catch (errS) {}
-      window.__boxiesLockY = y;
+      // Solo FS. Menú sigue abierto. No tocar scroll ni position/overflow del body.
       try {
-        if (window.BoxiesFullscreen && window.BoxiesFullscreen.captureView) {
-          window.BoxiesFullscreen.captureView({ y: y });
-        }
+        if (window.BoxiesRememberLandingForFs) window.BoxiesRememberLandingForFs();
       } catch (err0) {}
-      lockPageScroll(y);
       var p;
       try {
         if (window.BoxiesFullscreen && window.BoxiesFullscreen.toggle) {
@@ -289,25 +235,15 @@
       } catch (err) {
         p = Promise.reject(err);
       }
-      var hold = function () {
-        if (!panel.classList.contains('open')) return;
-        lockPageScroll(y);
-      };
-      requestAnimationFrame(hold);
-      setTimeout(hold, 40);
-      setTimeout(hold, 120);
-      setTimeout(hold, 280);
       Promise.resolve(p).catch(function () {}).then(function () {
-        hold();
-        var keepOpen = true;
+        var keepOpen = panel.classList.contains('open');
         renderLinks();
-        if (keepOpen) {
-          panel.classList.add('open');
-          overlay.classList.add('open');
-          toggle.classList.add('active');
-          lockPageScroll(y);
-        }
-        hold();
+        if (keepOpen) setOpen(true);
+        try {
+          if (window.BoxiesRestoreLandingView && window.BoxiesCaptureLandingView) {
+            /* applyPendingFsView en landing escucha fullscreenchange */
+          }
+        } catch (err2) {}
       });
     }
 

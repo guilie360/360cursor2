@@ -303,23 +303,15 @@
     intentionalExit = false;
     setWanted(true);
     saveUrl(location.href);
-    try {
-      var menuY = parseInt(sessionStorage.getItem('boxiesMenuScrollY') || '', 10);
-      if (isFinite(menuY) && menuY >= 0) captureViewState({ y: menuY });
-      else captureViewState();
-    } catch (e) { captureViewState(); }
-    // Misma página: solo FS nativo. El shell iframe se crea al navegar a otra ruta
-    // para no recargar ni perder el scroll.
+    // Misma página: solo FS nativo. Sin restaurar scroll aquí (lo hace la landing).
     return requestFs()
       .then(function () {
         dispatch(true);
-        scheduleRestore(false);
         return true;
       })
       .catch(function () {
         armOneShotEnter();
         dispatch(false);
-        scheduleRestore(false);
         return false;
       });
   }
@@ -327,14 +319,12 @@
   function leave() {
     intentionalExit = true;
     setWanted(false);
-    captureViewState();
     return exitFs()
       .catch(function () {})
       .then(function () {
         destroyShell();
         intentionalExit = false;
         dispatch(false);
-        scheduleRestore(true);
         return false;
       });
   }
@@ -343,9 +333,8 @@
     if (isFs()) return leave();
     if (getShell()) {
       setWanted(true);
-      captureViewState();
       return requestFs()
-        .then(function () { dispatch(true); scheduleRestore(false); return true; })
+        .then(function () { dispatch(true); return true; })
         .catch(function () {
           armOneShotEnter();
           dispatch(false);
@@ -360,7 +349,6 @@
       setWanted(true);
       intentionalExit = false;
       dispatch(true);
-      scheduleRestore(false);
       return;
     }
     if (intentionalExit) {
@@ -368,14 +356,12 @@
       setWanted(false);
       destroyShell();
       dispatch(false);
-      scheduleRestore(true);
       return;
     }
-    // Esc u otra salida involuntaria: no forzar shell (evita recarga/salto).
+    // Esc u otra salida involuntaria: rearmar solo con clic (nunca teclado).
     if (wanted()) {
       armOneShotEnter();
       dispatch(false);
-      scheduleRestore(false);
     }
   }
 
@@ -389,23 +375,25 @@
     function handler(e) {
       if (!wanted()) { cleanup(); return; }
       if (isFs()) { cleanup(); return; }
+      /* Nunca secuestrar teclado (Ctrl+F5, F5, atajos). Solo clic/touch. */
+      if (e.type === 'keydown') return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.type === 'pointerdown' && e.button != null && e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
       if (e.stopImmediatePropagation) e.stopImmediatePropagation();
       cleanup();
-      captureViewState();
       requestFs().then(function () {
         dispatch(true);
-        scheduleRestore(false);
       }).catch(function () { armOneShotEnter(); });
     }
     function cleanup() {
       oneShotArmed = false;
-      ['pointerdown', 'click', 'touchstart', 'keydown'].forEach(function (ev) {
+      ['pointerdown', 'click', 'touchstart'].forEach(function (ev) {
         document.removeEventListener(ev, handler, true);
       });
     }
-    ['pointerdown', 'click', 'touchstart', 'keydown'].forEach(function (ev) {
+    ['pointerdown', 'click', 'touchstart'].forEach(function (ev) {
       document.addEventListener(ev, handler, true);
     });
   }
@@ -441,20 +429,37 @@
     ensureShell(abs);
   }, true);
 
+  function isReloadNavigation() {
+    try {
+      var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+      if (nav && nav.type === 'reload') return true;
+    } catch (e) {}
+    try {
+      if (performance.navigation && performance.navigation.type === 1) return true;
+    } catch (e2) {}
+    return false;
+  }
+
   function boot() {
-    if (!wanted()) return;
-    /* Recarga / llegada desde otra página con FS pendiente → shell */
-    if (!getShell()) ensureShell(savedUrl(location.href));
-    if (!isFs()) armOneShotEnter();
-    else {
-      dispatch(true);
-      scheduleRestore(true);
+    /* Ctrl+F5 / F5: limpiar flag FS para que el refresh no reactive pantalla completa. */
+    if (isReloadNavigation()) {
+      setWanted(false);
+      return;
     }
+    if (!wanted()) return;
+    if (!isFs()) armOneShotEnter();
+    else dispatch(true);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
-  window.addEventListener('pageshow', function () { if (wanted()) boot(); });
+  window.addEventListener('pageshow', function () {
+    if (isReloadNavigation()) {
+      setWanted(false);
+      return;
+    }
+    if (wanted()) boot();
+  });
 
   global.BoxiesFullscreen = {
     toggle: toggle,

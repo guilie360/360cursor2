@@ -12,47 +12,14 @@ msgs.forEach(m=>{const h=m.querySelector('h2');
 
 /* Progreso de scroll con inercia suave (el scroll nativo no se toca) */
 const tgt={intro:0,exp:0},cur={intro:0,exp:0};let raf=0;
-let landingFrozen=false;
-const frozenProgress={intro:0,exp:0};
-/* Con menú abierto body está position:fixed y scrollY=0; usar el lock real. */
-function pageScrollY(){
-  if(landingFrozen||document.documentElement.classList.contains('nav-scroll-locked')||window.__boxiesUnlocking){
-    if(typeof window.__boxiesLockY==='number'&&window.__boxiesLockY>=0) return window.__boxiesLockY;
-    const top=parseInt(document.body.style.top||'0',10);
-    if(isFinite(top)&&top!==0) return Math.abs(top);
-  }
-  return scrollY||document.documentElement.scrollTop||0;
-}
 function read(){
-  /* Menú/FS: congelar el scrub para que no anime de 0→final al desbloquear */
-  if(landingFrozen){
-    tgt.intro=frozenProgress.intro;
-    tgt.exp=frozenProgress.exp;
-    cur.intro=frozenProgress.intro;
-    cur.exp=frozenProgress.exp;
-    if(raf){cancelAnimationFrame(raf);raf=0}
-    render();
-    return;
-  }
   const vh=innerHeight;
-  const y=pageScrollY();
-  tgt.intro=clamp(y/(vh*.7));
+  tgt.intro=clamp(scrollY/(vh*.7));
   const sc=exp.offsetHeight-vh;
   tgt.exp=sc>0?clamp(-exp.getBoundingClientRect().top/sc):0;
-  if(document.documentElement.classList.contains('nav-scroll-locked')||window.__boxiesUnlocking){
-    cur.intro=tgt.intro;
-    cur.exp=tgt.exp;
-    if(raf){cancelAnimationFrame(raf);raf=0}
-    render();
-    return;
-  }
   if(!raf)raf=requestAnimationFrame(tick);
 }
 function tick(){
-  if(landingFrozen||document.documentElement.classList.contains('nav-scroll-locked')||window.__boxiesUnlocking){
-    raf=0;
-    return;
-  }
   let busy=false;const k=reduce?1:.14;
   for(const key in tgt){const d=tgt[key]-cur[key];if(Math.abs(d)>.0004){cur[key]+=d*k;busy=true}else cur[key]=tgt[key]}
   render();raf=busy?requestAnimationFrame(tick):0;
@@ -87,70 +54,12 @@ addEventListener('scroll',read,{passive:true});addEventListener('resize',read);r
 /* Salto de sección sin scrub visual del scroll-story */
 if('scrollRestoration' in history) history.scrollRestoration='manual';
 function snapScrollState(){
-  if(landingFrozen){
-    tgt.intro=frozenProgress.intro;
-    tgt.exp=frozenProgress.exp;
-    cur.intro=frozenProgress.intro;
-    cur.exp=frozenProgress.exp;
-    if(raf){cancelAnimationFrame(raf);raf=0}
-    render();
-    return;
-  }
   read();
   cur.intro=tgt.intro;
   cur.exp=tgt.exp;
   if(raf){cancelAnimationFrame(raf);raf=0;}
   render();
 }
-window.BoxiesFreezeLandingScroll=()=>{
-  read();
-  frozenProgress.intro=tgt.intro;
-  frozenProgress.exp=tgt.exp;
-  cur.intro=tgt.intro;
-  cur.exp=tgt.exp;
-  landingFrozen=true;
-  if(raf){cancelAnimationFrame(raf);raf=0}
-  render();
-};
-window.BoxiesUnfreezeLandingScroll=(y)=>{
-  if(typeof y==='number'&&y>=0) window.__boxiesLockY=y;
-  window.__boxiesUnlocking=true;
-  landingFrozen=false;
-  try{
-    if(typeof y==='number'&&y>=0){
-      scrollTo(0,y);
-      document.documentElement.scrollTop=y;
-      document.body.scrollTop=y;
-    }
-  }catch(e){}
-  read();
-  cur.intro=tgt.intro;
-  cur.exp=tgt.exp;
-  if(raf){cancelAnimationFrame(raf);raf=0}
-  render();
-  requestAnimationFrame(()=>{
-    try{
-      if(typeof y==='number'&&y>=0){
-        scrollTo(0,y);
-        document.documentElement.scrollTop=y;
-        document.body.scrollTop=y;
-      }
-    }catch(e){}
-    read();
-    cur.intro=tgt.intro;
-    cur.exp=tgt.exp;
-    if(raf){cancelAnimationFrame(raf);raf=0}
-    render();
-    requestAnimationFrame(()=>{
-      read();
-      cur.intro=tgt.intro;
-      cur.exp=tgt.exp;
-      if(raf){cancelAnimationFrame(raf);raf=0}
-      render();
-      window.__boxiesUnlocking=false;
-    });
-  });
-};
 function sectionTop(el){
   if(!el) return 0;
   const y=el.getBoundingClientRect().top+scrollY;
@@ -205,47 +114,22 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
 }
 window.BoxiesGoToSection=goToSection;
 window.BoxiesSnapLandingScroll=snapScrollState;
-function mostVisibleLandingSection(){
-  const ids=['inicio','servicio','demo'];
-  let best='',bestVis=0;
-  const vh=innerHeight||1;
-  ids.forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el) return;
-    const r=el.getBoundingClientRect();
-    const vis=Math.min(r.bottom,vh)-Math.max(r.top,0);
-    if(vis>bestVis){bestVis=vis;best=id}
-  });
-  return best;
-}
-window.BoxiesCaptureLandingView=(override)=>{
-  const y=typeof override?.y==='number'?override.y:pageScrollY();
-  if(typeof override?.y==='number') window.__boxiesLockY=override.y;
-  read();
-  return{
-    intro:tgt.intro,
-    exp:tgt.exp,
-    section:mostVisibleLandingSection(),
-    y,
-    vh:innerHeight,
-    sh:document.documentElement.scrollHeight
-  };
+let pendingFsView=null;
+window.BoxiesCaptureLandingView=()=>({
+  y:scrollY||document.documentElement.scrollTop||0,
+  vh:innerHeight,
+  sh:document.documentElement.scrollHeight
+});
+window.BoxiesRememberLandingForFs=()=>{
+  pendingFsView=window.BoxiesCaptureLandingView();
 };
-/* Con lock activo no tocar scroll nativo (rompería la vista). */
 window.BoxiesRestoreLandingView=state=>{
   if(!state||typeof state.y!=='number') return false;
-  if(document.documentElement.classList.contains('nav-scroll-locked')){
-    window.__boxiesLockY=state.y;
-    document.body.style.top='-'+Math.round(state.y)+'px';
-    snapScrollState();
-    return true;
-  }
   const vh=innerHeight||1;
   const sh=document.documentElement.scrollHeight||0;
   let top=state.y;
   if(state.sh>state.vh&&sh>vh){
-    const ratio=state.y/Math.max(1,state.sh-state.vh);
-    top=ratio*Math.max(1,sh-vh);
+    top=(state.y/Math.max(1,state.sh-state.vh))*Math.max(1,sh-vh);
   }
   top=Math.max(0,Math.round(top));
   scrollTo({top,left:0,behavior:'instant'});
@@ -254,12 +138,22 @@ window.BoxiesRestoreLandingView=state=>{
   snapScrollState();
   return true;
 };
-document.addEventListener('boxies:fullscreen',()=>{
-  // Mantener scrub según lock/scroll real; no re-navegar.
-  requestAnimationFrame(()=>{
-    read();
+function applyPendingFsView(){
+  const state=pendingFsView;
+  if(state){
+    window.BoxiesRestoreLandingView(state);
+  }else{
     snapScrollState();
-  });
+  }
+}
+document.addEventListener('fullscreenchange',()=>{
+  requestAnimationFrame(()=>requestAnimationFrame(applyPendingFsView));
+});
+document.addEventListener('webkitfullscreenchange',()=>{
+  requestAnimationFrame(()=>requestAnimationFrame(applyPendingFsView));
+});
+document.addEventListener('boxies:fullscreen',()=>{
+  requestAnimationFrame(()=>requestAnimationFrame(applyPendingFsView));
 });
 function bootHashJump(){
   const raw=(location.hash||'').replace(/^#/,'');
@@ -317,18 +211,13 @@ const fsLabel=()=>{
   fs.title=a?'Salir de pantalla completa':'Pantalla completa';
 };
 fs.addEventListener('click',async()=>{
-  const y=scrollY;
-  try{window.BoxiesFullscreen?.captureView?.()}catch(e0){}
+  try{window.BoxiesRememberLandingForFs?.()}catch(e0){}
   try{
     if(window.BoxiesFullscreen?.toggle) await window.BoxiesFullscreen.toggle();
     else if(document.fullscreenElement) await document.exitFullscreen();
     else await document.documentElement.requestFullscreen();
   }catch(e){console.warn('Pantalla completa no disponible.',e)}
-  requestAnimationFrame(()=>{
-    scrollTo(0,y);
-    window.BoxiesFullscreen?.restoreView?.();
-    snapScrollState();
-  });
+  applyPendingFsView();
   fsLabel();
 });
 document.addEventListener('fullscreenchange',fsLabel);
