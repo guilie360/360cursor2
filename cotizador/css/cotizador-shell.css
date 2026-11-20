@@ -136,6 +136,13 @@ body.cotizador-app.modo-interno .quote-footer-commission,
 body.cotizador-app.modo-interno .quote-footer-commission.portal-hidden{
   display:flex!important;
 }
+body.cotizador-app .quote-footer-charge{
+  display:none;flex:0 0 auto;margin:0 8px 0 0;padding:8px 12px;
+  border:1px solid rgba(255,255,255,.22);border-radius:999px;background:transparent;
+  color:#d6d0c8;font:600 10px/1 var(--font-ui);letter-spacing:.12em;text-transform:uppercase;cursor:pointer
+}
+body.cotizador-app.modo-interno .quote-footer-charge{display:inline-flex;align-items:center}
+body.cotizador-app .quote-footer-charge:hover{border-color:#fff;color:#fff}
 body.cotizador-app .quote-footer-commission small{
   font:600 var(--t-xs)/1 var(--font-ui);letter-spacing:.1em;text-transform:uppercase;
   color:#6f6a64;

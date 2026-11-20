@@ -178,6 +178,45 @@
     commissionBtn.classList.remove('portal-hidden');
   }
 
+  /* Cobrar cotización actual vía Stripe (panel Pagos) */
+  if (modo === 'interno') {
+    var chargeBtn = document.getElementById('internoChargeBtn');
+    if (!chargeBtn) {
+      chargeBtn = document.createElement('button');
+      chargeBtn.id = 'internoChargeBtn';
+      chargeBtn.type = 'button';
+      chargeBtn.className = 'quote-footer-charge mag';
+      chargeBtn.textContent = 'Cobrar';
+      chargeBtn.title = 'Generar enlace Stripe con este presupuesto';
+      chargeBtn.setAttribute('data-cursor', 'COBRAR');
+      var footerInner = document.querySelector('.quote-goal-footer-inner');
+      var priceBox = document.querySelector('.quote-footer-price');
+      if (footerInner && priceBox) footerInner.insertBefore(chargeBtn, priceBox);
+    }
+    chargeBtn.addEventListener('click', function () {
+      try {
+        var priceEl = document.getElementById('stickyPrice');
+        var raw = (priceEl && priceEl.textContent) || '';
+        var num = Number(String(raw).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'));
+        sessionStorage.setItem('boxiesTeamSession', '1');
+        sessionStorage.setItem('boxiesPayPrefill', JSON.stringify({
+          amount: Number.isFinite(num) && num > 0 ? num : 0,
+          concepto: 'Cotización showroom 360Preventa',
+          t: Date.now()
+        }));
+      } catch (e) {}
+      var url = '/panel_gestion/?abrir=pagos';
+      try {
+        if (window.BoxiesFullscreen && typeof window.BoxiesFullscreen.navigate === 'function' &&
+          sessionStorage.getItem('boxiesKeepFullscreen') === '1') {
+          window.BoxiesFullscreen.navigate(url);
+          return;
+        }
+      } catch (e2) {}
+      location.href = url;
+    });
+  }
+
   function syncCommission() {
     var text = (live && live.textContent) ? live.textContent.trim() : '0 €';
     if (!text) text = '0 €';

@@ -1598,3 +1598,22 @@ html.has-cur label,
 html.has-cur .btn{
   cursor:none!important;
 }
+
+/* ===== Pagos Stripe ===== */
+.panel-payments{display:grid;gap:22px}
+.panel-pay-stripe{
+  padding:22px 20px;border:1px solid rgba(255,255,255,.1);
+  border-radius:18px;background:rgba(255,255,255,.03)
+}
+.panel-pay-form{display:grid;gap:12px;margin-top:14px}
+.panel-pay-form .field{display:grid;gap:6px;font:600 11px/1.2 var(--font-ui,Manrope,sans-serif);letter-spacing:.08em;text-transform:uppercase;color:#9a948c}
+.panel-pay-form .field input{
+  width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.16);
+  background:#121212;color:#efeae3;font:500 15px/1.3 var(--font-ui,Manrope,sans-serif);text-transform:none;letter-spacing:0
+}
+.panel-pay-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+.panel-pay-status{min-height:1.2em;margin:4px 0 0;color:#cfc9bd;font:500 13px/1.4 var(--font-ui,Manrope,sans-serif)}
+.panel-pay-status a{color:#fff;text-decoration:underline}
+.status-pill--pending{opacity:.85}
+.status-pill--cobrado{border-color:rgba(120,200,140,.45);color:#b7e0c2}
+.status-pill--fallido,.status-pill--cancelado{opacity:.7}
