@@ -1379,17 +1379,19 @@ function portalOpenPage(key){
   return;
  }
  if(key==='quote'){
-  // Cotizador privado del panel (comisión hunter + menú de empresa).
+  // Cotizador privado: con FS activo va por shell iframe (no location.href).
   try{
    sessionStorage.setItem('boxiesTeamSession','1');
    var rol=(document.body.dataset.panelRole||sessionStorage.getItem('boxiesPanelRole')||'').trim();
    if(rol) sessionStorage.setItem('boxiesPanelRole',rol);
   }catch(e){}
   var quoteUrl='/cotizar?modo=interno';
-  if(window.BoxiesFullscreen&&typeof window.BoxiesFullscreen.navigate==='function'){
-   window.BoxiesFullscreen.navigate(quoteUrl);
-   return;
-  }
+  try{
+   if(window.BoxiesFullscreen&&typeof window.BoxiesFullscreen.navigate==='function'){
+    window.BoxiesFullscreen.navigate(quoteUrl);
+    return;
+   }
+  }catch(errNav){}
   window.location.href=quoteUrl;
   return;
  }

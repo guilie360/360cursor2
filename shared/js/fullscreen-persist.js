@@ -33,8 +33,8 @@
   function isFs() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
   }
-  function requestFs() {
-    var el = document.documentElement;
+  function requestFs(target) {
+    var el = target || document.documentElement;
     var fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
     if (!fn) return Promise.reject(new Error('unsupported'));
     return Promise.resolve(fn.call(el));
@@ -193,7 +193,23 @@
         if (api && api.toggle) return api.toggle();
         return Promise.resolve(false);
       },
+      leave: function () {
+        var api = parentApi();
+        if (api && api.leave) return api.leave();
+        return Promise.resolve(false);
+      },
       restore: function () { return Promise.resolve(false); },
+      navigate: function (href) {
+        var api = parentApi();
+        if (api && api.navigate) return api.navigate(href);
+        if (href) location.href = href;
+        return !!href;
+      },
+      ensureShell: function (href) {
+        var api = parentApi();
+        if (api && api.ensureShell) return api.ensureShell(href);
+        return null;
+      },
       wanted: function () {
         var api = parentApi();
         return api && api.wanted ? api.wanted() : wanted();
@@ -455,37 +471,84 @@
     return el.getAttribute('data-href') || el.getAttribute('href') || '';
   }
 
+  function stampTeamForQuote(href) {
+    if (!href || href.indexOf('modo=interno') === -1) return;
+    try {
+      sessionStorage.setItem('boxiesTeamSession', '1');
+      var rol = '';
+      try { rol = (document.body && document.body.dataset.panelRole) || sessionStorage.getItem('boxiesPanelRole') || ''; } catch (e0) {}
+      rol = String(rol || '').trim();
+      if (rol) sessionStorage.setItem('boxiesPanelRole', rol);
+    } catch (e) {}
+  }
+
+  function reassertFs() {
+    setWanted(true);
+    var shell = getShell();
+    var target = shell || document.documentElement;
+    /*
+     * Siempre re-pedir FS en el mismo gesto de clic.
+     * Varios browsers sueltan Fullscreen API al insertar el iframe;
+     * si solo comprobamos isFs() un instante, el request llega tarde.
+     */
+    try {
+      var syncFn = target.requestFullscreen || target.webkitRequestFullscreen || target.msRequestFullscreen;
+      if (syncFn) syncFn.call(target);
+    } catch (e0) {}
+    return requestFs(target)
+      .then(function () {
+        dispatch(true);
+        return true;
+      })
+      .catch(function () {
+        if (target !== document.documentElement) {
+          return requestFs(document.documentElement)
+            .then(function () { dispatch(true); return true; })
+            .catch(function () {
+              armOneShotEnter();
+              dispatch(false);
+              return false;
+            });
+        }
+        armOneShotEnter();
+        dispatch(false);
+        return false;
+      });
+  }
+
   function navigateKeepFs(href) {
     if (!href) return false;
     var abs;
     try { abs = new URL(href, location.href).href; } catch (e) { return false; }
+    stampTeamForQuote(abs);
     saveUrl(abs);
-    if (isFs() || getShell()) {
-      captureViewState();
-      ensureShell(abs);
+
+    /* Sin FS pedido: navegación normal */
+    if (!(isFs() || wanted() || getShell())) {
+      location.href = abs;
       return true;
     }
-    location.href = abs;
+
+    /* Con FS: shell iframe en el padre + reafirmar Fullscreen API en este clic */
+    setWanted(true);
+    captureViewState();
+    ensureShell(abs);
+    reassertFs();
     return true;
   }
 
-  /* Si FS está activo sin shell, al ir a otra ruta crear shell para no perder FS */
+  /* Si FS está activo / pedido, al ir a otra ruta crear shell (no location.href) */
   document.addEventListener('click', function (e) {
-    if (getShell()) {
-      /* Dentro del shell top: data-page del documento padre no aplica al iframe */
-      return;
-    }
+    if (getShell()) return;
     if (!isFs() && !wanted()) return;
     var el = e.target.closest && e.target.closest('a[href], a[data-href], button[data-href], [data-page="quote"]');
     if (!el) return;
     var href = hrefFromNavEl(el);
     if (!shouldShellNav(href)) return;
-    if (!isFs()) return; /* wanted pero sin FS: navegación normal; boot repondrá */
-    var abs = new URL(href, location.href).href;
     e.preventDefault();
     e.stopPropagation();
     if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-    navigateKeepFs(abs);
+    navigateKeepFs(href);
   }, true);
 
   function isReloadNavigation() {
