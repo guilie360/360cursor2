@@ -408,6 +408,14 @@ function openOrderModal(){
  $('orderSummary').innerHTML+=$('quoteRows').innerHTML;
  $('orderTotal').textContent=money(q.total);$('confirmStatus').textContent='';
  $('exportCustomerName').textContent=$('customerName').value.trim();
+ try{
+  window.PanelPaddle?.mountInOrderModal?.(q.total,{
+   customerName:$('customerName').value.trim(),
+   customerEmail:$('customerEmail')?.value.trim()||'',
+   proyectoLabel:'Showroom personalizado · '+type,
+   quoteSnapshot:{mode:'manual',total:q.total,area:q.area,floors:q.floors,type}
+  });
+ }catch(ePay){}
  $('orderModal').classList.remove('hidden');
 }
 $('modalClose').addEventListener('click',()=>{$('orderModal').classList.add('hidden');restoreOrderModal();});
@@ -1118,7 +1126,16 @@ $('packageSelect').addEventListener('click',()=>{
  $('orderTitle').textContent='Resumen del paquete';
  $('orderSummary').innerHTML=rows.map(([a,b])=>`<div class="order-detail-row"><span>${a}</span><strong>${b}</strong></div>`).join('');
  $('orderTotal').textContent=money(q.total);$('confirmStatus').textContent='';
- $('exportCustomerName').textContent=$('customerName').value.trim();$('orderModal').classList.remove('hidden');
+ $('exportCustomerName').textContent=$('customerName').value.trim();
+ try{
+  window.PanelPaddle?.mountInOrderModal?.(q.total,{
+   customerName:$('customerName').value.trim(),
+   customerEmail:$('customerEmail')?.value.trim()||'',
+   proyectoLabel:p.title,
+   quoteSnapshot:{mode:'package',package:activePackage,total:q.total,area}
+  });
+ }catch(ePay){}
+ $('orderModal').classList.remove('hidden');
 });
 
 update();updateHunter();
@@ -1140,7 +1157,7 @@ function saveTasksState(){try{localStorage.setItem('boxiesTasksState',JSON.strin
 const demoMoney=n=>'€ '+Number(n).toLocaleString('es-ES');
 const projectRows=()=>demoProjects.map(p=>`<tr><td><button class="project-open" data-project="${p.id}">${p.name}</button></td><td>${p.client}</td><td>${p.owner}</td><td><span class="status-pill">${p.status}</span></td><td>${demoMoney(p.amount)}</td><td><div class="progress-track"><span style="width:${p.progress}%"></span></div><small>${p.progress}%</small></td></tr>`).join('');
 const portalPages={
- payments:{title:'Pagos',intro:'Control económico real: genera enlaces Stripe (EUR) y consulta cobros pendientes y confirmados.',body:`<div id="panelPaymentsRoot" class="panel-payments" data-payments-root="1"><div class="portal-note">Cargando pagos…</div></div>`},
+ payments:{title:'Pagos',intro:'Pedidos con anticipo 50% + entrega 50% vía Paddle (EUR sin IVA; el impuesto se calcula en el checkout).',body:`<div id="panelPaymentsRoot" class="panel-payments" data-payments-root="1"><div class="portal-note">Cargando pagos…</div></div>`},
  contracts:{title:'Contratos',intro:'Prepara contratos desde los datos del proyecto para evitar introducir la información dos veces.',body:`<div class="portal-note">Flujo previsto: seleccionar proyecto → completar datos fiscales faltantes → generar documento desde plantilla → revisión → firma.</div><div class="portal-form"><label>Proyecto<select><option>Seleccionar proyecto…</option><option>Miralago</option><option>Apartamento Centro</option><option>Co-living Norte</option></select></label><label>Plantilla<select><option>Contrato de servicios</option><option>Acuerdo de confidencialidad</option></select></label><label>Razón social<input placeholder="Se completará desde el proyecto"></label><label>Documento fiscal<input placeholder="NIF / CIF / NIT"></label></div><button class="btn primary" data-demo="contracts">Preparar contrato</button><p class="desc">La generación automática requiere cargar la plantilla contractual aprobada.</p>`},
  database:{title:'Base de datos',intro:'Un espacio central para consultar y organizar los archivos compartidos de 360Preventa. Conecta Google Drive una sola vez y accede a cada categoría.',body:`
 <div class="database-toolbar">
@@ -1296,6 +1313,7 @@ function openSaleOrder(id){
  $('orderModal').querySelector('.order-dialog > .desc').textContent='Detalle del pedido asociado a esta venta.';
  $('customerName').parentElement.style.display='none';
  $('exportCustomerName').textContent=sale.client;
+ const payHost=$('orderPaySchedule');if(payHost)payHost.innerHTML='';
  $('orderSummary').innerHTML=sale.quoteRows.map(([a,b])=>`<div class="order-detail-row"><span>${a}</span><strong>${b}</strong></div>`).join('');
  $('orderSummary').innerHTML+=`<div class="price-line"><span>Comisión generada · 8 %</span><strong>${demoMoney(sale.commission)}</strong></div>`;
  $('orderTotal').textContent=demoMoney(sale.amount);
@@ -1313,6 +1331,7 @@ function restoreOrderModal(){
  if($('downloadPdf')){$('downloadPdf').style.display='';$('downloadPdf').textContent='DESCARGAR COTIZACIÓN';}
  const wa=$('orderModal')?.querySelector('.summary-actions .final-quote-whatsapp');if(wa)wa.style.display='';
  ['downloadImage','shareQuote','quoteToProject','shareFormats'].forEach(id=>{const el=$(id);if(el)el.style.display='';});
+ const payHost=$('orderPaySchedule');if(payHost)payHost.innerHTML='';
 }
 function portalShowHome(){
  $('portalHome').classList.remove('portal-hidden');$('portalSubpage').classList.add('portal-hidden');
@@ -1417,7 +1436,9 @@ function portalOpenPage(key){
  $('portalSubpage').innerHTML=`<div class="eyebrow">360PREVENTA · MÓDULO</div><h2>${p.title}</h2><p class="portal-sub">${p.intro}</p>${p.body}`;
  if(key==='tasks')renderTasks();
  if(key==='payments'){
-  try{ window.PanelPayments?.mount?.($('portalSubpage')); }catch(ePay){ console.warn('[Pagos]', ePay); }
+  try{ window.PanelPaddle?.mount?.($('portalSubpage')); }catch(ePay){
+   try{ window.PanelPayments?.mount?.($('portalSubpage')); }catch(e2){ console.warn('[Pagos]', ePay||e2); }
+  }
  }
  if(key==='hunt'){const input=document.getElementById('adsDriveUrl');try{input.value=localStorage.getItem('boxiesAdsDriveUrl')||'';}catch(e){}}
  if(key==='library'){const input=document.getElementById('libraryDriveUrl');try{input.value=localStorage.getItem('boxiesLibraryDriveUrl')||'';}catch(e){}}
