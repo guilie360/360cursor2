@@ -113,6 +113,69 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
   requestAnimationFrame(()=>setTimeout(run, fromLoad ? 40 : 90));
 }
 window.BoxiesGoToSection=goToSection;
+window.BoxiesSnapLandingScroll=snapScrollState;
+function mostVisibleLandingSection(){
+  const ids=['inicio','servicio','demo'];
+  let best='',bestVis=0;
+  const vh=innerHeight||1;
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    const r=el.getBoundingClientRect();
+    const vis=Math.min(r.bottom,vh)-Math.max(r.top,0);
+    if(vis>bestVis){bestVis=vis;best=id}
+  });
+  return best;
+}
+window.BoxiesCaptureLandingView=()=>{
+  read();
+  return{
+    intro:tgt.intro,
+    exp:tgt.exp,
+    section:mostVisibleLandingSection(),
+    y:scrollY,
+    vh:innerHeight
+  };
+};
+window.BoxiesRestoreLandingView=state=>{
+  if(!state) return false;
+  const sec=state.section||'';
+  if(sec==='demo'||sec==='inicio'){
+    const el=document.getElementById(sec);
+    if(!el) return false;
+    prepareFinalAtJump();
+    const top=sectionTop(el);
+    scrollTo({top,left:0,behavior:'instant'});
+    document.documentElement.scrollTop=top;
+    document.body.scrollTop=top;
+    snapScrollState();
+    try{if(location.hash!=='#'+sec) history.replaceState(null,'','#'+sec)}catch(e){}
+    return true;
+  }
+  if(typeof state.exp==='number'&&exp){
+    const sc=Math.max(0,exp.offsetHeight-innerHeight);
+    const top=sectionTop(exp)+clamp(state.exp)*sc;
+    scrollTo({top,left:0,behavior:'instant'});
+    document.documentElement.scrollTop=top;
+    document.body.scrollTop=top;
+    snapScrollState();
+    return true;
+  }
+  if(typeof state.intro==='number'){
+    const top=clamp(state.intro)*innerHeight*.7;
+    scrollTo({top,left:0,behavior:'instant'});
+    snapScrollState();
+    return true;
+  }
+  return false;
+};
+document.addEventListener('boxies:fullscreen',()=>{
+  // Tras cambiar el viewport (FS), re-sincronizar la historia de scroll.
+  requestAnimationFrame(()=>{
+    if(window.BoxiesFullscreen?.restoreView) window.BoxiesFullscreen.restoreView();
+    else snapScrollState();
+  });
+});
 function bootHashJump(){
   const raw=(location.hash||'').replace(/^#/,'');
   if(!raw) return;
@@ -169,11 +232,18 @@ const fsLabel=()=>{
   fs.title=a?'Salir de pantalla completa':'Pantalla completa';
 };
 fs.addEventListener('click',async()=>{
+  const y=scrollY;
+  try{window.BoxiesFullscreen?.captureView?.()}catch(e0){}
   try{
     if(window.BoxiesFullscreen?.toggle) await window.BoxiesFullscreen.toggle();
     else if(document.fullscreenElement) await document.exitFullscreen();
     else await document.documentElement.requestFullscreen();
   }catch(e){console.warn('Pantalla completa no disponible.',e)}
+  requestAnimationFrame(()=>{
+    scrollTo(0,y);
+    window.BoxiesFullscreen?.restoreView?.();
+    snapScrollState();
+  });
   fsLabel();
 });
 document.addEventListener('fullscreenchange',fsLabel);

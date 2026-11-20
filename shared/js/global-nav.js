@@ -196,6 +196,12 @@
     function doFullscreen() {
       // Toggle FS en el mismo gesto del clic; cerrar el menú después.
       // Si se cierra antes, el navegador pierde el user-gesture y hace falta un 2º clic.
+      var y = window.scrollY || document.documentElement.scrollTop || 0;
+      try {
+        if (window.BoxiesFullscreen && window.BoxiesFullscreen.captureView) {
+          window.BoxiesFullscreen.captureView();
+        }
+      } catch (err0) {}
       var p;
       try {
         if (window.BoxiesFullscreen && window.BoxiesFullscreen.toggle) {
@@ -212,7 +218,24 @@
         p = Promise.reject(err);
       }
       close();
+      // Al quitar overflow:hidden del menú el scroll no debe saltar.
+      var pin = function () {
+        try {
+          window.scrollTo(0, y);
+          document.documentElement.scrollTop = y;
+          document.body.scrollTop = y;
+          if (window.BoxiesFullscreen && window.BoxiesFullscreen.restoreView) {
+            window.BoxiesFullscreen.restoreView();
+          } else if (window.BoxiesSnapLandingScroll) {
+            window.BoxiesSnapLandingScroll();
+          }
+        } catch (err2) {}
+      };
+      requestAnimationFrame(pin);
+      setTimeout(pin, 50);
+      setTimeout(pin, 180);
       Promise.resolve(p).catch(function () {}).then(function () {
+        pin();
         setTimeout(renderLinks, 160);
       });
     }
