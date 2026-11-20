@@ -936,17 +936,41 @@ body.cotizador-app #packageDetails .base-compact-grid>.base-include-item{
   transition:border-color .18s ease,background .18s ease,box-shadow .18s ease;
 }
 body.cotizador-app .base-compact-grid>.base-include-item{
+  position:relative!important;
   display:flex;
   flex-direction:column;
   align-items:flex-start;
   gap:0!important;
   width:100%;
+  padding-right:30px!important;
   text-align:left;
   color:inherit;
   font:inherit;
   cursor:pointer;
   -webkit-appearance:none;
   appearance:none;
+}
+body.cotizador-app .base-compact-grid>.base-include-item::after{
+  content:""!important;
+  position:absolute!important;
+  right:14px!important;
+  top:18px!important;
+  width:6px!important;
+  height:6px!important;
+  border-right:1.5px solid rgba(255,255,255,.45)!important;
+  border-bottom:1.5px solid rgba(255,255,255,.45)!important;
+  border-top:0!important;
+  border-left:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  transform:rotate(45deg)!important;
+  pointer-events:none!important;
+  transition:transform .2s ease,top .2s ease,opacity .2s ease!important;
+}
+body.cotizador-app .base-compact-grid>.base-include-item.is-open::after{
+  transform:rotate(225deg)!important;
+  top:20px!important;
+  opacity:.75!important;
 }
 body.cotizador-app .step:nth-child(even) .choice,
 body.cotizador-app .step:nth-child(even) .base-compact-grid>div,
