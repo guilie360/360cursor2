@@ -1639,10 +1639,16 @@ function leaveWorkspaceUi(){
  $('portal').classList.add('portal-hidden');
  $('loginScreen').classList.remove('portal-hidden');
  document.body.classList.remove('workspace-authenticated');
+ try{
+  delete document.body.dataset.panelRole;
+  sessionStorage.removeItem('boxiesPanelRole');
+  sessionStorage.removeItem('boxiesTeamSession');
+ }catch(e){}
  $('teamChatPopup')?.classList.add('portal-hidden');
  if($('loginPassword'))$('loginPassword').value='';
  if($('loginError'))$('loginError').textContent='';
  document.body.classList.add('portal-mode');
+ if(window.BoxiesGlobalNav?.refresh) window.BoxiesGlobalNav.refresh();
  window.scrollTo(0,0);
 }
 window.leaveWorkspaceUi=leaveWorkspaceUi;

@@ -85,10 +85,11 @@ html.has-cur .cur-dot{
   flex:0 0 auto;margin-left:14px;transition:transform .4s var(--nav-ease)
 }
 
-/* Footer del menú: pantalla completa, discreta */
+/* Footer del menú: pantalla completa + rol del equipo */
 .menu-panel-footer{
   flex:0 0 auto;margin-top:auto;padding-top:22px;
-  border-top:1px solid rgba(255,255,255,.1)
+  border-top:1px solid rgba(255,255,255,.1);
+  display:flex;flex-direction:column;align-items:stretch;gap:10px
 }
 .menu-fs-link{
   appearance:none;width:100%;margin:0;padding:12px 0 4px;
@@ -100,6 +101,14 @@ html.has-cur .cur-dot{
 .menu-panel.open .menu-fs-link{opacity:1}
 .menu-fs-link:hover,
 .menu-fs-link:focus-visible{color:rgba(214,210,204,.92);outline:none}
+.menu-role-label{
+  margin:6px 0 2px;padding:0;
+  text-align:center;
+  font:500 10px/1.2 var(--nav-sans);
+  letter-spacing:.18em;text-transform:uppercase;
+  color:rgba(214,210,204,.42);
+  pointer-events:none;user-select:none
+}
 
 @media (hover:hover){
   .menu-toggle:not(.active):hover span:first-child{transform:translateY(-2px)}

@@ -25,20 +25,67 @@
     if (google) google.disabled = !!on;
   }
 
+  var TEAM_SESSION_KEY = 'boxiesTeamSession';
+  var PANEL_ROLE_KEY = 'boxiesPanelRole';
+
+  function clearPanelRole() {
+    try {
+      delete document.body.dataset.panelRole;
+      sessionStorage.removeItem(PANEL_ROLE_KEY);
+      sessionStorage.removeItem(TEAM_SESSION_KEY);
+    } catch (e) {}
+    if (window.BoxiesGlobalNav && typeof window.BoxiesGlobalNav.refresh === 'function') {
+      window.BoxiesGlobalNav.refresh();
+    }
+  }
+
+  function applyPanelRole(rol) {
+    var clean = String(rol || '').trim().toLowerCase();
+    if (!clean) clean = 'usuario';
+    try {
+      document.body.dataset.panelRole = clean;
+      sessionStorage.setItem(PANEL_ROLE_KEY, clean);
+      sessionStorage.setItem(TEAM_SESSION_KEY, '1');
+    } catch (e) {}
+    if (window.BoxiesGlobalNav && typeof window.BoxiesGlobalNav.refresh === 'function') {
+      window.BoxiesGlobalNav.refresh();
+    }
+  }
+
+  async function loadAndApplyRole(userId) {
+    if (!userId) {
+      applyPanelRole('usuario');
+      return;
+    }
+    try {
+      var client = PlatformAuth.getClient();
+      var result = await client.from('profiles').select('rol').eq('id', userId).maybeSingle();
+      if (result.error) throw result.error;
+      applyPanelRole(result.data && result.data.rol);
+    } catch (err) {
+      console.warn('[PanelAuth] role', err);
+      applyPanelRole('usuario');
+    }
+  }
+
   function enterWorkspace() {
     if (typeof window.enterWorkspace === 'function') {
       window.enterWorkspace();
-      return;
+    } else {
+      var login = $('loginScreen');
+      var portal = $('portal');
+      if (login) login.classList.add('portal-hidden');
+      if (portal) portal.classList.remove('portal-hidden');
+      document.body.classList.add('portal-mode', 'workspace-authenticated');
+      if (typeof window.portalShowHome === 'function') window.portalShowHome();
     }
-    var login = $('loginScreen');
-    var portal = $('portal');
-    if (login) login.classList.add('portal-hidden');
-    if (portal) portal.classList.remove('portal-hidden');
-    document.body.classList.add('portal-mode', 'workspace-authenticated');
-    if (typeof window.portalShowHome === 'function') window.portalShowHome();
+    if (window.BoxiesGlobalNav && typeof window.BoxiesGlobalNav.refresh === 'function') {
+      window.BoxiesGlobalNav.refresh();
+    }
   }
 
   function leaveWorkspace() {
+    clearPanelRole();
     if (typeof window.leaveWorkspaceUi === 'function') {
       window.leaveWorkspaceUi();
       return;
@@ -185,7 +232,8 @@
         }
         setBusy(true);
         try {
-          await loginWithPassword(email, password, remember);
+          var session = await loginWithPassword(email, password, remember);
+          await loadAndApplyRole(session && session.user && session.user.id);
           enterWorkspace();
         } catch (err) {
           console.error('[PanelAuth] login', err);
@@ -239,10 +287,24 @@
     wireUi();
 
     try {
+      var signout = new URLSearchParams(window.location.search || '').get('signout');
+      if (signout === '1') {
+        try {
+          var cleanUrl = new URL(window.location.href);
+          cleanUrl.searchParams.delete('signout');
+          window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search);
+        } catch (e) {}
+        await logout();
+        return;
+      }
       await exchangeCodeIfPresent();
       var session = await getSession();
-      if (session) enterWorkspace();
-      else leaveWorkspace();
+      if (session) {
+        await loadAndApplyRole(session.user && session.user.id);
+        enterWorkspace();
+      } else {
+        leaveWorkspace();
+      }
     } catch (err) {
       console.error('[PanelAuth] boot', err);
       setError(friendlyAuthError(err));

@@ -7,6 +7,20 @@
   document.body.classList.add('modo-' + modo);
   document.body.classList.remove('portal-mode');
 
+  /* Sesión de equipo (panel → cotizar interno): mismo menú + rol */
+  if (modo === 'interno') {
+    try {
+      if (sessionStorage.getItem('boxiesTeamSession') === '1') {
+        document.body.classList.add('workspace-authenticated');
+        var rol = (sessionStorage.getItem('boxiesPanelRole') || '').trim();
+        if (rol) document.body.dataset.panelRole = rol;
+      }
+    } catch (e) {}
+    if (window.BoxiesGlobalNav && typeof window.BoxiesGlobalNav.refresh === 'function') {
+      window.BoxiesGlobalNav.refresh();
+    }
+  }
+
   function startQuote() {
     try {
       if (typeof openEmbeddedQuote === 'function') {

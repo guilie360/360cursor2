@@ -20,13 +20,45 @@
     return node;
   }
 
-  function isPanelAuthed() {
-    return document.body.classList.contains('workspace-authenticated');
+  function teamRole() {
+    var fromBody = (document.body.dataset.panelRole || '').trim();
+    if (fromBody) return fromBody;
+    try {
+      return (sessionStorage.getItem('boxiesPanelRole') || '').trim();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function hasTeamSessionFlag() {
+    try {
+      return sessionStorage.getItem('boxiesTeamSession') === '1';
+    } catch (e) {
+      return false;
+    }
   }
 
   function isCotizador() {
     return document.body.classList.contains('cotizador-app') ||
       document.body.getAttribute('data-app') === 'cotizador';
+  }
+
+  function isPanelAuthed() {
+    if (document.body.classList.contains('workspace-authenticated')) return true;
+    /* Cotizar modo interno con sesión de equipo = mismo menú del panel */
+    if (isCotizador() && document.body.classList.contains('modo-interno') && hasTeamSessionFlag()) {
+      return true;
+    }
+    return false;
+  }
+
+  function clearTeamSessionLocal() {
+    try {
+      delete document.body.dataset.panelRole;
+      document.body.classList.remove('workspace-authenticated');
+      sessionStorage.removeItem('boxiesPanelRole');
+      sessionStorage.removeItem('boxiesTeamSession');
+    } catch (e) {}
   }
 
   function isFullscreenOn() {
@@ -75,11 +107,7 @@
       { href: WA, label: 'Chatear con asesor', n: '03', external: true },
       { href: '/#demo', label: 'Ver demo', n: '04' }
     ];
-    if (isCotizador() && document.body.classList.contains('modo-interno')) {
-      links.push({ href: '/panel_gestion/', label: 'Panel', n: '05' });
-    } else {
-      links.push({ href: '/panel_gestion/', label: 'Ingresar', n: '05' });
-    }
+    links.push({ href: '/panel_gestion/', label: 'Ingresar', n: '05' });
     return links;
   }
 
@@ -175,16 +203,25 @@
       });
       panel.appendChild(list);
 
-      /* Footer: pantalla completa (solo PC/tablet), más pequeño */
-      if (canOfferFullscreen()) {
+      /* Footer: FS (PC/tablet) + rol del equipo centrado abajo */
+      var role = isPanelAuthed() ? teamRole() : '';
+      if (canOfferFullscreen() || role) {
         var foot = el('div', { className: 'menu-panel-footer' });
-        var fsBtn = el('button', {
-          className: 'menu-fs-link',
-          type: 'button',
-          'data-nav-fullscreen': '1',
-          'data-cursor': 'PANTALLA'
-        }, fullscreenLabel());
-        foot.appendChild(fsBtn);
+        if (canOfferFullscreen()) {
+          var fsBtn = el('button', {
+            className: 'menu-fs-link',
+            type: 'button',
+            'data-nav-fullscreen': '1',
+            'data-cursor': 'PANTALLA'
+          }, fullscreenLabel());
+          foot.appendChild(fsBtn);
+        }
+        if (role) {
+          foot.appendChild(el('div', {
+            className: 'menu-role-label',
+            text: role
+          }));
+        }
         panel.appendChild(foot);
       }
 
@@ -194,12 +231,14 @@
 
     function doLogout() {
       close();
+      clearTeamSessionLocal();
       var btn = document.getElementById('logoutBtn');
       if (btn) btn.click();
-      else {
+      else if (window.PanelAuth && typeof window.PanelAuth.logout === 'function') {
+        window.PanelAuth.logout();
+      } else {
         try {
-          document.body.classList.remove('workspace-authenticated');
-          location.href = '/panel_gestion/';
+          location.href = '/panel_gestion/?signout=1';
         } catch (err) {}
       }
     }
