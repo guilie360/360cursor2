@@ -4,6 +4,7 @@ var PlatformRoles = (function () {
   var ROLES = {
     USUARIO: 'usuario',
     ASESOR: 'asesor',
+    HUNTER: 'hunter',
     ADMIN: 'admin',
     SUPER_ADMIN: 'super_admin'
   };
@@ -11,6 +12,7 @@ var PlatformRoles = (function () {
   var ROLE_LABELS = {
     usuario: 'Usuario',
     asesor: 'Asesor',
+    hunter: 'Hunter',
     admin: 'Administrador',
     super_admin: 'Super administrador'
   };
@@ -41,6 +43,10 @@ var PlatformRoles = (function () {
     return getRole(profile) === ROLES.ASESOR;
   }
 
+  function isHunter(profile) {
+    return getRole(profile) === ROLES.HUNTER;
+  }
+
   function isAdmin(profile) {
     return getRole(profile) === ROLES.ADMIN;
   }
@@ -52,7 +58,7 @@ var PlatformRoles = (function () {
   }
 
   function isStaff(profile) {
-    return isAsesor(profile) || isPlatformAdmin(profile);
+    return isAsesor(profile) || isHunter(profile) || isPlatformAdmin(profile);
   }
 
   return {
@@ -62,6 +68,7 @@ var PlatformRoles = (function () {
     getRoleLabel: getRoleLabel,
     isUsuario: isUsuario,
     isAsesor: isAsesor,
+    isHunter: isHunter,
     isAdmin: isAdmin,
     isPlatformAdmin: isPlatformAdmin,
     isStaff: isStaff
