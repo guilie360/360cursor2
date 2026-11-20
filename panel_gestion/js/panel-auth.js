@@ -178,25 +178,47 @@
     window.location.assign(result.data.url);
   }
 
-  async function logout() {
+  function clearFullscreenFlag() {
+    try { sessionStorage.removeItem('boxiesKeepFullscreen'); } catch (e) {}
+    try { sessionStorage.removeItem('boxiesFsUrl'); } catch (e2) {}
     try {
       if (window.BoxiesFullscreen && typeof window.BoxiesFullscreen.leave === 'function') {
-        await window.BoxiesFullscreen.leave();
-      } else {
-        try { sessionStorage.removeItem('boxiesKeepFullscreen'); } catch (e0) {}
-        try {
-          if (document.fullscreenElement || document.webkitFullscreenElement) {
-            var exit = document.exitFullscreen || document.webkitExitFullscreen;
-            if (exit) await exit.call(document);
-          }
-        } catch (e1) {}
+        /* No await: en algunos browsers exitFullscreen cuelga el logout */
+        window.BoxiesFullscreen.leave();
+      } else if (document.fullscreenElement || document.webkitFullscreenElement) {
+        var exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) exit.call(document);
       }
-    } catch (eFs) {}
+    } catch (e3) {}
+  }
+
+  async function logout() {
+    clearPanelRole();
+    clearFullscreenFlag();
     try {
-      await PlatformAuth.getClient().auth.signOut();
+      var client = PlatformAuth.getClient();
+      await Promise.race([
+        client.auth.signOut({ scope: 'local' }),
+        new Promise(function (resolve) { setTimeout(resolve, 1200); })
+      ]);
     } catch (e) {}
-    PlatformAuth.resetClient();
+    try { PlatformAuth.resetClient(); } catch (e2) {}
     leaveWorkspace();
+  }
+
+  /** Cierra sesión y opcionalmente navega (landing / login). Usa top por si hay shell FS. */
+  async function endSession(nextUrl) {
+    await logout();
+    var target = nextUrl || '';
+    if (!target) return true;
+    try {
+      if (window.top && window.top !== window.self) {
+        window.top.location.assign(target);
+        return true;
+      }
+    } catch (e) {}
+    location.assign(target);
+    return true;
   }
 
   async function exchangeCodeIfPresent() {
@@ -307,14 +329,31 @@
     wireUi();
 
     try {
-      var signout = new URLSearchParams(window.location.search || '').get('signout');
+      var bootParams = new URLSearchParams(window.location.search || '');
+      var signout = bootParams.get('signout');
+      var nextAfter = bootParams.get('next') || '';
       if (signout === '1') {
+        await logout();
         try {
           var cleanUrl = new URL(window.location.href);
           cleanUrl.searchParams.delete('signout');
+          cleanUrl.searchParams.delete('next');
           window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search);
         } catch (e) {}
-        await logout();
+        /* Tras Salir/Inicio: si hay next seguro, salir del panel (estilo banca) */
+        if (nextAfter && nextAfter.charAt(0) === '/') {
+          try {
+            if (window.top && window.top !== window.self) {
+              window.top.location.replace(nextAfter);
+            } else {
+              location.replace(nextAfter);
+            }
+          } catch (e2) {
+            location.replace(nextAfter);
+          }
+          return;
+        }
+        leaveWorkspace();
         return;
       }
       await exchangeCodeIfPresent();
@@ -343,6 +382,7 @@
     loginWithPassword: loginWithPassword,
     loginWithGoogle: loginWithGoogle,
     logout: logout,
+    endSession: endSession,
     getSession: getSession
   };
 

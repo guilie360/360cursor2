@@ -43,7 +43,14 @@
       document.body.getAttribute('data-app') === 'cotizador';
   }
 
+  function isPanelLoginScreen() {
+    var login = document.getElementById('loginScreen');
+    return !!(login && !login.classList.contains('portal-hidden'));
+  }
+
   function isPanelAuthed() {
+    /* Pantalla de correo/contraseña = menú público */
+    if (isPanelLoginScreen()) return false;
     if (document.body.classList.contains('workspace-authenticated')) return true;
     /* Cotizar privado (modo interno) con sesión de empresa = mismo menú del panel */
     if (isCotizador() && document.body.classList.contains('modo-interno') && (hasTeamSessionFlag() || !!teamRole())) {
@@ -93,10 +100,11 @@
 
   /** Links principales (FS va aparte, en el footer del menú) */
   function linksForContext() {
+    /* Menú privado: solo con sesión de empresa (panel / cotizar interno) */
     if (isPanelAuthed()) {
       return [
-        { href: '/#inicio', label: 'Inicio', n: '01' },
-        { href: '/#demo', label: 'Ver demo', n: '02' },
+        { action: 'logout-home', label: 'Inicio', n: '01' },
+        { action: 'logout-demo', label: 'Ver demo', n: '02' },
         { action: 'panel-home', label: 'Panel de gestión', n: '03' },
         { action: 'logout', label: 'Salir', n: '04' }
       ];
@@ -193,12 +201,15 @@
         var btn = el('button', {
           className: 'menu-link',
           type: 'button',
-          'data-cursor': item.action === 'logout' ? 'SALIR'
+          'data-cursor': item.action === 'logout' || item.action === 'logout-home' || item.action === 'logout-demo'
+            ? 'SALIR'
             : item.action === 'panel-home' ? 'PANEL'
             : item.label.toUpperCase().split(' ')[0]
         }, item.label + ' <span>' + item.n + '</span>');
         btn.style.setProperty('--dl', delay);
         if (item.action === 'logout') btn.setAttribute('data-nav-logout', '1');
+        else if (item.action === 'logout-home') btn.setAttribute('data-nav-logout-home', '1');
+        else if (item.action === 'logout-demo') btn.setAttribute('data-nav-logout-demo', '1');
         else if (item.action === 'panel-home') btn.setAttribute('data-nav-panel-home', '1');
         else {
           btn.setAttribute('data-href', item.href);
@@ -228,25 +239,64 @@
       if (wasOpen) setOpen(true);
     }
 
-    function doLogout() {
-      close();
-      /* Cerrar sesión de empresa → pantalla de login (correo/contraseña) */
-      if (window.PanelAuth && typeof window.PanelAuth.logout === 'function') {
-        Promise.resolve(window.PanelAuth.logout()).catch(function () {
-          clearTeamSessionLocal();
-          location.href = '/panel_gestion/?signout=1';
-        });
-        return;
-      }
-      var btn = document.getElementById('logoutBtn');
-      if (btn) {
-        btn.click();
-        return;
-      }
-      clearTeamSessionLocal();
+    var endingSession = false;
+    function assignTop(url) {
       try {
-        location.href = '/panel_gestion/?signout=1';
-      } catch (err) {}
+        if (window.top && window.top !== window.self) {
+          window.top.location.assign(url);
+          return;
+        }
+      } catch (e) {}
+      location.assign(url);
+    }
+
+    /**
+     * Cierre de sesión tipo banca: al salir del panel (Salir / Inicio / Demo)
+     * se invalida Supabase y se fuerza navegación en la ventana top (rompe shell FS).
+     * nextUrl vacío → quedarse en login del panel.
+     */
+    function endPrivateSession(nextUrl) {
+      if (endingSession) return;
+      endingSession = true;
+      close();
+      clearTeamSessionLocal();
+      try { sessionStorage.removeItem('boxiesKeepFullscreen'); } catch (e0) {}
+      try { sessionStorage.removeItem('boxiesFsUrl'); } catch (e1) {}
+
+      var dest = '/panel_gestion/?signout=1';
+      if (nextUrl) dest += '&next=' + encodeURIComponent(nextUrl);
+
+      var gone = false;
+      function go() {
+        if (gone) return;
+        gone = true;
+        assignTop(dest);
+      }
+
+      try {
+        if (window.PanelAuth && typeof window.PanelAuth.logout === 'function') {
+          Promise.resolve(window.PanelAuth.logout()).then(go, go);
+        } else {
+          go();
+        }
+      } catch (err) {
+        go();
+      }
+      /* Si signOut/FS se cuelga, igual salimos */
+      setTimeout(go, 700);
+    }
+
+    function doLogout() {
+      /* Salir → login del panel, sin acceso hasta nueva autenticación */
+      endPrivateSession('');
+    }
+
+    function doLogoutHome() {
+      endPrivateSession('/#inicio');
+    }
+
+    function doLogoutDemo() {
+      endPrivateSession('/#demo');
     }
 
     function goPanelHome() {
@@ -257,7 +307,7 @@
           return;
         }
       } catch (err) {}
-      location.href = '/panel_gestion/';
+      assignTop('/panel_gestion/');
     }
 
     function doFullscreen() {
@@ -303,7 +353,20 @@
     panel.addEventListener('click', function (e) {
       if (e.target.closest('[data-nav-logout]')) {
         e.preventDefault();
+        e.stopPropagation();
         doLogout();
+        return;
+      }
+      if (e.target.closest('[data-nav-logout-home]')) {
+        e.preventDefault();
+        e.stopPropagation();
+        doLogoutHome();
+        return;
+      }
+      if (e.target.closest('[data-nav-logout-demo]')) {
+        e.preventDefault();
+        e.stopPropagation();
+        doLogoutDemo();
         return;
       }
       if (e.target.closest('[data-nav-panel-home]')) {
