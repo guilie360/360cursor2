@@ -110,13 +110,47 @@
     document.body.appendChild(overlay);
     document.body.appendChild(panel);
 
+    function pinScroll(y) {
+      y = Math.max(0, Math.round(Number(y) || 0));
+      try {
+        window.scrollTo(0, y);
+        document.documentElement.scrollTop = y;
+        document.body.scrollTop = y;
+      } catch (err) {}
+    }
+
+    function savedMenuScroll() {
+      var fromPanel = parseInt(panel.getAttribute('data-scroll-y') || '', 10);
+      if (isFinite(fromPanel) && fromPanel >= 0) return fromPanel;
+      try {
+        var fromStore = parseInt(sessionStorage.getItem('boxiesMenuScrollY') || '', 10);
+        if (isFinite(fromStore) && fromStore >= 0) return fromStore;
+      } catch (err) {}
+      return window.scrollY || document.documentElement.scrollTop || 0;
+    }
+
     function setOpen(open) {
+      var alreadyOpen = panel.classList.contains('open');
+      if (open && !alreadyOpen) {
+        var y = window.scrollY || document.documentElement.scrollTop || 0;
+        panel.setAttribute('data-scroll-y', String(y));
+        try { sessionStorage.setItem('boxiesMenuScrollY', String(y)); } catch (err) {}
+        try {
+          if (window.BoxiesFullscreen && window.BoxiesFullscreen.captureView) {
+            window.BoxiesFullscreen.captureView({ y: y });
+          }
+        } catch (err2) {}
+      }
       panel.classList.toggle('open', open);
       overlay.classList.toggle('open', open);
       toggle.classList.toggle('active', open);
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
       toggle.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
       document.body.style.overflow = open ? 'hidden' : '';
+      // overflow:hidden a veces resetea el scroll: volver a la posición guardada.
+      var pinY = savedMenuScroll();
+      requestAnimationFrame(function () { pinScroll(pinY); });
+      setTimeout(function () { pinScroll(pinY); }, 30);
     }
 
     function close() { setOpen(false); }
@@ -194,12 +228,13 @@
     }
 
     function doFullscreen() {
-      // Toggle FS en el mismo gesto del clic; cerrar el menú después.
-      // Si se cierra antes, el navegador pierde el user-gesture y hace falta un 2º clic.
-      var y = window.scrollY || document.documentElement.scrollTop || 0;
+      // Mantener el menú abierto y la posición exacta de scroll.
+      var y = savedMenuScroll();
+      panel.setAttribute('data-scroll-y', String(y));
+      try { sessionStorage.setItem('boxiesMenuScrollY', String(y)); } catch (errS) {}
       try {
         if (window.BoxiesFullscreen && window.BoxiesFullscreen.captureView) {
-          window.BoxiesFullscreen.captureView();
+          window.BoxiesFullscreen.captureView({ y: y });
         }
       } catch (err0) {}
       var p;
@@ -217,26 +252,23 @@
       } catch (err) {
         p = Promise.reject(err);
       }
-      close();
-      // Al quitar overflow:hidden del menú el scroll no debe saltar.
       var pin = function () {
+        pinScroll(y);
         try {
-          window.scrollTo(0, y);
-          document.documentElement.scrollTop = y;
-          document.body.scrollTop = y;
-          if (window.BoxiesFullscreen && window.BoxiesFullscreen.restoreView) {
-            window.BoxiesFullscreen.restoreView();
-          } else if (window.BoxiesSnapLandingScroll) {
-            window.BoxiesSnapLandingScroll();
-          }
+          if (window.BoxiesSnapLandingScroll) window.BoxiesSnapLandingScroll();
         } catch (err2) {}
       };
       requestAnimationFrame(pin);
-      setTimeout(pin, 50);
-      setTimeout(pin, 180);
+      setTimeout(pin, 40);
+      setTimeout(pin, 120);
+      setTimeout(pin, 280);
       Promise.resolve(p).catch(function () {}).then(function () {
         pin();
-        setTimeout(renderLinks, 160);
+        // Re-pintar label FS sin cerrar el menú.
+        var keepOpen = panel.classList.contains('open');
+        renderLinks();
+        if (keepOpen) setOpen(true);
+        pin();
       });
     }
 

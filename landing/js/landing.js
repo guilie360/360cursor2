@@ -127,54 +127,38 @@ function mostVisibleLandingSection(){
   });
   return best;
 }
-window.BoxiesCaptureLandingView=()=>{
+window.BoxiesCaptureLandingView=(override)=>{
   read();
+  const y=typeof override?.y==='number'?override.y:scrollY;
   return{
     intro:tgt.intro,
     exp:tgt.exp,
     section:mostVisibleLandingSection(),
-    y:scrollY,
-    vh:innerHeight
+    y,
+    vh:innerHeight,
+    sh:document.documentElement.scrollHeight
   };
 };
+/* Restaura la posición exacta (ratio de documento). Nunca salta a inicio/demo. */
 window.BoxiesRestoreLandingView=state=>{
-  if(!state) return false;
-  const sec=state.section||'';
-  if(sec==='demo'||sec==='inicio'){
-    const el=document.getElementById(sec);
-    if(!el) return false;
-    prepareFinalAtJump();
-    const top=sectionTop(el);
-    scrollTo({top,left:0,behavior:'instant'});
-    document.documentElement.scrollTop=top;
-    document.body.scrollTop=top;
-    snapScrollState();
-    try{if(location.hash!=='#'+sec) history.replaceState(null,'','#'+sec)}catch(e){}
-    return true;
+  if(!state||typeof state.y!=='number') return false;
+  const vh=innerHeight||1;
+  const sh=document.documentElement.scrollHeight||0;
+  let top=state.y;
+  if(state.sh>state.vh&&sh>vh){
+    const ratio=state.y/Math.max(1,state.sh-state.vh);
+    top=ratio*Math.max(1,sh-vh);
   }
-  if(typeof state.exp==='number'&&exp){
-    const sc=Math.max(0,exp.offsetHeight-innerHeight);
-    const top=sectionTop(exp)+clamp(state.exp)*sc;
-    scrollTo({top,left:0,behavior:'instant'});
-    document.documentElement.scrollTop=top;
-    document.body.scrollTop=top;
-    snapScrollState();
-    return true;
-  }
-  if(typeof state.intro==='number'){
-    const top=clamp(state.intro)*innerHeight*.7;
-    scrollTo({top,left:0,behavior:'instant'});
-    snapScrollState();
-    return true;
-  }
-  return false;
+  top=Math.max(0,Math.round(top));
+  scrollTo({top,left:0,behavior:'instant'});
+  document.documentElement.scrollTop=top;
+  document.body.scrollTop=top;
+  snapScrollState();
+  return true;
 };
 document.addEventListener('boxies:fullscreen',()=>{
-  // Tras cambiar el viewport (FS), re-sincronizar la historia de scroll.
-  requestAnimationFrame(()=>{
-    if(window.BoxiesFullscreen?.restoreView) window.BoxiesFullscreen.restoreView();
-    else snapScrollState();
-  });
+  // Solo re-sincronizar el scrub con el scroll actual; no re-navegar.
+  requestAnimationFrame(()=>snapScrollState());
 });
 function bootHashJump(){
   const raw=(location.hash||'').replace(/^#/,'');

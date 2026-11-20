@@ -65,9 +65,20 @@
     return best;
   }
 
-  function captureViewState() {
+  function captureViewState(override) {
+    override = override || {};
+    var y = typeof override.y === 'number'
+      ? override.y
+      : (window.scrollY || document.documentElement.scrollTop || 0);
+    try {
+      var menuY = parseInt(sessionStorage.getItem('boxiesMenuScrollY') || '', 10);
+      var menuOpen = !!(document.querySelector && document.querySelector('.menu-panel.open'));
+      if (typeof override.y !== 'number' && isFinite(menuY) && menuY >= 0 && (menuOpen || (y < 8 && menuY > 8))) {
+        y = menuY;
+      }
+    } catch (e0) {}
     var state = {
-      y: window.scrollY || document.documentElement.scrollTop || 0,
+      y: y,
       vh: window.innerHeight || 0,
       sh: document.documentElement.scrollHeight || 0,
       section: mostVisibleSection(),
@@ -76,10 +87,13 @@
     };
     try {
       if (typeof global.BoxiesCaptureLandingView === 'function') {
-        var land = global.BoxiesCaptureLandingView();
+        var land = global.BoxiesCaptureLandingView({ y: y });
         if (land) {
           state.intro = land.intro;
           state.exp = land.exp;
+          state.y = typeof land.y === 'number' ? land.y : state.y;
+          if (land.sh) state.sh = land.sh;
+          if (land.vh) state.vh = land.vh;
           if (land.section) state.section = land.section;
         }
       }
@@ -111,27 +125,14 @@
 
   function restoreViewState() {
     var state = readViewState();
-    if (!state) return false;
+    if (!state || typeof state.y !== 'number') return false;
     var applied = false;
     try {
       if (typeof global.BoxiesRestoreLandingView === 'function') {
         applied = !!global.BoxiesRestoreLandingView(state);
       }
     } catch (e) {}
-    if (!applied && state.section) {
-      var el = document.getElementById(state.section);
-      if (el && typeof global.BoxiesGoToSection === 'function') {
-        try {
-          global.BoxiesGoToSection(state.section, { updateHash: true, fromLoad: true });
-          applied = true;
-        } catch (err) {}
-      } else if (el) {
-        var top = Math.round(el.getBoundingClientRect().top + (window.scrollY || 0));
-        applyScrollY(top);
-        applied = true;
-      }
-    }
-    if (!applied && typeof state.y === 'number') {
+    if (!applied) {
       var sh = document.documentElement.scrollHeight || 0;
       var vh = window.innerHeight || 1;
       if (state.sh > state.vh && sh > vh) {
@@ -285,7 +286,11 @@
     intentionalExit = false;
     setWanted(true);
     saveUrl(location.href);
-    captureViewState();
+    try {
+      var menuY = parseInt(sessionStorage.getItem('boxiesMenuScrollY') || '', 10);
+      if (isFinite(menuY) && menuY >= 0) captureViewState({ y: menuY });
+      else captureViewState();
+    } catch (e) { captureViewState(); }
     // Misma página: solo FS nativo. El shell iframe se crea al navegar a otra ruta
     // para no recargar ni perder el scroll.
     return requestFs()
