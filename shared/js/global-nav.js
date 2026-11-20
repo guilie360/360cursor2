@@ -132,29 +132,24 @@
       var list = el('div', { className: 'menu-panel-list' });
       linksForContext().forEach(function (item, i) {
         var delay = (0.12 + i * 0.07).toFixed(2) + 's';
-        if (item.action === 'logout' || item.action === 'panel-home') {
-          var btn = el('button', {
-            className: 'menu-link',
-            type: 'button',
-            'data-cursor': item.action === 'logout' ? 'SALIR' : 'PANEL'
-          }, item.label + ' <span>' + item.n + '</span>');
-          if (item.action === 'logout') btn.setAttribute('data-nav-logout', '1');
-          if (item.action === 'panel-home') btn.setAttribute('data-nav-panel-home', '1');
-          btn.style.setProperty('--dl', delay);
-          list.appendChild(btn);
-          return;
-        }
-        var a = el('a', {
-          href: item.href,
-          'data-cursor': item.label.toUpperCase().split(' ')[0]
+        var btn = el('button', {
+          className: 'menu-link',
+          type: 'button',
+          'data-cursor': item.action === 'logout' ? 'SALIR'
+            : item.action === 'panel-home' ? 'PANEL'
+            : item.label.toUpperCase().split(' ')[0]
         }, item.label + ' <span>' + item.n + '</span>');
-        a.style.setProperty('--dl', delay);
-        if (item.external) {
-          a.setAttribute('target', '_blank');
-          a.setAttribute('rel', 'noopener');
-          a.id = 'contacto';
+        btn.style.setProperty('--dl', delay);
+        if (item.action === 'logout') btn.setAttribute('data-nav-logout', '1');
+        else if (item.action === 'panel-home') btn.setAttribute('data-nav-panel-home', '1');
+        else {
+          btn.setAttribute('data-href', item.href);
+          if (item.external) {
+            btn.setAttribute('data-external', '1');
+            btn.id = 'contacto';
+          }
         }
-        list.appendChild(a);
+        list.appendChild(btn);
       });
       panel.appendChild(list);
 
@@ -246,11 +241,13 @@
         doFullscreen();
         return;
       }
-      var a = e.target.closest('a');
-      if (!a || !panel.contains(a)) return;
-      var href = a.getAttribute('href') || '';
-      if (a.target === '_blank') {
+      var nav = e.target.closest('[data-href]');
+      if (!nav || !panel.contains(nav)) return;
+      e.preventDefault();
+      var href = nav.getAttribute('data-href') || '';
+      if (nav.getAttribute('data-external')) {
         close();
+        if (href) window.open(href, '_blank', 'noopener');
         return;
       }
       var hash = '';
@@ -259,20 +256,22 @@
       if (hash) {
         var target = document.getElementById(hash);
         if (target && typeof window.BoxiesGoToSection === 'function') {
-          e.preventDefault();
           close();
           window.BoxiesGoToSection(hash, { updateHash: true });
           return;
         }
         if (target) {
-          e.preventDefault();
           close();
           target.scrollIntoView({ behavior: 'smooth', block: 'start' });
           try { history.replaceState(null, '', '#' + hash); } catch (err) {}
           return;
         }
+        close();
+        location.href = '/#' + hash;
+        return;
       }
       close();
+      if (href) location.href = href;
     });
 
     renderLinks();

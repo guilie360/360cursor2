@@ -15,7 +15,7 @@ button{font:inherit}
 :focus-visible{outline:1px solid var(--bronze);outline-offset:4px}
 
 /* HEADER — geometría en shared/css/site-chrome.css */
-.header-logo{pointer-events:none;opacity:0;will-change:opacity,transform}
+.header-logo{appearance:none;-webkit-appearance:none;border:0;background:transparent;padding:0;cursor:pointer;pointer-events:none;opacity:0;will-change:opacity,transform}
 .mag{transition:transform .35s var(--ease)}
 /* Fullscreen: arriba-izquierda (espejo del menú; posición en shared/safe-area.css) */
 .fullscreen-toggle{

@@ -192,6 +192,13 @@ document.querySelectorAll('a[href^="#"]').forEach(a=>{
     goToSection(id,{updateHash:true});
   });
 });
+const headerLogo=$('#headerLogo');
+if(headerLogo){
+  headerLogo.addEventListener('click',()=>{
+    window.BoxiesGlobalNav?.close?.();
+    goToSection('inicio',{updateHash:true});
+  });
+}
 if(document.readyState==='complete') bootHashJump();
 else addEventListener('load',bootHashJump);
 /* Páginas estáticas de tipologías: apartamento, estudio y coliving */
