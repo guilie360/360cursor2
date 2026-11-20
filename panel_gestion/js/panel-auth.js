@@ -68,7 +68,14 @@
     }
   }
 
+  function stampTeamSession() {
+    try {
+      sessionStorage.setItem(TEAM_SESSION_KEY, '1');
+    } catch (e) {}
+  }
+
   function enterWorkspace() {
+    stampTeamSession();
     if (typeof window.enterWorkspace === 'function') {
       window.enterWorkspace();
     } else {

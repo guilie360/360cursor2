@@ -58,6 +58,12 @@ html.has-cur .cur-dot{
   box-sizing:border-box
 }
 .menu-panel.open{transform:none;visibility:visible}
+.menu-role-title{
+  margin:10px 0 26px;padding:0;
+  font:400 clamp(34px,7vw,48px)/1.05 var(--nav-serif);
+  color:#fff;letter-spacing:.01em;
+  text-transform:lowercase;pointer-events:none;user-select:none
+}
 .menu-caption{
   color:var(--nav-bronze);font:9px/1.2 var(--nav-sans);
   letter-spacing:3px;margin-bottom:35px;text-transform:uppercase;flex:0 0 auto
@@ -101,14 +107,6 @@ html.has-cur .cur-dot{
 .menu-panel.open .menu-fs-link{opacity:1}
 .menu-fs-link:hover,
 .menu-fs-link:focus-visible{color:rgba(214,210,204,.92);outline:none}
-.menu-role-label{
-  margin:6px 0 2px;padding:0;
-  text-align:center;
-  font:500 10px/1.2 var(--nav-sans);
-  letter-spacing:.18em;text-transform:uppercase;
-  color:rgba(214,210,204,.42);
-  pointer-events:none;user-select:none
-}
 
 @media (hover:hover){
   .menu-toggle:not(.active):hover span:first-child{transform:translateY(-2px)}

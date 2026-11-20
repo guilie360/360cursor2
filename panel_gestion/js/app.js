@@ -1379,7 +1379,12 @@ function portalOpenPage(key){
   return;
  }
  if(key==='quote'){
-  // Misma app pública /cotizar, con capa de equipo.
+  // Cotizador privado del panel (comisión hunter + menú de empresa).
+  try{
+   sessionStorage.setItem('boxiesTeamSession','1');
+   var rol=(document.body.dataset.panelRole||sessionStorage.getItem('boxiesPanelRole')||'').trim();
+   if(rol) sessionStorage.setItem('boxiesPanelRole',rol);
+  }catch(e){}
   window.location.href='/cotizar?modo=interno';
   return;
  }
@@ -1632,7 +1637,10 @@ function runProjectSearch(value){
 }
 $('portalHome').addEventListener('keydown',e=>{if(e.target.id==='dashboardSearch'&&e.key==='Enter')runProjectSearch(e.target.value)});
 function enterWorkspace(){
- $('loginScreen').classList.add('portal-hidden');$('portal').classList.remove('portal-hidden');document.body.classList.add('portal-mode','workspace-authenticated');portalShowHome();
+ $('loginScreen').classList.add('portal-hidden');$('portal').classList.remove('portal-hidden');document.body.classList.add('portal-mode','workspace-authenticated');
+ try{sessionStorage.setItem('boxiesTeamSession','1');}catch(e){}
+ portalShowHome();
+ if(window.BoxiesGlobalNav?.refresh) window.BoxiesGlobalNav.refresh();
 }
 window.enterWorkspace=enterWorkspace;
 function leaveWorkspaceUi(){

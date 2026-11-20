@@ -45,8 +45,8 @@
 
   function isPanelAuthed() {
     if (document.body.classList.contains('workspace-authenticated')) return true;
-    /* Cotizar modo interno con sesión de equipo = mismo menú del panel */
-    if (isCotizador() && document.body.classList.contains('modo-interno') && hasTeamSessionFlag()) {
+    /* Cotizar privado (modo interno) con sesión de empresa = mismo menú del panel */
+    if (isCotizador() && document.body.classList.contains('modo-interno') && (hasTeamSessionFlag() || !!teamRole())) {
       return true;
     }
     return false;
@@ -179,6 +179,14 @@
         text: isPanelAuthed() ? '360PREVENTA / PANEL' : '360PREVENTA / NAVEGACIÓN'
       }));
 
+      var role = isPanelAuthed() ? teamRole() : '';
+      if (role) {
+        panel.appendChild(el('div', {
+          className: 'menu-role-title',
+          text: role
+        }));
+      }
+
       var list = el('div', { className: 'menu-panel-list' });
       linksForContext().forEach(function (item, i) {
         var delay = (0.12 + i * 0.07).toFixed(2) + 's';
@@ -203,25 +211,16 @@
       });
       panel.appendChild(list);
 
-      /* Footer: FS (PC/tablet) + rol del equipo centrado abajo */
-      var role = isPanelAuthed() ? teamRole() : '';
-      if (canOfferFullscreen() || role) {
+      /* Footer: pantalla completa (PC/tablet) */
+      if (canOfferFullscreen()) {
         var foot = el('div', { className: 'menu-panel-footer' });
-        if (canOfferFullscreen()) {
-          var fsBtn = el('button', {
-            className: 'menu-fs-link',
-            type: 'button',
-            'data-nav-fullscreen': '1',
-            'data-cursor': 'PANTALLA'
-          }, fullscreenLabel());
-          foot.appendChild(fsBtn);
-        }
-        if (role) {
-          foot.appendChild(el('div', {
-            className: 'menu-role-label',
-            text: role
-          }));
-        }
+        var fsBtn = el('button', {
+          className: 'menu-fs-link',
+          type: 'button',
+          'data-nav-fullscreen': '1',
+          'data-cursor': 'PANTALLA'
+        }, fullscreenLabel());
+        foot.appendChild(fsBtn);
         panel.appendChild(foot);
       }
 

@@ -7,15 +7,20 @@
   document.body.classList.add('modo-' + modo);
   document.body.classList.remove('portal-mode');
 
-  /* Sesión de equipo (panel → cotizar interno): mismo menú + rol */
+  /* Cotizador privado: solo con sesión de empresa desde el panel */
   if (modo === 'interno') {
+    var teamOk = false;
+    var rol = '';
     try {
-      if (sessionStorage.getItem('boxiesTeamSession') === '1') {
-        document.body.classList.add('workspace-authenticated');
-        var rol = (sessionStorage.getItem('boxiesPanelRole') || '').trim();
-        if (rol) document.body.dataset.panelRole = rol;
-      }
+      teamOk = sessionStorage.getItem('boxiesTeamSession') === '1';
+      rol = (sessionStorage.getItem('boxiesPanelRole') || '').trim();
     } catch (e) {}
+    if (!teamOk) {
+      location.replace('/panel_gestion/');
+      return;
+    }
+    document.body.classList.add('workspace-authenticated', 'modo-interno');
+    if (rol) document.body.dataset.panelRole = rol;
     if (window.BoxiesGlobalNav && typeof window.BoxiesGlobalNav.refresh === 'function') {
       window.BoxiesGlobalNav.refresh();
     }
