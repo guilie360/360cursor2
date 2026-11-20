@@ -254,7 +254,7 @@ button,input,select,textarea,.btn,label,.eyebrow,.desc,.muted,.hunter-goal,.hunt
 .portal-sub{color:var(--muted);max-width:700px;font-size:13px}
 .portal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-top:28px}
 .portal-card{border:1px solid var(--line);background:#151515;padding:22px;text-align:left;min-height:150px;display:flex;flex-direction:column;gap:12px;transition:.18s;color:inherit;text-decoration:none;cursor:pointer;font:inherit}
-a.portal-card{appearance:none}
+a.portal-card,button.portal-card{appearance:none}
 .portal-card:hover{border-color:var(--gold);background:#1b1915;transform:translateY(-2px)}
 .portal-card .picon{color:var(--gold-soft);font-size:23px}
 .portal-card b{font:22px Italiana,Georgia,serif;font-weight:400}
@@ -283,6 +283,7 @@ a.portal-card{appearance:none}
 /* Acceso previo al espacio de trabajo */
 .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 18px;background:radial-gradient(ellipse at 50% 35%,#171512 0%,#0b0b0b 58%,#080808 100%);position:relative}
 .login-home-logo{
+ appearance:none;-webkit-appearance:none;border:0;background:transparent;padding:0;cursor:pointer;
  position:relative;z-index:1;top:auto;left:auto;
  width:72px;height:72px;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;
  opacity:.96;transition:opacity .25s ease,transform .35s ease

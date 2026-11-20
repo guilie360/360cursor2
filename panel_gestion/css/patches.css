@@ -1347,8 +1347,8 @@ html:not(.has-cur) #pathChooser .flip-back>.flip-cta{cursor:pointer!important}
 }
 #packageChooser .final-quote-actions > button:not([hidden]),
 #manualConfigurator .final-quote-actions > button:not([hidden]),
-#packageChooser .final-quote-actions > a.final-quote-whatsapp,
-#manualConfigurator .final-quote-actions > a.final-quote-whatsapp{
+#packageChooser .final-quote-actions > .final-quote-whatsapp,
+#manualConfigurator .final-quote-actions > .final-quote-whatsapp{
  display:flex!important;
  align-items:center!important;
  justify-content:center!important;
@@ -1379,8 +1379,8 @@ html:not(.has-cur) #pathChooser .flip-back>.flip-cta{cursor:pointer!important}
  color:#e5d0aa!important;
  box-shadow:0 15px 34px rgba(0,0,0,.62),0 0 22px rgba(181,149,99,.10),inset 0 1px 0 rgba(255,255,255,.07)!important;
 }
-#packageChooser .final-quote-actions > a.final-quote-whatsapp,
-#manualConfigurator .final-quote-actions > a.final-quote-whatsapp{
+#packageChooser .final-quote-actions > .final-quote-whatsapp,
+#manualConfigurator .final-quote-actions > .final-quote-whatsapp{
  color:#e5d0aa!important;
  border-color:rgba(195,166,119,.55)!important;
  display:flex!important;
@@ -1392,23 +1392,23 @@ html:not(.has-cur) #pathChooser .flip-back>.flip-cta{cursor:pointer!important}
 }
 #packageChooser .final-quote-actions > button:hover,
 #manualConfigurator .final-quote-actions > button:hover,
-#packageChooser .final-quote-actions > a.final-quote-whatsapp:hover,
-#manualConfigurator .final-quote-actions > a.final-quote-whatsapp:hover{
+#packageChooser .final-quote-actions > .final-quote-whatsapp:hover,
+#manualConfigurator .final-quote-actions > .final-quote-whatsapp:hover{
  transform:translateY(-3px)!important;
  border-color:rgba(210,183,139,.9)!important;
  box-shadow:0 19px 38px rgba(0,0,0,.68),0 0 24px rgba(181,149,99,.12)!important;
 }
 #packageChooser .final-quote-actions > button:active,
 #manualConfigurator .final-quote-actions > button:active,
-#packageChooser .final-quote-actions > a.final-quote-whatsapp:active,
-#manualConfigurator .final-quote-actions > a.final-quote-whatsapp:active{transform:translateY(0)!important}
+#packageChooser .final-quote-actions > .final-quote-whatsapp:active,
+#manualConfigurator .final-quote-actions > .final-quote-whatsapp:active{transform:translateY(0)!important}
 @media(max-width:620px){
  #packageChooser .final-quote-actions,
  #manualConfigurator .final-quote-actions{flex-direction:column!important;align-items:stretch!important}
  #packageChooser .final-quote-actions > button:not([hidden]),
  #manualConfigurator .final-quote-actions > button:not([hidden]),
- #packageChooser .final-quote-actions > a.final-quote-whatsapp,
- #manualConfigurator .final-quote-actions > a.final-quote-whatsapp{
+ #packageChooser .final-quote-actions > .final-quote-whatsapp,
+ #manualConfigurator .final-quote-actions > .final-quote-whatsapp{
   flex:1 1 auto!important;width:100%!important;min-width:0!important;max-width:none!important;
  }
 }
