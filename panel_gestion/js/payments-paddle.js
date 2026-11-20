@@ -178,27 +178,112 @@
     }
   }
 
+  function fillOrderPayUI(totalEuros, meta) {
+    meta = meta || {};
+    var totalCents = Math.round(Number(totalEuros) * 100);
+    if (!Number.isFinite(totalCents) || totalCents <= 0) return;
+    var parts = splitCents(totalCents);
+    var hunter = hunterSplit(totalCents);
+    var setTxt = function (id, val) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = val;
+    };
+    setTxt('orderPayTotal', moneyFromCents(totalCents));
+    setTxt('orderPayDepositAmt', moneyFromCents(parts.deposit));
+    setTxt('orderPayBalanceAmt', moneyFromCents(parts.balance));
+    setTxt('orderPayHunterDeposit', moneyFromCents(hunter.deposit));
+    setTxt('orderPayHunterBalance', moneyFromCents(hunter.balance));
+    var hunterBox = document.getElementById('orderPayHunter');
+    if (hunterBox) hunterBox.hidden = !isInterno();
+    var host = document.getElementById('orderPaySchedule');
+    if (host) {
+      host.hidden = false;
+      host.style.display = '';
+      if (meta.pedidoId) host.setAttribute('data-pedido-id', meta.pedidoId);
+    }
+    var depBtn = document.getElementById('orderPayDeposit');
+    var balBtn = document.getElementById('orderPayBalance');
+    var status = meta.status || 'pendiente_anticipo';
+    var depositDone = status === 'en_produccion' || status === 'pendiente_entrega' || status === 'pagado';
+    var balanceDone = status === 'pagado';
+    if (depBtn) depBtn.disabled = !!depositDone;
+    if (balBtn) balBtn.disabled = !depositDone || balanceDone;
+    var statusEl = document.getElementById('orderPayStatus');
+    if (statusEl) statusEl.textContent = '';
+  }
+
   function mountInOrderModal(totalEuros, meta) {
     meta = meta || {};
-    var host = document.getElementById('orderPaySchedule');
-    if (!host) return;
-    var totalCents = Math.round(Number(totalEuros) * 100);
-    if (!Number.isFinite(totalCents) || totalCents <= 0) {
-      host.innerHTML = '';
-      return;
-    }
-    host.innerHTML = scheduleHtml(totalCents, {
-      showHunter: isInterno(),
-      status: meta.status || 'pendiente_anticipo',
-      pedidoId: meta.pedidoId || ''
-    });
-    bindSchedule(host, {
+    fillOrderPayUI(totalEuros, meta);
+    var ctx = {
       totalEuros: totalEuros,
       customerName: meta.customerName || '',
       customerEmail: meta.customerEmail || '',
       proyectoLabel: meta.proyectoLabel || 'Showroom 360Preventa',
       quoteSnapshot: meta.quoteSnapshot || null
-    });
+    };
+    window.__paddleOrderPayCtx = ctx;
+    var host = document.getElementById('orderPaySchedule');
+    if (host) bindStaticPayButtons(ctx);
+  }
+
+  function bindStaticPayButtons(ctx) {
+    function run(stage, btn, payCtx) {
+      return async function () {
+        var c = payCtx || window.__paddleOrderPayCtx || ctx;
+        var statusEl = document.getElementById('orderPayStatus');
+        var email = (document.getElementById('customerEmail') || {}).value || c.customerEmail || '';
+        var name = (document.getElementById('customerName') || {}).value || c.customerName || '';
+        if (!email) {
+          if (statusEl) statusEl.textContent = 'Indica el correo del cliente antes de pagar.';
+          var emailInput = document.getElementById('customerEmail');
+          if (emailInput) emailInput.focus();
+          return;
+        }
+        btn.disabled = true;
+        if (statusEl) statusEl.textContent = 'Creando cobro Paddle…';
+        try {
+          var payload = {
+            stage: stage,
+            quote_total_euros: c.totalEuros,
+            customer_name: name,
+            customer_email: email,
+            proyecto_label: c.proyectoLabel,
+            source: location.pathname.indexOf('cotizador') >= 0 ? 'cotizador' : 'panel',
+            quote_snapshot: c.quoteSnapshot || undefined
+          };
+          var host = document.getElementById('orderPaySchedule');
+          var pedidoId = host && host.getAttribute('data-pedido-id');
+          if (pedidoId) payload.pedido_id = pedidoId;
+          var data = await createCheckout(payload);
+          if (data.pedido_id && host) host.setAttribute('data-pedido-id', data.pedido_id);
+          if (statusEl) statusEl.textContent = 'Abriendo checkout… el IVA se calcula ahí si aplica.';
+          await openCheckout(data.transaction_id, email);
+          if (statusEl) statusEl.textContent = 'Checkout abierto. Al completar, el estado se actualizará automáticamente.';
+        } catch (err) {
+          if (statusEl) statusEl.textContent = err.message || 'No se pudo iniciar el pago.';
+          btn.disabled = false;
+        }
+      };
+    }
+    var dep = document.getElementById('orderPayDeposit');
+    var bal = document.getElementById('orderPayBalance');
+    if (dep && !dep.dataset.paddleBound) {
+      dep.dataset.paddleBound = '1';
+      dep.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        var c = window.__paddleOrderPayCtx || ctx;
+        run('deposit', dep, c)();
+      });
+    }
+    if (bal && !bal.dataset.paddleBound) {
+      bal.dataset.paddleBound = '1';
+      bal.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        var c = window.__paddleOrderPayCtx || ctx;
+        run('balance', bal, c)();
+      });
+    }
   }
 
   function bindSchedule(host, ctx) {
@@ -322,6 +407,7 @@
       renderPanel(el);
     },
     mountInOrderModal: mountInOrderModal,
+    fillOrderPayUI: fillOrderPayUI,
     scheduleHtml: scheduleHtml,
     splitCents: splitCents,
     hunterSplit: hunterSplit,
@@ -329,6 +415,13 @@
     productId: PRODUCT_REF,
     clientToken: CLIENT_TOKEN
   };
+
+  // Bind estático en cuanto el DOM esté listo (botones del HTML del modal).
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { bindStaticPayButtons({}); });
+  } else {
+    bindStaticPayButtons({});
+  }
 
   document.addEventListener('paddle:checkout-completed', function () {
     var host = document.getElementById('orderPaySchedule');

@@ -417,6 +417,7 @@ function openOrderModal(){
   });
  }catch(ePay){}
  $('orderModal').classList.remove('hidden');
+ try{$('orderPaySchedule')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});}catch(eScroll){}
 }
 $('modalClose').addEventListener('click',()=>{$('orderModal').classList.add('hidden');restoreOrderModal();});
 $('orderModal').addEventListener('click',e=>{if(e.target===$('orderModal')){$('orderModal').classList.add('hidden');restoreOrderModal();}});
@@ -1136,6 +1137,7 @@ $('packageSelect').addEventListener('click',()=>{
   });
  }catch(ePay){}
  $('orderModal').classList.remove('hidden');
+ try{$('orderPaySchedule')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});}catch(eScroll){}
 });
 
 update();updateHunter();
@@ -1313,7 +1315,8 @@ function openSaleOrder(id){
  $('orderModal').querySelector('.order-dialog > .desc').textContent='Detalle del pedido asociado a esta venta.';
  $('customerName').parentElement.style.display='none';
  $('exportCustomerName').textContent=sale.client;
- const payHost=$('orderPaySchedule');if(payHost)payHost.innerHTML='';
+ const payHost=$('orderPaySchedule');if(payHost){payHost.hidden=true;payHost.style.display='none';}
+ ['orderPayDeposit','orderPayBalance'].forEach(id=>{const el=$(id);if(el)el.style.display='none';});
  $('orderSummary').innerHTML=sale.quoteRows.map(([a,b])=>`<div class="order-detail-row"><span>${a}</span><strong>${b}</strong></div>`).join('');
  $('orderSummary').innerHTML+=`<div class="price-line"><span>Comisión generada · 8 %</span><strong>${demoMoney(sale.commission)}</strong></div>`;
  $('orderTotal').textContent=demoMoney(sale.amount);
@@ -1331,7 +1334,12 @@ function restoreOrderModal(){
  if($('downloadPdf')){$('downloadPdf').style.display='';$('downloadPdf').textContent='DESCARGAR COTIZACIÓN';}
  const wa=$('orderModal')?.querySelector('.summary-actions .final-quote-whatsapp');if(wa)wa.style.display='';
  ['downloadImage','shareQuote','quoteToProject','shareFormats'].forEach(id=>{const el=$(id);if(el)el.style.display='';});
- const payHost=$('orderPaySchedule');if(payHost)payHost.innerHTML='';
+ const payHost=$('orderPaySchedule');
+ if(payHost){payHost.hidden=false;payHost.style.display='';}
+ const payStatus=$('orderPayStatus');if(payStatus)payStatus.textContent='';
+ const dep=$('orderPayDeposit'),bal=$('orderPayBalance');
+ if(dep){dep.style.display='';dep.disabled=false;}
+ if(bal){bal.style.display='';bal.disabled=true;}
 }
 function portalShowHome(){
  $('portalHome').classList.remove('portal-hidden');$('portalSubpage').classList.add('portal-hidden');

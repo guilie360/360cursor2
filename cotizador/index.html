@@ -8,13 +8,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel44">
-<link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel44">
+<link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel45">
+<link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel45">
 <link rel="stylesheet" href="/shared/css/scrollbar.css?v=1">
 <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
 <link rel="stylesheet" href="/shared/css/site-chrome.css?v=9">
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
-<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=63">
+<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=64">
 </head>
 <body data-app="cotizador" class="cotizador-app">
 <header class="topbar"><div class="topinner">
@@ -399,9 +399,27 @@
   <div id="orderSummary" class="order-details"></div>
   <div class="price-line total-line"><span>Total estimado · sin IVA</span><strong id="orderTotal">—</strong></div>
   <small class="price-vat-note">€ sin IVA · + IVA si aplica (lo calcula Paddle en el pago)</small>
-  <div id="orderPaySchedule" class="order-pay-schedule"></div>
+  <div id="orderPaySchedule" class="order-pay-schedule quote-pay-schedule">
+   <div class="quote-pay-head">
+    <span class="eyebrow">PLAN DE PAGOS</span>
+    <p class="desc">Importes <strong>sin IVA</strong>. El IVA, si aplica, lo calcula Paddle en el checkout.</p>
+   </div>
+   <div class="quote-pay-grid">
+    <div class="quote-pay-card"><small>Total</small><strong id="orderPayTotal">—</strong><span>Sin IVA</span></div>
+    <div class="quote-pay-card"><small>Anticipo · 50%</small><strong id="orderPayDepositAmt">—</strong><span>Para iniciar</span></div>
+    <div class="quote-pay-card"><small>Entrega · 50%</small><strong id="orderPayBalanceAmt">—</strong><span>Al entregar</span></div>
+   </div>
+   <div class="quote-pay-hunter" id="orderPayHunter" hidden>
+    <small>Comisión Hunter · 8%</small>
+    <div class="quote-pay-hunter-row"><span>Con anticipo</span><strong id="orderPayHunterDeposit">—</strong></div>
+    <div class="quote-pay-hunter-row"><span>Con entrega</span><strong id="orderPayHunterBalance">—</strong></div>
+   </div>
+   <p class="quote-pay-status muted" id="orderPayStatus" aria-live="polite"></p>
+  </div>
   <div class="actions summary-actions">
-   <button class="btn primary final-quote-download" id="downloadPdf" type="button">DESCARGAR COTIZACIÓN</button>
+   <button class="btn primary" id="orderPayDeposit" type="button">PAGAR ANTICIPO (50%)</button>
+   <button class="btn" id="orderPayBalance" type="button" disabled>PAGAR ENTREGA (50%)</button>
+   <button class="btn final-quote-download" id="downloadPdf" type="button">DESCARGAR PDF</button>
    <button type="button" class="btn final-quote-whatsapp" data-href="https://wa.me/573226834084" data-external="1" aria-label="Chatear con asesor">CHATEAR CON ASESOR</button>
   </div>
   <div id="shareFormats" class="share-formats hidden" aria-label="Formato para compartir" style="display:none">
@@ -475,8 +493,8 @@
 <script src="/shared/js/fullscreen-persist.js?v=9"></script>
 <script src="/shared/js/nav-no-status.js?v=2"></script>
 <script src="/shared/js/global-nav.js?v=19"></script>
-<script src="/panel_gestion/js/app.js?v=fs22"></script>
-<script src="/panel_gestion/js/payments-paddle.js?v=1"></script>
+<script src="/panel_gestion/js/payments-paddle.js?v=2"></script>
+<script src="/panel_gestion/js/app.js?v=fs23"></script>
 <script src="/shared/js/cursor-layer.js?v=2"></script>
 <script src="/panel_gestion/js/visual-layer.js"></script>
 <script src="/panel_gestion/js/lightbox.js"></script>

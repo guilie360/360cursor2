@@ -361,6 +361,9 @@ body.cotizador-app #orderModal .summary-actions{
   gap:12px!important;
   flex-wrap:wrap!important;
 }
+body.cotizador-app #orderModal .quote-pay-schedule{margin-top:14px}
+body.cotizador-app #orderModal .summary-actions #orderPayDeposit,
+body.cotizador-app #orderModal .summary-actions #orderPayBalance,
 body.cotizador-app #orderModal .summary-actions #downloadPdf,
 body.cotizador-app #orderModal .summary-actions .final-quote-whatsapp{
   display:inline-flex!important;
@@ -374,6 +377,8 @@ body.cotizador-app #orderModal .summary-actions .final-quote-whatsapp{
 }
 @media(max-width:620px){
   body.cotizador-app #orderModal .summary-actions{flex-direction:column!important;align-items:stretch!important}
+  body.cotizador-app #orderModal .summary-actions #orderPayDeposit,
+  body.cotizador-app #orderModal .summary-actions #orderPayBalance,
   body.cotizador-app #orderModal .summary-actions #downloadPdf,
   body.cotizador-app #orderModal .summary-actions .final-quote-whatsapp{width:100%!important}
 }

@@ -1649,6 +1649,15 @@ html.has-cur .btn{
 .quote-pay-hunter-row strong{color:#f3f3f1;font-weight:650}
 .quote-pay-actions{display:flex;flex-wrap:wrap;gap:10px}
 .quote-pay-status{min-height:1.2em;margin:0}
+#orderModal .summary-actions{
+  display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;
+}
+#orderModal .summary-actions #orderPayDeposit{
+  background:#fff!important;color:#111!important;border-color:#fff!important;
+}
+#orderModal .summary-actions #downloadPdf{
+  opacity:.92;
+}
 .panel-pay-paddle h3{margin:0 0 8px;font:28px/1.15 'Italiana',Georgia,serif;font-weight:400;color:#f3f3f1}
 .quote-pay-pedido{align-items:flex-start}
 @media (max-width:720px){
