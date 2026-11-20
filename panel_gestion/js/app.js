@@ -1,15 +1,31 @@
 const $=id=>document.getElementById(id);
 const money=n=>new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format(n);
 const num=(id,min=0,max=100000)=>Math.max(min,Math.min(max,Number($(id).value)||min));
-const areaExtra=a=>Math.max(0,a-100)*7;
+/* Precios sin IVA · + IVA si aplica (checkout / Paddle) */
+const PACKAGE_BASE=2190;
+const HUNTER_RATE=0.08;
+const HUNTER_MIN_MONTHLY=70;
+const PRICE_BASE=545;
+const PRICE_FLOOR=245;
+const PRICE_MAIN=275;
+const PRICE_SECONDARY=155;
+const PRICE_AREA_M2=8;
+const PRICE_REEL=275;
+const PRICE_VERTICAL=245;
+const PRICE_CINEMA=390;
+const PRICE_SHEET=245;
+const PRICE_CATALOG=220;
+const PRICE_VAT_NOTE='€ sin IVA · + IVA si aplica';
+const areaExtra=a=>Math.max(0,a-100)*PRICE_AREA_M2;
+const hunterCommission=total=>total>0?Math.max(HUNTER_MIN_MONTHLY,total*HUNTER_RATE):0;
 const checked=sel=>[...document.querySelectorAll(sel+':checked')];
 function mainSpaces(){return checked('.mainspace').length}
 function nonBedroomMainSpaces(){return checked('.mainspace').filter(e=>e.id!=='master').length}
 function bedroomCount(){return ( $('master').checked ? 1 : 0 ) + num('extraBedrooms')}
-function bedroomPrice(){return ($('master').checked?250:0)+num('extraBedrooms')*140}
+function bedroomPrice(){return ($('master').checked?PRICE_MAIN:0)+num('extraBedrooms')*PRICE_SECONDARY}
 function secondarySpaces(){return checked('.secondary').length}
 function addons(){return checked('.addon').reduce((s,e)=>s+Number(e.dataset.cost),0)}
-function configSubtotal(area,floors,includeResources=true){return 490+areaExtra(area)+floors*220+nonBedroomMainSpaces()*250+bedroomPrice()+secondarySpaces()*140+(includeResources?addons():0)}
+function configSubtotal(area,floors,includeResources=true){return PRICE_BASE+areaExtra(area)+floors*PRICE_FLOOR+nonBedroomMainSpaces()*PRICE_MAIN+bedroomPrice()+secondarySpaces()*PRICE_SECONDARY+(includeResources?addons():0)}
 function current(){
  const area=num('area',1),floors=num('floors',0,30);
  const primary=configSubtotal(area,floors);
@@ -24,10 +40,10 @@ function current(){
 function update(){
  const q=current(),type=document.querySelector('input[name="type"]:checked').value;
  $('typeMeta').textContent=type;$('areaMeta').textContent=q.area+' m²';$('areaCost').textContent=money(areaExtra(q.area));
- const extraFloorCount=q.floors,extraFloorCost=extraFloorCount*220;
+ const extraFloorCount=q.floors,extraFloorCost=extraFloorCount*PRICE_FLOOR;
  $('floorMeta').textContent=q.floors+(q.floors===1?' planta 3D · ':' plantas 3D · ')+money(extraFloorCost);
  if($('manualTotalAreaLabel'))$('manualTotalAreaLabel').textContent=q.area+' m²';
- $('floorFormula').textContent=`${extraFloorCount} ${extraFloorCount===1?'planta':'plantas'} × 220 €`;
+ $('floorFormula').textContent=`${extraFloorCount} ${extraFloorCount===1?'planta':'plantas'} × ${PRICE_FLOOR} €`;
  $('floorCost').textContent=money(extraFloorCost);
  if($('manualRequestedPlantCount'))$('manualRequestedPlantCount').textContent=String(extraFloorCount);
  if($('manualTotalPlantCount'))$('manualTotalPlantCount').textContent=String(extraFloorCount);
@@ -37,22 +53,22 @@ function update(){
  if($('additionalMeta'))$('additionalMeta').textContent=q.hasSimilar?'Segundo inmueble agregado':'Opcional · sin coste por añadirlo';
  if(!$('manualConfigurator').classList.contains('hidden')){
   $('stickyPrice').textContent=money(q.total);
-  $('hunterLiveCommission').textContent=money(q.total>0?Math.max(70,q.total*.07874015748031496):0);
+  $('hunterLiveCommission').textContent=money(hunterCommission(q.total));
  }
  const rows=[];
- rows.push(['Base del showroom · hasta 100 m²',490]);
+ rows.push(['Base del showroom · hasta 100 m²',PRICE_BASE]);
  if(areaExtra(q.area))rows.push([`Ajuste de superficie · ${q.area} m²`,areaExtra(q.area)]);
- if(q.floors>0)rows.push([`Plantas 3D del inmueble · ${q.floors} × 220 €`,q.floors*220]);
- checked('.mainspace').filter(e=>e.id!=='master').forEach(e=>rows.push([e.dataset.name,250]));
+ if(q.floors>0)rows.push([`Plantas 3D del inmueble · ${q.floors} × ${PRICE_FLOOR} €`,q.floors*PRICE_FLOOR]);
+ checked('.mainspace').filter(e=>e.id!=='master').forEach(e=>rows.push([e.dataset.name,PRICE_MAIN]));
  const rooms=bedroomCount();
- if($('master').checked)rows.push(['Dormitorio principal · 250 €',250]);
- if(num('extraBedrooms'))rows.push([`Dormitorios adicionales · ${num('extraBedrooms')} × 140 €`,num('extraBedrooms')*140]);
- checked('.secondary').forEach(e=>rows.push([(e.id==='otherSpace'&&$('otherName').value.trim()?$('otherName').value.trim():e.dataset.name)+' · zona complementaria',140]));
+ if($('master').checked)rows.push([`Dormitorio principal · ${PRICE_MAIN} €`,PRICE_MAIN]);
+ if(num('extraBedrooms'))rows.push([`Dormitorios adicionales · ${num('extraBedrooms')} × ${PRICE_SECONDARY} €`,num('extraBedrooms')*PRICE_SECONDARY]);
+ checked('.secondary').forEach(e=>rows.push([(e.id==='otherSpace'&&$('otherName').value.trim()?$('otherName').value.trim():e.dataset.name)+' · zona complementaria',PRICE_SECONDARY]));
  checked('.addon').forEach(e=>rows.push([e.closest('.choice').querySelector('b').textContent,Number(e.dataset.cost)]));
  $('quoteRows').innerHTML='<div class="price-line"><span>Tipología</span><strong>'+type+'</strong></div>'+rows.map(([a,b])=>`<div class="price-line"><span>${a}</span><strong>${typeof b==='number'?money(b):b}</strong></div>`).join('');
  $('quoteRows').innerHTML+=`<div class="price-line"><span>Subtotal del primer inmueble</span><strong>${money(q.primary)}</strong></div>`;
  if(q.hasSimilar){
-  $('quoteRows').innerHTML+=`<div class="property-block"><h4>Segundo showroom · ${q.simType}</h4><div class="price-line"><span>Tipo de inmueble</span><strong>${q.simType}</strong></div><div class="price-line"><span>Superficie</span><strong>${q.simArea} m²</strong></div><div class="price-line"><span>Planta 3D incluida</span><strong>1</strong></div>${q.simFloors?`<div class="price-line"><span>Plantas 3D adicionales</span><strong>${q.simFloors} · ${money(q.simFloors*220)}</strong></div>`:''}<div class="price-line"><span>Recursos adicionales</span><strong>Compartidos · sin coste extra</strong></div><div class="price-line"><span>Configuración reutilizada antes del descuento</span><strong>${money(q.similarBase)}</strong></div><div class="price-line"><span>Descuento aplicado</span><strong>50 % · − ${money(q.discount)}</strong></div><div class="price-line"><span>Segundo inmueble</span><strong>${money(q.similarBase-q.discount)}</strong></div></div>`;
+  $('quoteRows').innerHTML+=`<div class="property-block"><h4>Segundo showroom · ${q.simType}</h4><div class="price-line"><span>Tipo de inmueble</span><strong>${q.simType}</strong></div><div class="price-line"><span>Superficie</span><strong>${q.simArea} m²</strong></div><div class="price-line"><span>Planta 3D incluida</span><strong>1</strong></div>${q.simFloors?`<div class="price-line"><span>Plantas 3D adicionales</span><strong>${q.simFloors} · ${money(q.simFloors*PRICE_FLOOR)}</strong></div>`:''}<div class="price-line"><span>Recursos adicionales</span><strong>Compartidos · sin coste extra</strong></div><div class="price-line"><span>Configuración reutilizada antes del descuento</span><strong>${money(q.similarBase)}</strong></div><div class="price-line"><span>Descuento aplicado</span><strong>50 % · − ${money(q.discount)}</strong></div><div class="price-line"><span>Segundo inmueble</span><strong>${money(q.similarBase-q.discount)}</strong></div></div>`;
  }
  $('grandTotal').textContent=money(q.total);
  if($('manualHeadTotal'))$('manualHeadTotal').textContent=money(q.total);
@@ -231,15 +247,15 @@ function resetConfigurator(){
   });
   document.querySelectorAll('.step').forEach(s=>s.open=false);
   update();
-  $('stickyPrice').textContent=money(490);
+  $('stickyPrice').textContent=money(PRICE_BASE);
   $('hunterLiveCommission').textContent=money(70);
  }else if(packageVisible){
   const first=Object.keys(packageCatalog)[0];
   renderPackage(first);
   $('packageArea').value=100;
   updatePackagePrice();
-  $('stickyPrice').textContent=money(1970);
-  $('hunterLiveCommission').textContent=money(Math.max(70,1970*.07874015748031496));
+  $('stickyPrice').textContent=money(PACKAGE_BASE);
+  $('hunterLiveCommission').textContent=money(hunterCommission(PACKAGE_BASE));
   $('packageSelectedNote').textContent='Configuración reiniciada al precio base del paquete.';
  }else{
   $('stickyPrice').textContent=money(0);
@@ -274,7 +290,7 @@ function updateHunter(){
  const prices=mode==='average'
   ? Array(n).fill(Math.max(0,Number($('hunterAverage').value)||0))
   : [...document.querySelectorAll('.hunter-project-price')].map(x=>Math.max(0,Number(x.value)||0));
- const rawCommission=prices.reduce((sum,v)=>sum+v*.07874015748031496,0);
+ const rawCommission=prices.reduce((sum,v)=>sum+v*HUNTER_RATE,0);
  const commission=n>0?Math.max(70,rawCommission):0;
  const b=bonus(n),total=commission+b;
  $('hunterCommission').textContent=money(commission);
@@ -386,7 +402,7 @@ $('manualOfferChoosePackage').addEventListener('click',()=>{
 function openOrderModal(){
  restoreOrderModal();
  const q=current(),type=document.querySelector('input[name="type"]:checked').value;
- const rows=[['Tipo de inmueble',type],['Superficie',q.area+' m²'],['Plantas 3D',q.floors+' × 220 €'],['Subtotal primer inmueble',money(q.primary)]];
+ const rows=[['Tipo de inmueble',type],['Superficie',q.area+' m²'],['Plantas 3D',q.floors+' × '+PRICE_FLOOR+' €'],['Subtotal primer inmueble',money(q.primary)]];
  if(q.hasSimilar){rows.push(['Segundo showroom',q.simType+' · '+q.simArea+' m²'],['Tipo de inmueble',q.simType],['Planta 3D incluida','1'],['Plantas 3D adicionales',q.simFloors],['Recursos adicionales','Compartidos · sin coste extra'],['Descuento aplicado','50 %'],['Importe segundo inmueble',money(q.similarBase-q.discount)]);}
  $('orderSummary').innerHTML=rows.map(([a,b])=>`<div class="order-detail-row"><span>${a}</span><strong>${b}</strong></div>`).join('');
  $('orderSummary').innerHTML+=$('quoteRows').innerHTML;
@@ -718,8 +734,8 @@ document.addEventListener('click',(e)=>{
 function packageAreaValue(id='packageArea'){return Math.max(1,Math.round(Number($(id)?.value))||100);}
 function packageExtraFloors(id='packageExtraFloors'){return Math.max(0,Math.floor(Number($(id)?.value)||0));}
 function packageSinglePrice(area,extraFloors=0){
- const extra=Math.max(0,area-100),floorCost=extraFloors*220;
- return {extra,floorCost,price:1970+extra*7+floorCost};
+ const extra=Math.max(0,area-100),floorCost=extraFloors*PRICE_FLOOR;
+ return {extra,floorCost,price:PACKAGE_BASE+extra*PRICE_AREA_M2+floorCost};
 }
 function packageAreaPrice(area){return packageSinglePrice(area,packageExtraFloors());}
 function packageTotalPrice(){
@@ -743,9 +759,9 @@ function renderPackage(key){
     <h3>${p.title}</h3>
    </div>
    <div class="package-detail-price">
-    <strong id="packageLivePrice">1.970 €</strong>
+    <strong id="packageLivePrice">2.190 €</strong>
     <small>PRECIO DEL PAQUETE</small>
-    <small>100 m² incluidos · +7 €/m² adicional</small>
+    <small>100 m² incluidos · +8 €/m² adicional</small>
    </div>
   </div>
 
@@ -780,7 +796,7 @@ function renderPackage(key){
    </div>
    <details class="package-extra-terms">
     <summary>Ver condiciones y servicios adicionales</summary>
-    <p>La cantidad de habitaciones y ambientes interiores no tiene límite dentro de los metros cuadrados contratados. A partir de 100 m² se añaden 7 € por cada m² adicional.</p>
+    <p>La cantidad de habitaciones y ambientes interiores no tiene límite dentro de los metros cuadrados contratados. A partir de 100 m² se añaden 8 € por cada m² adicional.</p>
     <p>Plantas 3D adicionales y otros recursos —vídeo cinematográfico, ficha comercial, catálogo, formulario, CRM y landing page— se contratan por separado. No incluye modelado 3D de fachadas.</p>
    </details>
   </section>
@@ -815,7 +831,7 @@ function renderPackage(key){
      </div>
      <div class="area-panel-control">
       <div class="area-input-wrap"><input id="packageArea" type="number" min="1" step="1" value="100" aria-label="Superficie total en metros cuadrados"><span>m²</span></div>
-      <small>Hasta 100 m² incluidos · Cada m² adicional: 7 €.</small>
+      <small>Hasta 100 m² incluidos · Cada m² adicional: 8 €.</small>
      </div>
      <div class="actions"><button type="button" class="btn primary" data-package-next="packageFloorsAccordion">Continuar</button></div>
     </div>
@@ -838,7 +854,7 @@ function renderPackage(key){
      </div>
      <div class="plant-selector-card">
       <label for="packageExtraFloors">¿Cuántas plantas adicionales necesitas?</label>
-      <small>220 € por planta adicional</small>
+      <small>245 € por planta adicional</small>
       <div class="clean-stepper">
        <button type="button" id="packageExtraFloorsMinus" aria-label="Quitar una planta">−</button>
        <input id="packageExtraFloors" type="number" min="0" max="20" step="1" value="0" aria-label="Número de plantas adicionales">
@@ -897,16 +913,16 @@ function renderPackage(key){
        <label for="packageImagesIncluded"><b>Imágenes verticales <span class="resource-status-inline">INCLUIDO</span></b><small>Pack de imágenes optimizadas para redes y comunicación comercial.</small></label>
       </div>
       <div class="choice package-resource-card">
-      <input type="checkbox" class="package-addon" id="packageCinematicVideo" data-cost="350" data-label="Vídeo cinematográfico">
-      <label for="packageCinematicVideo"><b>Vídeo cinematográfico</b><small>Vídeo horizontal 16:9 para presentaciones presenciales y pantallas grandes, con narrativa visual y edición · 350 €</small></label>
+      <input type="checkbox" class="package-addon" id="packageCinematicVideo" data-cost="390" data-label="Vídeo cinematográfico">
+      <label for="packageCinematicVideo"><b>Vídeo cinematográfico</b><small>Vídeo horizontal 16:9 para presentaciones presenciales y pantallas grandes, con narrativa visual y edición · 390 €</small></label>
      </div>
      <div class="choice package-resource-card">
-      <input type="checkbox" class="package-addon" id="packageCommercialSheet" data-cost="220" data-label="Ficha comercial individual">
-      <label for="packageCommercialSheet"><b>Ficha comercial individual</b><small>Ficha de una vivienda con imágenes, plano, superficie y datos clave · 220 €</small></label>
+      <input type="checkbox" class="package-addon" id="packageCommercialSheet" data-cost="245" data-label="Ficha comercial individual">
+      <label for="packageCommercialSheet"><b>Ficha comercial individual</b><small>Ficha de una vivienda con imágenes, plano, superficie y datos clave · 245 €</small></label>
      </div>
      <div class="choice package-resource-card">
-      <input type="checkbox" class="package-addon" id="packageUnitCatalog" data-cost="200" data-label="Catálogo de unidades">
-      <label for="packageUnitCatalog"><b>Catálogo de unidades</b><small>Documento digital con varias viviendas, sus planos y características · 200 €</small></label>
+      <input type="checkbox" class="package-addon" id="packageUnitCatalog" data-cost="220" data-label="Catálogo de unidades">
+      <label for="packageUnitCatalog"><b>Catálogo de unidades</b><small>Documento digital con varias viviendas, sus planos y características · 220 €</small></label>
      </div>
      <div class="choice package-resource-card package-coming-soon">
       <input type="checkbox" id="packageLeadForm" disabled>
@@ -933,7 +949,7 @@ function renderPackage(key){
     <span class="accordion-plus" aria-hidden="true">+</span>
    </summary>
    <div class="accordion-content">
-    <div class="breakdown"><h3>Desglose del proyecto</h3><div id="packageQuoteRows"></div><div class="price-line total-line"><span>Total estimado</span><strong id="packageGrandTotal">1970 €</strong></div><p class="desc" id="packageDiscountExplanation" style="margin:12px 0 0"></p></div>
+    <div class="breakdown"><h3>Desglose del proyecto</h3><div id="packageQuoteRows"></div><div class="price-line total-line"><span>Total estimado</span><strong id="packageGrandTotal">2.190 €</strong></div><small class="price-vat-note">${PRICE_VAT_NOTE}</small><p class="desc" id="packageDiscountExplanation" style="margin:12px 0 0"></p></div>
    </div>
   </details>
   </div>
@@ -977,7 +993,7 @@ function updatePackagePrice(){
  $('packageLivePrice').textContent=money(total);
  if(!$('packageChooser').classList.contains('hidden')){
   $('stickyPrice').textContent=money(total);
-  $('hunterLiveCommission').textContent=money(Math.max(70,total*.07874015748031496));
+  $('hunterLiveCommission').textContent=money(hunterCommission(total));
  }
  const areaLabel=$('packageTotalAreaLabel');if(areaLabel)areaLabel.textContent=area+' m²';
  const similarFields=$('packageSimilarFields');if(similarFields){similarFields.hidden=!q.similar;similarFields.setAttribute('aria-hidden',String(!q.similar));}
@@ -990,11 +1006,12 @@ function updatePackagePrice(){
  const similarText=q.similar?` · Segundo showroom: ${money(q.similar.price)} − 50 % (${money(q.discount)} de descuento)`:'';
  const resourcesText=q.resourcesTotal?` · Recursos opcionales: ${money(q.resourcesTotal)}`:'';
  $('packageSelectedNote').textContent=`${area} m² totales · ${extraFloors} planta(s) 3D${q.main.extra?` · ${q.main.extra} m² adicionales`:''}${similarText}${resourcesText} · ${money(total)} total.`;
- const manualSpaces=250+250+250+(2*140)+(2*140)+250;
- const includedIndividually=250+220; // Reel Ads + imágenes verticales
- const individualExtras=areaExtra(area)+(extraFloors*220)+q.resourcesTotal;
- const similarIndividual=q.similar?(q.similar.price+770):0;
- const manualEquivalent=490+220+manualSpaces+includedIndividually+individualExtras+similarIndividual; // base + 1 planta 3D + recursos incluidos
+ const manualSpaces=PRICE_MAIN*4+PRICE_SECONDARY*4;
+ const includedIndividually=PRICE_REEL+PRICE_VERTICAL; // Reel Ads + imágenes verticales
+ const individualExtras=areaExtra(area)+(extraFloors*PRICE_FLOOR)+q.resourcesTotal;
+ const packageManualDelta=(PRICE_BASE+PRICE_FLOOR+manualSpaces+includedIndividually)-PACKAGE_BASE;
+ const similarIndividual=q.similar?(q.similar.price+packageManualDelta):0;
+ const manualEquivalent=PRICE_BASE+PRICE_FLOOR+manualSpaces+includedIndividually+individualExtras+similarIndividual; // base + 1 planta 3D + recursos incluidos
  const packageWithExtras=q.total;
  const saving=manualEquivalent-packageWithExtras;
  const savingsLabel=saving>=0?'Ahorro':'Diferencia';
@@ -1002,10 +1019,10 @@ function updatePackagePrice(){
  // Presupuesto final del paquete (mismo formato que el desglose del flujo personalizado)
  const pq=$('packageQuoteRows');
  if(pq){
-  const pk=packageCatalog[activePackage],baseP=q.main.price-q.main.extra*7-q.main.floorCost;
+  const pk=packageCatalog[activePackage],baseP=q.main.price-q.main.extra*PRICE_AREA_M2-q.main.floorCost;
   const pRows=[['Tipología',pk.title.replace('Showroom Completo ','')],['Showroom completo · hasta 100 m²',money(baseP)]];
-  if(q.main.extra)pRows.push([`Superficie adicional · ${q.main.extra} m² × 7 €`,money(q.main.extra*7)]);
-  if(extraFloors>0)pRows.push([`Plantas 3D adicionales · ${extraFloors} × 220 €`,money(q.main.floorCost)]);
+  if(q.main.extra)pRows.push([`Superficie adicional · ${q.main.extra} m² × ${PRICE_AREA_M2} €`,money(q.main.extra*PRICE_AREA_M2)]);
+  if(extraFloors>0)pRows.push([`Plantas 3D adicionales · ${extraFloors} × ${PRICE_FLOOR} €`,money(q.main.floorCost)]);
   q.resources.forEach(item=>pRows.push([item.label,money(item.cost)]));
   pq.innerHTML=pRows.map(([a,b])=>`<div class="price-line"><span>${a}</span><strong>${b}</strong></div>`).join('')
    +`<div class="price-line"><span>Subtotal del primer inmueble</span><strong>${money(q.main.price+q.resourcesTotal)}</strong></div>`;
@@ -1089,12 +1106,12 @@ $('packageSelect').addEventListener('click',()=>{
  restoreOrderModal();
  const p=packageCatalog[activePackage],area=packageAreaValue(),q=packageTotalPrice();
  const rows=[['Paquete',p.title],['Superficie total del inmueble',area+' m²'],['Base completa del showroom','Incluida'],['Todos los espacios interiores existentes','Incluidos sin límite'],['Plantas 3D del inmueble',(1+packageExtraFloors())+' planta(s) · '+money(q.main.floorCost)+' en plantas adicionales'],['Reel Ads promocional','Incluido'],['Pack de imágenes verticales','Incluido']];
- if(q.main.extra)rows.push([`Superficie adicional · ${q.main.extra} m² × 7 €`,money(q.main.extra*7)]);
+ if(q.main.extra)rows.push([`Superficie adicional · ${q.main.extra} m² × ${PRICE_AREA_M2} €`,money(q.main.extra*PRICE_AREA_M2)]);
  q.resources.forEach(item=>rows.push([item.label,money(item.cost)]));
  if(q.similar){
   rows.push(['Segundo showroom · '+packageAreaValue('packageSimilarArea')+' m²',money(q.similar.price)]);
   rows.push(['Planta 3D del segundo showroom','1 planta incluida']);
-  if(q.similar.extra)rows.push(['Superficie adicional del segundo showroom',money(q.similar.extra*7)]);
+  if(q.similar.extra)rows.push(['Superficie adicional del segundo showroom',money(q.similar.extra*PRICE_AREA_M2)]);
   rows.push(['Descuento segundo showroom · 50 %','− '+money(q.discount)]);
   rows.push(['Recursos adicionales','Compartidos con ambos inmuebles · sin coste extra']);
  }
@@ -1108,7 +1125,7 @@ update();updateHunter();
 
 const demoProjects=[
  {id:1,name:'Miralago',client:'Inmobiliaria Miralago',owner:'Diseño',status:'En producción',amount:4190,progress:65,area:'148 m²'},
- {id:2,name:'Apartamento Centro',client:'Laura Gómez',owner:'Diseño',status:'En revisión',amount:1970,progress:88,area:'92 m²'},
+ {id:2,name:'Apartamento Centro',client:'Laura Gómez',owner:'Diseño',status:'En revisión',amount:2190,progress:88,area:'92 m²'},
  {id:3,name:'Co-living Norte',client:'Grupo Norte',owner:'Marketing',status:'Pendiente',amount:3250,progress:15,area:'180 m²'}
 ];
 let demoTasks=[
@@ -1219,7 +1236,7 @@ document.addEventListener('click',function(ev){
 function profileSalesData(){
  return demoProjects.map(p=>({
   ...p,
-  commission:Math.max(70,p.amount*0.07874015748031496),
+  commission:Math.max(HUNTER_MIN_MONTHLY,p.amount*HUNTER_RATE),
   quoteRows:[
    ['Tipo de inmueble','Showroom inmobiliario'],
    ['Superficie',p.area],
@@ -1280,7 +1297,7 @@ function openSaleOrder(id){
  $('customerName').parentElement.style.display='none';
  $('exportCustomerName').textContent=sale.client;
  $('orderSummary').innerHTML=sale.quoteRows.map(([a,b])=>`<div class="order-detail-row"><span>${a}</span><strong>${b}</strong></div>`).join('');
- $('orderSummary').innerHTML+=`<div class="price-line"><span>Comisión generada · 7,874 %</span><strong>${demoMoney(sale.commission)}</strong></div>`;
+ $('orderSummary').innerHTML+=`<div class="price-line"><span>Comisión generada · 8 %</span><strong>${demoMoney(sale.commission)}</strong></div>`;
  $('orderTotal').textContent=demoMoney(sale.amount);
  ['downloadImage','downloadPdf','shareQuote','quoteToProject','shareFormats'].forEach(id=>{const el=$(id);if(el)el.style.display='none';});
  const wa=$('orderModal')?.querySelector('.summary-actions .final-quote-whatsapp');if(wa)wa.style.display='none';

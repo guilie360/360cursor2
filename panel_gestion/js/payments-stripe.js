@@ -144,7 +144,7 @@
       '<h3>Cobrar con Stripe</h3>' +
       '<p class="desc">Crea un enlace de pago seguro para tu cliente. Cuando pague, el cobro pasará a Cobrado automáticamente.</p>' +
       '<form id="panelPayForm" class="panel-pay-form">' +
-      '<label class="field">Importe (€)<input id="panelPayAmount" type="number" min="0.5" step="0.01" required placeholder="1970.00"></label>' +
+      '<label class="field">Importe (€)<input id="panelPayAmount" type="number" min="0.5" step="0.01" required placeholder="2190.00"></label>' +
       '<label class="field">Concepto<input id="panelPayConcepto" type="text" required maxlength="200" placeholder="Anticipo showroom"></label>' +
       '<label class="field">Proyecto / referencia<input id="panelPayProyecto" type="text" maxlength="200" placeholder="Miralago · opcional"></label>' +
       '<label class="field">Email del cliente<input id="panelPayEmail" type="email" maxlength="200" placeholder="cliente@empresa.com · opcional"></label>' +

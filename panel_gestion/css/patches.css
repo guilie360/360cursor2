@@ -1617,3 +1617,28 @@ html.has-cur .btn{
 .status-pill--pending{opacity:.85}
 .status-pill--cobrado{border-color:rgba(120,200,140,.45);color:#b7e0c2}
 .status-pill--fallido,.status-pill--cancelado{opacity:.7}
+
+
+/* VAT disclaimer under sticky / totals */
+.price-vat-note{
+  display:block;
+  margin-top:4px;
+  font-size:10px;
+  line-height:1.3;
+  letter-spacing:.02em;
+  color:rgba(255,255,255,.45);
+  font-weight:500;
+}
+.topbar .pricebox .price-vat-note,
+.quote-footer-price .price-vat-note{
+  margin-top:2px;
+  text-align:right;
+}
+.visual-copy .price-vat-note{
+  margin-top:6px;
+  color:rgba(255,255,255,.55);
+}
+.breakdown .price-vat-note{
+  margin:6px 0 0;
+  text-align:right;
+}
