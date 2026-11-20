@@ -1,6 +1,33 @@
 /* Shell del cotizador público/interno (misma app, distinta capa) */
 body.cotizador-app{
   background:#0b0b0b;
+  -webkit-user-select:none;
+  user-select:none;
+  caret-color:transparent;
+}
+/* Solo campos de formulario permiten selección/caret de escritura */
+body.cotizador-app input,
+body.cotizador-app textarea,
+body.cotizador-app select,
+body.cotizador-app [contenteditable="true"]{
+  -webkit-user-select:text;
+  user-select:text;
+  caret-color:auto;
+}
+body.cotizador-app button,
+body.cotizador-app a,
+body.cotizador-app summary,
+body.cotizador-app label,
+body.cotizador-app .step,
+body.cotizador-app .package-accordion,
+body.cotizador-app .base-include-item,
+body.cotizador-app .choice,
+body.cotizador-app .flip-front,
+body.cotizador-app .flip-back,
+body.cotizador-app .btn{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  caret-color:transparent!important;
 }
 
 /* Header limpio: solo logo (+ menú global). Precio/reset viven en el footer. */
