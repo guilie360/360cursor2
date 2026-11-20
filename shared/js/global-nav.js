@@ -136,12 +136,15 @@
         sessionStorage.setItem('boxiesMenuScrollY', String(y));
       } catch (err) {}
       try {
-        if (window.BoxiesSnapLandingScroll) window.BoxiesSnapLandingScroll();
+        if (window.BoxiesFreezeLandingScroll) window.BoxiesFreezeLandingScroll();
+        else if (window.BoxiesSnapLandingScroll) window.BoxiesSnapLandingScroll();
       } catch (err2) {}
     }
 
     function unlockPageScroll() {
       var y = savedMenuScroll();
+      window.__boxiesLockY = y;
+      window.__boxiesUnlocking = true;
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.left = '';
@@ -149,14 +152,14 @@
       document.body.style.width = '';
       document.body.style.overflow = '';
       document.documentElement.classList.remove('nav-scroll-locked');
-      window.__boxiesLockY = y;
       try {
         window.scrollTo(0, y);
         document.documentElement.scrollTop = y;
         document.body.scrollTop = y;
       } catch (err) {}
       try {
-        if (window.BoxiesSnapLandingScroll) window.BoxiesSnapLandingScroll();
+        if (window.BoxiesUnfreezeLandingScroll) window.BoxiesUnfreezeLandingScroll(y);
+        else if (window.BoxiesSnapLandingScroll) window.BoxiesSnapLandingScroll();
       } catch (err2) {}
     }
 

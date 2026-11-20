@@ -12,29 +12,47 @@ msgs.forEach(m=>{const h=m.querySelector('h2');
 
 /* Progreso de scroll con inercia suave (el scroll nativo no se toca) */
 const tgt={intro:0,exp:0},cur={intro:0,exp:0};let raf=0;
+let landingFrozen=false;
+const frozenProgress={intro:0,exp:0};
 /* Con menú abierto body está position:fixed y scrollY=0; usar el lock real. */
 function pageScrollY(){
-  if(document.documentElement.classList.contains('nav-scroll-locked')){
+  if(landingFrozen||document.documentElement.classList.contains('nav-scroll-locked')||window.__boxiesUnlocking){
     if(typeof window.__boxiesLockY==='number'&&window.__boxiesLockY>=0) return window.__boxiesLockY;
     const top=parseInt(document.body.style.top||'0',10);
-    if(isFinite(top)) return Math.abs(top);
+    if(isFinite(top)&&top!==0) return Math.abs(top);
   }
   return scrollY||document.documentElement.scrollTop||0;
 }
 function read(){
+  /* Menú/FS: congelar el scrub para que no anime de 0→final al desbloquear */
+  if(landingFrozen){
+    tgt.intro=frozenProgress.intro;
+    tgt.exp=frozenProgress.exp;
+    cur.intro=frozenProgress.intro;
+    cur.exp=frozenProgress.exp;
+    if(raf){cancelAnimationFrame(raf);raf=0}
+    render();
+    return;
+  }
   const vh=innerHeight;
   const y=pageScrollY();
   tgt.intro=clamp(y/(vh*.7));
   const sc=exp.offsetHeight-vh;
-  if(document.documentElement.classList.contains('nav-scroll-locked')){
-    /* getBoundingClientRect ya refleja el offset fixed; no mezclar con scrollY=0 */
-    tgt.exp=sc>0?clamp(-exp.getBoundingClientRect().top/sc):0;
-  }else{
-    tgt.exp=sc>0?clamp(-exp.getBoundingClientRect().top/sc):0;
+  tgt.exp=sc>0?clamp(-exp.getBoundingClientRect().top/sc):0;
+  if(document.documentElement.classList.contains('nav-scroll-locked')||window.__boxiesUnlocking){
+    cur.intro=tgt.intro;
+    cur.exp=tgt.exp;
+    if(raf){cancelAnimationFrame(raf);raf=0}
+    render();
+    return;
   }
   if(!raf)raf=requestAnimationFrame(tick);
 }
 function tick(){
+  if(landingFrozen||document.documentElement.classList.contains('nav-scroll-locked')||window.__boxiesUnlocking){
+    raf=0;
+    return;
+  }
   let busy=false;const k=reduce?1:.14;
   for(const key in tgt){const d=tgt[key]-cur[key];if(Math.abs(d)>.0004){cur[key]+=d*k;busy=true}else cur[key]=tgt[key]}
   render();raf=busy?requestAnimationFrame(tick):0;
@@ -69,12 +87,70 @@ addEventListener('scroll',read,{passive:true});addEventListener('resize',read);r
 /* Salto de sección sin scrub visual del scroll-story */
 if('scrollRestoration' in history) history.scrollRestoration='manual';
 function snapScrollState(){
+  if(landingFrozen){
+    tgt.intro=frozenProgress.intro;
+    tgt.exp=frozenProgress.exp;
+    cur.intro=frozenProgress.intro;
+    cur.exp=frozenProgress.exp;
+    if(raf){cancelAnimationFrame(raf);raf=0}
+    render();
+    return;
+  }
   read();
   cur.intro=tgt.intro;
   cur.exp=tgt.exp;
   if(raf){cancelAnimationFrame(raf);raf=0;}
   render();
 }
+window.BoxiesFreezeLandingScroll=()=>{
+  read();
+  frozenProgress.intro=tgt.intro;
+  frozenProgress.exp=tgt.exp;
+  cur.intro=tgt.intro;
+  cur.exp=tgt.exp;
+  landingFrozen=true;
+  if(raf){cancelAnimationFrame(raf);raf=0}
+  render();
+};
+window.BoxiesUnfreezeLandingScroll=(y)=>{
+  if(typeof y==='number'&&y>=0) window.__boxiesLockY=y;
+  window.__boxiesUnlocking=true;
+  landingFrozen=false;
+  try{
+    if(typeof y==='number'&&y>=0){
+      scrollTo(0,y);
+      document.documentElement.scrollTop=y;
+      document.body.scrollTop=y;
+    }
+  }catch(e){}
+  read();
+  cur.intro=tgt.intro;
+  cur.exp=tgt.exp;
+  if(raf){cancelAnimationFrame(raf);raf=0}
+  render();
+  requestAnimationFrame(()=>{
+    try{
+      if(typeof y==='number'&&y>=0){
+        scrollTo(0,y);
+        document.documentElement.scrollTop=y;
+        document.body.scrollTop=y;
+      }
+    }catch(e){}
+    read();
+    cur.intro=tgt.intro;
+    cur.exp=tgt.exp;
+    if(raf){cancelAnimationFrame(raf);raf=0}
+    render();
+    requestAnimationFrame(()=>{
+      read();
+      cur.intro=tgt.intro;
+      cur.exp=tgt.exp;
+      if(raf){cancelAnimationFrame(raf);raf=0}
+      render();
+      window.__boxiesUnlocking=false;
+    });
+  });
+};
 function sectionTop(el){
   if(!el) return 0;
   const y=el.getBoundingClientRect().top+scrollY;
