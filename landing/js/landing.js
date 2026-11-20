@@ -203,7 +203,7 @@ $$('.showroom').forEach(card=>{
     const title=card.querySelector('strong')?.textContent.trim()||'SHOWROOM';
     demoReturnY=scrollY;
     demoPageTitle.textContent=title;
-    demoExplore.href=card.getAttribute('href')||'#';
+    demoExplore.dataset.url=card.dataset.url||'#';
     demoPage.classList.add('active');
     demoPage.setAttribute('aria-hidden','false');
     document.body.classList.add('demo-open');
@@ -218,6 +218,11 @@ function closeDemoPage(){
   if(location.hash.startsWith('#demo-'))history.replaceState(null,'',location.pathname+location.search+'#demo');
   requestAnimationFrame(()=>scrollTo({top:demoReturnY,behavior:'instant'}));
 }
+demoExplore.addEventListener('click',()=>{
+  const url=(demoExplore.dataset.url||'').trim();
+  if(!url||url==='#')return;
+  window.open(url,'_blank','noopener');
+});
 demoBack.addEventListener('click',closeDemoPage);
 addEventListener('popstate',()=>{if(demoPage.classList.contains('active'))closeDemoPage()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDemoPage()});
