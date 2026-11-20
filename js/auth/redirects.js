@@ -102,7 +102,9 @@ var AuthRedirects = (function () {
       origin() + '/auth/ingresar.html',
       origin() + '/auth/registro.html',
       origin() + '/auth/cuenta.html',
-      origin() + '/index.html'
+      origin() + '/index.html',
+      origin() + '/panel_gestion/',
+      origin() + '/panel_gestion/index.html'
     ];
   }
 

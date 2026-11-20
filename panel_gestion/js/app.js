@@ -1634,12 +1634,20 @@ $('portalHome').addEventListener('keydown',e=>{if(e.target.id==='dashboardSearch
 function enterWorkspace(){
  $('loginScreen').classList.add('portal-hidden');$('portal').classList.remove('portal-hidden');document.body.classList.add('portal-mode','workspace-authenticated');portalShowHome();
 }
-$('loginForm').noValidate=true; /* acceso directo temporal: sin validación hasta conectar la autenticación */
-$('loginForm').addEventListener('submit',e=>{e.preventDefault();$('loginError').textContent='';enterWorkspace();});
-$('googleLogin').addEventListener('click',()=>{$('loginError').textContent='';enterWorkspace();}); /* acceso directo temporal hasta configurar OAuth 2.0 y Supabase Auth */
-$('logoutBtn').addEventListener('click',()=>{$('portal').classList.add('portal-hidden');$('loginScreen').classList.remove('portal-hidden');document.body.classList.remove('workspace-authenticated');$('teamChatPopup')?.classList.add('portal-hidden');$('loginPassword').value='';$('loginError').textContent='';document.body.classList.add('portal-mode');window.scrollTo(0,0);});
-$('loginForm').addEventListener('dblclick',()=>{});
-$('loginForm').querySelector('.login-submit').addEventListener('contextmenu',e=>e.preventDefault());
+window.enterWorkspace=enterWorkspace;
+function leaveWorkspaceUi(){
+ $('portal').classList.add('portal-hidden');
+ $('loginScreen').classList.remove('portal-hidden');
+ document.body.classList.remove('workspace-authenticated');
+ $('teamChatPopup')?.classList.add('portal-hidden');
+ if($('loginPassword'))$('loginPassword').value='';
+ if($('loginError'))$('loginError').textContent='';
+ document.body.classList.add('portal-mode');
+ window.scrollTo(0,0);
+}
+window.leaveWorkspaceUi=leaveWorkspaceUi;
+/* Login/logout reales: panel-auth.js (Supabase). Aquí solo estado inicial de UI. */
+if($('loginForm'))$('loginForm').noValidate=false;
 $('loginScreen').classList.remove('portal-hidden');$('portal').classList.add('portal-hidden');
 
 
