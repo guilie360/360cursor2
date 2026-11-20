@@ -145,11 +145,16 @@ body.cotizador-app .quote-footer-reset svg{
   width:18px;height:18px;stroke:currentColor;fill:none;
   stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
 }
-/* Mini alerta reinicio — mismo lenguaje visual que payments-gate */
+/* Mini alerta reinicio — debajo del cursor custom (110000) para no “ciegar” el puntero */
 body.cotizador-app .quote-reset-backdrop{
   position:fixed;inset:0;z-index:10090;
   background:rgba(0,0,0,.78);backdrop-filter:blur(5px);
   display:grid;place-items:center;padding:20px;
+}
+html.has-cur body.cotizador-app .cur,
+html.has-cur body.cotizador-app .cur-dot{
+  z-index:110000!important;
+  pointer-events:none!important;
 }
 body.cotizador-app .quote-reset-backdrop.hidden{display:none!important}
 body.cotizador-app .quote-reset-dialog{

@@ -37,10 +37,11 @@
 }
 .menu-overlay.open{opacity:1;visibility:visible}
 
-/* Cursor custom por encima del menú (has-cur oculta el cursor del sistema) */
+/* Cursor custom por encima de menú, popups de reinicio y overlays (has-cur oculta el del sistema) */
 html.has-cur .cur,
 html.has-cur .cur-dot{
-  z-index:10070!important
+  z-index:110000!important;
+  pointer-events:none!important
 }
 
 .menu-panel{
