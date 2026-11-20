@@ -62,6 +62,11 @@
         return;
       }
       if (href.charAt(0) === '#' || /^\/#/.test(href)) {
+        try {
+          sessionStorage.setItem('boxiesForceSection', hash);
+          sessionStorage.removeItem('boxiesFsView');
+          sessionStorage.removeItem('boxiesMenuScrollY');
+        } catch (err) {}
         location.href = '/#' + hash;
         return;
       }

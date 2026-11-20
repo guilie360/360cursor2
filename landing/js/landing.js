@@ -3,6 +3,19 @@ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const fine=matchMedia('(hover:hover) and (pointer:fine)').matches&&!reduce;
 const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
 const ss=(a,b,v)=>{v=clamp((v-a)/(b-a));return v*v*(3-2*v)};
+/* Evitar que el navegador restaure un scroll viejo al volver desde /cotizar */
+if('scrollRestoration' in history) history.scrollRestoration='manual';
+(function earlyHashPin(){
+  try{
+    const force=sessionStorage.getItem('boxiesForceSection');
+    const hash=(location.hash||'').replace(/^#/,'');
+    if(force||hash){
+      scrollTo(0,0);
+      document.documentElement.scrollTop=0;
+      document.body.scrollTop=0;
+    }
+  }catch(e){}
+})();
 const exp=$('.experience'),sticky=$('.experience-sticky'),msgs=$$('.message'),dots=$$('.progress span'),prog=$('#progress'),
       intro=$('.intro-content'),hint=$('.scroll-hint'),hl=$('.header-logo'),N=msgs.length;
 
@@ -52,7 +65,6 @@ function render(){
 addEventListener('scroll',read,{passive:true});addEventListener('resize',read);read();
 
 /* Salto de sección sin scrub visual del scroll-story */
-if('scrollRestoration' in history) history.scrollRestoration='manual';
 function snapScrollState(){
   read();
   cur.intro=tgt.intro;
@@ -156,15 +168,39 @@ document.addEventListener('boxies:fullscreen',()=>{
   requestAnimationFrame(()=>requestAnimationFrame(applyPendingFsView));
 });
 function bootHashJump(){
-  const raw=(location.hash||'').replace(/^#/,'');
+  let raw=(location.hash||'').replace(/^#/,'');
+  try{
+    const force=sessionStorage.getItem('boxiesForceSection');
+    if(force){
+      raw=force;
+      sessionStorage.removeItem('boxiesForceSection');
+      sessionStorage.removeItem('boxiesFsView');
+      sessionStorage.removeItem('boxiesMenuScrollY');
+    }
+  }catch(e){}
   if(!raw) return;
   // #demo-apartamento etc. se manejan aparte; llevar a #demo primero.
   const id=raw.startsWith('demo-') ? 'demo' : raw;
   if(!document.getElementById(id)) return;
+  const pinInicio=()=>{
+    scrollTo({top:0,left:0,behavior:'instant'});
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
+    snapScrollState();
+    try{if(location.hash!=='#inicio') history.replaceState(null,'','#inicio')}catch(e){}
+  };
+  if(id==='inicio'){
+    pinInicio();
+    setTimeout(pinInicio,50);
+    setTimeout(pinInicio,200);
+    setTimeout(pinInicio,450);
+    return;
+  }
   // Evitar el scroll nativo del ancla antes de nuestro salto.
   scrollTo({top:0,left:0,behavior:'instant'});
   snapScrollState();
   goToSection(id,{updateHash:true,fromLoad:true});
+  setTimeout(()=>goToSection(id,{updateHash:true,fromLoad:true}),250);
 }
 
 /* Entrada de la sección final */

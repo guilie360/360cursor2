@@ -296,7 +296,13 @@
           try { history.replaceState(null, '', '#' + hash); } catch (err) {}
           return;
         }
+        /* Otra página (p. ej. cotizador → landing): forzar sección al cargar */
         close();
+        try {
+          sessionStorage.setItem('boxiesForceSection', hash);
+          sessionStorage.removeItem('boxiesFsView');
+          sessionStorage.removeItem('boxiesMenuScrollY');
+        } catch (err) {}
         location.href = '/#' + hash;
         return;
       }
