@@ -180,6 +180,19 @@
 
   async function logout() {
     try {
+      if (window.BoxiesFullscreen && typeof window.BoxiesFullscreen.leave === 'function') {
+        await window.BoxiesFullscreen.leave();
+      } else {
+        try { sessionStorage.removeItem('boxiesKeepFullscreen'); } catch (e0) {}
+        try {
+          if (document.fullscreenElement || document.webkitFullscreenElement) {
+            var exit = document.exitFullscreen || document.webkitExitFullscreen;
+            if (exit) await exit.call(document);
+          }
+        } catch (e1) {}
+      }
+    } catch (eFs) {}
+    try {
       await PlatformAuth.getClient().auth.signOut();
     } catch (e) {}
     PlatformAuth.resetClient();

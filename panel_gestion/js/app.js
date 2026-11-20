@@ -1385,7 +1385,12 @@ function portalOpenPage(key){
    var rol=(document.body.dataset.panelRole||sessionStorage.getItem('boxiesPanelRole')||'').trim();
    if(rol) sessionStorage.setItem('boxiesPanelRole',rol);
   }catch(e){}
-  window.location.href='/cotizar?modo=interno';
+  var quoteUrl='/cotizar?modo=interno';
+  if(window.BoxiesFullscreen&&typeof window.BoxiesFullscreen.navigate==='function'){
+   window.BoxiesFullscreen.navigate(quoteUrl);
+   return;
+  }
+  window.location.href=quoteUrl;
   return;
  }
  const p=portalPages[key];if(!p)return;
@@ -1644,20 +1649,25 @@ function enterWorkspace(){
 }
 window.enterWorkspace=enterWorkspace;
 function leaveWorkspaceUi(){
- $('portal').classList.add('portal-hidden');
- $('loginScreen').classList.remove('portal-hidden');
- document.body.classList.remove('workspace-authenticated');
+ $('portal')?.classList.add('portal-hidden');
+ $('portalSubpage')?.classList.add('portal-hidden');
+ $('portalHome')?.classList.remove('portal-hidden');
+ $('hunter')?.classList.add('portal-hidden');
+ $('loginScreen')?.classList.remove('portal-hidden');
+ document.body.classList.remove('workspace-authenticated','nav-panel-authed');
  try{
   delete document.body.dataset.panelRole;
   sessionStorage.removeItem('boxiesPanelRole');
   sessionStorage.removeItem('boxiesTeamSession');
  }catch(e){}
  $('teamChatPopup')?.classList.add('portal-hidden');
+ $('portalBack')?.classList.add('portal-hidden');
  if($('loginPassword'))$('loginPassword').value='';
  if($('loginError'))$('loginError').textContent='';
  document.body.classList.add('portal-mode');
  if(window.BoxiesGlobalNav?.refresh) window.BoxiesGlobalNav.refresh();
  window.scrollTo(0,0);
+ try{ $('loginEmail')?.focus?.(); }catch(e){}
 }
 window.leaveWorkspaceUi=leaveWorkspaceUi;
 /* Login/logout reales: panel-auth.js (Supabase). Aquí solo estado inicial de UI. */

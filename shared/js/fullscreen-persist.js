@@ -275,11 +275,12 @@
 
   function destroyShell(navigateTo) {
     var frame = getFrame();
-    var next = navigateTo || savedUrl(null);
+    var skipNav = navigateTo === false;
+    var next = skipNav ? null : (navigateTo || savedUrl(null));
     var frameY = 0;
     try {
       if (frame && frame.contentWindow) {
-        next = frame.contentWindow.location.href || next;
+        if (!skipNav) next = frame.contentWindow.location.href || next;
         frameY = frame.contentWindow.scrollY || 0;
         try {
           if (frame.contentWindow.BoxiesFullscreen && frame.contentWindow.BoxiesFullscreen.captureView) {
@@ -291,6 +292,7 @@
     var shell = getShell();
     if (shell) shell.remove();
     document.documentElement.classList.remove('boxies-fs-shell-on');
+    if (skipNav) return;
     if (next && next.split('#')[0] !== location.href.split('#')[0]) {
       location.replace(next);
     } else {
@@ -319,10 +321,12 @@
   function leave() {
     intentionalExit = true;
     setWanted(false);
+    try { sessionStorage.removeItem(URL_KEY); } catch (e) {}
     return exitFs()
       .catch(function () {})
       .then(function () {
-        destroyShell();
+        /* Salida explícita: quitar shell sin saltar a la URL del iframe */
+        destroyShell(false);
         intentionalExit = false;
         dispatch(false);
         return false;
@@ -369,6 +373,33 @@
   document.addEventListener('webkitfullscreenchange', onFsChange);
 
   var oneShotArmed = false;
+  function isChromeTarget(el) {
+    if (!el || !el.closest) return false;
+    return !!el.closest([
+      'a',
+      'button',
+      'input',
+      'select',
+      'textarea',
+      'label',
+      'summary',
+      '[data-href]',
+      '[data-page]',
+      '[data-nav-logout]',
+      '[data-nav-panel-home]',
+      '[data-nav-fullscreen]',
+      '[role="button"]',
+      '.menu-toggle',
+      '.menu-panel',
+      '.menu-overlay',
+      '.menu-link',
+      '.menu-fs-link',
+      '#logoutBtn',
+      '#loginForm',
+      '.portal-card',
+      '.portal-logout'
+    ].join(','));
+  }
   function armOneShotEnter() {
     if (oneShotArmed || isFs() || !wanted()) return;
     oneShotArmed = true;
@@ -379,6 +410,12 @@
       if (e.type === 'keydown') return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.type === 'pointerdown' && e.button != null && e.button !== 0) return;
+      /* Menú / Salir / Cotizar / formularios: no robar el clic */
+      if (isChromeTarget(e.target)) {
+        cleanup();
+        requestFs().then(function () { dispatch(true); }).catch(function () { armOneShotEnter(); });
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       if (e.stopImmediatePropagation) e.stopImmediatePropagation();
@@ -411,22 +448,44 @@
     }
   }
 
+  function hrefFromNavEl(el) {
+    if (!el) return '';
+    var page = el.getAttribute('data-page');
+    if (page === 'quote') return '/cotizar?modo=interno';
+    return el.getAttribute('data-href') || el.getAttribute('href') || '';
+  }
+
+  function navigateKeepFs(href) {
+    if (!href) return false;
+    var abs;
+    try { abs = new URL(href, location.href).href; } catch (e) { return false; }
+    saveUrl(abs);
+    if (isFs() || getShell()) {
+      captureViewState();
+      ensureShell(abs);
+      return true;
+    }
+    location.href = abs;
+    return true;
+  }
+
   /* Si FS está activo sin shell, al ir a otra ruta crear shell para no perder FS */
   document.addEventListener('click', function (e) {
-    if (getShell()) return;
+    if (getShell()) {
+      /* Dentro del shell top: data-page del documento padre no aplica al iframe */
+      return;
+    }
     if (!isFs() && !wanted()) return;
-    var el = e.target.closest && e.target.closest('a[href], a[data-href], button[data-href]');
+    var el = e.target.closest && e.target.closest('a[href], a[data-href], button[data-href], [data-page="quote"]');
     if (!el) return;
-    var href = el.getAttribute('data-href') || el.getAttribute('href') || '';
+    var href = hrefFromNavEl(el);
     if (!shouldShellNav(href)) return;
-    if (!isFs()) return; /* wanted pero sin FS: navegación normal; boot repondrá shell */
+    if (!isFs()) return; /* wanted pero sin FS: navegación normal; boot repondrá */
     var abs = new URL(href, location.href).href;
     e.preventDefault();
     e.stopPropagation();
     if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-    saveUrl(abs);
-    captureViewState();
-    ensureShell(abs);
+    navigateKeepFs(abs);
   }, true);
 
   function isReloadNavigation() {
@@ -463,8 +522,10 @@
 
   global.BoxiesFullscreen = {
     toggle: toggle,
+    leave: leave,
     restore: function () { return wanted() ? enter() : Promise.resolve(false); },
     ensureShell: ensureShell,
+    navigate: navigateKeepFs,
     wanted: wanted,
     isActive: isFs,
     captureView: captureViewState,

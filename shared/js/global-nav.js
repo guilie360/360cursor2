@@ -230,16 +230,23 @@
 
     function doLogout() {
       close();
-      clearTeamSessionLocal();
-      var btn = document.getElementById('logoutBtn');
-      if (btn) btn.click();
-      else if (window.PanelAuth && typeof window.PanelAuth.logout === 'function') {
-        window.PanelAuth.logout();
-      } else {
-        try {
+      /* Cerrar sesión de empresa → pantalla de login (correo/contraseña) */
+      if (window.PanelAuth && typeof window.PanelAuth.logout === 'function') {
+        Promise.resolve(window.PanelAuth.logout()).catch(function () {
+          clearTeamSessionLocal();
           location.href = '/panel_gestion/?signout=1';
-        } catch (err) {}
+        });
+        return;
       }
+      var btn = document.getElementById('logoutBtn');
+      if (btn) {
+        btn.click();
+        return;
+      }
+      clearTeamSessionLocal();
+      try {
+        location.href = '/panel_gestion/?signout=1';
+      } catch (err) {}
     }
 
     function goPanelHome() {
