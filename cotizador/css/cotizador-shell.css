@@ -187,10 +187,23 @@ body.cotizador-app .quote-footer-fx[aria-expanded="true"] small{color:#fff}
 body.cotizador-app .quote-footer-fx.is-loading{opacity:.7}
 .eur-cop-fx-panel{
   position:fixed;inset:0;z-index:120000;
-  display:grid;place-items:end center;
-  padding:16px 16px calc(88px + env(safe-area-inset-bottom,0px));
+  display:grid;place-items:center;
+  padding:16px;
   background:rgba(0,0,0,.55);
   backdrop-filter:blur(4px);
+}
+/* Overlay FX tapa el cursor custom (z 110k): devolver puntero de sistema en el popup */
+html.has-cur .eur-cop-fx-panel,
+html.has-cur .eur-cop-fx-panel *{
+  cursor:auto!important;
+}
+html.has-cur .eur-cop-fx-panel button,
+html.has-cur .eur-cop-fx-panel a.btn,
+html.has-cur .eur-cop-fx-panel [data-fx-close]{
+  cursor:pointer!important;
+}
+html.has-cur .eur-cop-fx-panel input{
+  cursor:text!important;
 }
 .eur-cop-fx-panel.hidden{display:none!important}
 .eur-cop-fx-card{
