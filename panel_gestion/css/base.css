@@ -281,7 +281,7 @@ a.portal-card,button.portal-card{appearance:none}
 
 
 /* Acceso previo al espacio de trabajo */
-.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 18px;background:radial-gradient(ellipse at 50% 35%,#171512 0%,#0b0b0b 58%,#080808 100%);position:relative}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 18px;background:radial-gradient(ellipse at 50% 35%,#121212 0%,#070707 58%,#050505 100%);position:relative}
 .login-home-logo{
  appearance:none;-webkit-appearance:none;border:0;background:transparent;padding:0;cursor:pointer;
  position:relative;z-index:1;top:auto;left:auto;
@@ -291,13 +291,13 @@ a.portal-card,button.portal-card{appearance:none}
 .login-home-logo img{width:100%;height:100%;object-fit:contain;display:block}
 .login-home-logo:hover{opacity:1;transform:scale(1.04)}
 @media(max-width:650px){.login-home-logo{width:60px;height:60px;margin-bottom:14px}}
-.login-card{width:min(680px,100%);padding:clamp(28px,6vw,58px);border:1px solid var(--line);background:rgba(12,12,12,.94);text-align:center}
-.login-wordmark{font:36px Italiana,Georgia,serif;letter-spacing:.34em;margin:0 0 10px 0;padding-left:.34em}
-.login-subtitle{color:var(--muted);margin:0 auto 34px;max-width:430px;font-size:14px}
-.login-google,.login-submit{width:100%;padding:17px 15px;border:1px solid #514638;background:#111;color:var(--ink);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
-.login-google{margin-bottom:24px}.login-submit{background:var(--gold);color:#111;border-color:var(--gold);margin-top:12px}
-.login-divider{display:flex;align-items:center;gap:14px;color:#777;font-size:11px;margin:8px 0 22px}.login-divider:before,.login-divider:after{content:"";height:1px;background:#302b24;flex:1}
-.login-field{text-align:left;margin:13px 0}.login-field label{display:block;color:#aaa;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}.login-field input{width:100%;padding:15px;background:#0a0a0a;border:1px solid #40382d;color:#eee;outline:none;color-scheme:dark;caret-color:#eee}.login-field input:focus{border-color:var(--gold);background:#0a0a0a}
+.login-card{width:min(680px,100%);padding:clamp(28px,6vw,58px);border:1px solid rgba(255,255,255,.12);background:rgba(10,10,10,.96);text-align:center}
+.login-wordmark{font:36px Italiana,Georgia,serif;letter-spacing:.34em;margin:0 0 10px 0;padding-left:.34em;color:#f5f5f5}
+.login-subtitle{color:#9a9a9a;margin:0 auto 34px;max-width:430px;font-size:14px}
+.login-google,.login-submit{width:100%;padding:17px 15px;border:1px solid rgba(255,255,255,.16);background:#0c0c0c;color:#f0f0f0;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.login-google{margin-bottom:24px}.login-submit{background:#f2f2f2;color:#0a0a0a;border-color:#f2f2f2;margin-top:12px}
+.login-divider{display:flex;align-items:center;gap:14px;color:#6e6e6e;font-size:11px;margin:8px 0 22px}.login-divider:before,.login-divider:after{content:"";height:1px;background:rgba(255,255,255,.1);flex:1}
+.login-field{text-align:left;margin:13px 0}.login-field label{display:block;color:#8f8f8f;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}.login-field input{width:100%;padding:15px;background:#080808;border:1px solid rgba(255,255,255,.14);color:#eee;outline:none;color-scheme:dark;caret-color:#eee}.login-field input:focus{border-color:rgba(255,255,255,.42);background:#080808}
 .login-field input:-webkit-autofill,
 .login-field input:-webkit-autofill:hover,
 .login-field input:-webkit-autofill:focus,
@@ -482,17 +482,23 @@ button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid #cf
 .portal-grid>.portal-card:nth-child(6){animation-delay:.34s}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
-/* ---------- Acceso ---------- */
-.login-screen{background:radial-gradient(ellipse 70% 55% at 50% 28%,rgba(255,255,255,.06),transparent 65%)}
-.login-card{border-radius:var(--r-modal);background:rgba(16,16,16,.74);
+/* ---------- Acceso (HALL cool dark, sin tono dorado) ---------- */
+.login-screen{background:radial-gradient(ellipse 70% 55% at 50% 28%,rgba(255,255,255,.035),transparent 65%),#060606}
+.login-card{border-radius:var(--r-modal);background:rgba(12,12,12,.88);
  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
- box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 50px 90px -40px #000,0 0 0 1px rgba(0,0,0,.4);
+ border-color:rgba(255,255,255,.12);
+ box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 50px 90px -40px #000,0 0 0 1px rgba(0,0,0,.55);
  animation:rise .7s var(--ease) backwards}
 .login-google,.login-submit{border-radius:var(--r-ctl);transition:transform .2s var(--ease),border-color .2s ease,background-color .2s ease,box-shadow .25s ease}
-.login-google:hover{border-color:var(--edge-hi);background:rgba(255,255,255,.05)}
-.login-submit{font-weight:700;box-shadow:0 10px 22px -12px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.28)}
-.login-submit:hover{transform:translateY(-1px);box-shadow:0 16px 28px -14px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.35)}
+.login-google:hover{border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.04)}
+.login-submit{font-weight:700;background:#f2f2f2!important;color:#0a0a0a!important;border-color:#f2f2f2!important;box-shadow:0 10px 22px -12px rgba(0,0,0,.95)}
+.login-submit:hover{transform:translateY(-1px);background:#fff!important;color:#000!important;border-color:#fff!important;box-shadow:0 16px 28px -14px rgba(0,0,0,.95)}
 .login-submit:active,.login-google:active{transform:translateY(1px)}
+.login-submit::after{display:none!important;animation:none!important;opacity:0!important}
+.login-field input:focus{border-color:rgba(255,255,255,.4)!important;box-shadow:0 0 0 3px rgba(255,255,255,.06)!important}
+.login-foot{color:#6a6a6a}
+.login-screen label[style]{color:#8a8a8a!important}
+.login-screen #rememberLogin{accent-color:#ddd}
 
 /* ---------- Modal ---------- */
 .order-modal{background:rgba(4,4,4,.74);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}

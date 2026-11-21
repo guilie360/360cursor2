@@ -2307,3 +2307,52 @@ select option:active{
 #orderModal .dark-select-option.is-selected{
   background:#2a2a2a!important;color:#fff!important;
 }
+
+/* Login: más dark / cool, sin dorado ni glow cálido */
+.login-screen{
+  background:
+    radial-gradient(ellipse 68% 52% at 50% 26%,rgba(255,255,255,.03),transparent 64%),
+    #050505!important;
+}
+.login-screen .login-card{
+  background:rgba(11,11,11,.92)!important;
+  border:1px solid rgba(255,255,255,.11)!important;
+  box-shadow:0 1px 0 rgba(255,255,255,.035) inset,0 40px 80px -36px #000!important;
+}
+.login-screen .login-wordmark{color:#f5f5f5!important}
+.login-screen .login-subtitle{color:#949494!important}
+.login-screen .login-divider{color:#666!important}
+.login-screen .login-divider:before,
+.login-screen .login-divider:after{background:rgba(255,255,255,.1)!important}
+.login-screen .login-field label{color:#8c8c8c!important}
+.login-screen .login-field input{
+  background:#070707!important;
+  border-color:rgba(255,255,255,.13)!important;
+  color:#eee!important;
+}
+.login-screen .login-field input:focus{
+  border-color:rgba(255,255,255,.4)!important;
+  box-shadow:0 0 0 3px rgba(255,255,255,.06)!important;
+}
+.login-screen .login-google{
+  background:#0c0c0c!important;
+  color:#f0f0f0!important;
+  border-color:rgba(255,255,255,.15)!important;
+}
+.login-screen .login-google:hover{
+  background:rgba(255,255,255,.04)!important;
+  border-color:rgba(255,255,255,.28)!important;
+}
+.login-screen .login-submit,
+.login-screen .login-submit:hover,
+.login-screen .login-submit:active{
+  background:#f2f2f2!important;
+  color:#0a0a0a!important;
+  border-color:#f2f2f2!important;
+  text-shadow:none!important;
+  box-shadow:0 10px 22px -14px rgba(0,0,0,.9)!important;
+}
+.login-screen .login-submit:hover{background:#fff!important;border-color:#fff!important}
+.login-screen .login-submit::after{display:none!important;opacity:0!important;animation:none!important}
+.login-screen .login-foot{color:#666!important}
+.login-screen #rememberLogin{accent-color:#ddd}
