@@ -826,13 +826,11 @@
 
         '<section class="pay-tab-panel" data-pay-panel="books" hidden>' +
           '<div class="pay-books" data-pay-books>' +
-            '<div class="pay-books-head">' +
-              '<div>' +
-                '<p class="desc pay-books-lead">Ingresos del mes. Los datos se rellenan solos cuando Paddle confirma el pago.</p>' +
-              '</div>' +
-              '<div class="pay-books-controls">' +
-                '<label>Buscar<input type="search" data-pay-search placeholder="Nombre o email…" autocomplete="off"></label>' +
-                '<label class="quote-crm-sort-label">Mes<select data-pay-month></select></label>' +
+            '<p class="desc pay-books-lead">Ingresos del mes. Los datos se rellenan solos cuando Paddle confirma el pago.</p>' +
+            '<div class="portal-form quote-crm-toolbar pay-toolbar">' +
+              '<label>Buscar<input type="search" data-pay-search placeholder="Nombre o email…" autocomplete="off"></label>' +
+              '<label class="quote-crm-sort-label">Mes<select data-pay-month></select></label>' +
+              '<div class="quote-crm-toolbar-actions">' +
                 '<button type="button" class="btn" data-pay-export>Exportar CSV</button>' +
               '</div>' +
             '</div>' +
