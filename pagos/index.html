@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pago · 360Preventa</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="/css/variables.css">
   <style>
     :root {
       --bg: #0b0b0c;
@@ -77,24 +76,62 @@
 <body>
   <main class="card">
     <p class="eyebrow">360Preventa · Pagos</p>
-    <h1 id="title">Procesando pago…</h1>
-    <p id="copy">Si acabas de pagar, confirma el estado en unos segundos. Si no, vuelve al cotizador.</p>
+    <h1 id="title">Abriendo checkout…</h1>
+    <p id="copy">Un momento mientras preparamos el pago seguro con Paddle.</p>
     <div class="actions">
       <a class="btn primary" href="/cotizar">Volver al cotizador</a>
       <a class="btn" href="/">Inicio</a>
     </div>
   </main>
+  <script src="/panel_gestion/js/config.js"></script>
+  <script src="/panel_gestion/js/payments-paddle.js?v=6"></script>
   <script>
     (function () {
-      var ok = /[?&]pago=ok(?:&|$)/i.test(location.search) || /_ptxn=/i.test(location.search);
+      var params = new URLSearchParams(location.search);
+      var ok = params.get('pago') === 'ok';
+      var txn = params.get('txn') || params.get('_ptxn') || '';
+      var email = params.get('email') || '';
       var title = document.getElementById('title');
       var copy = document.getElementById('copy');
+
       if (ok) {
         title.textContent = 'Pago recibido';
         copy.textContent = 'Gracias. El anticipo o la entrega ya quedó registrado. Te contactaremos para continuar con el showroom.';
-      } else {
+        return;
+      }
+
+      if (!txn) {
         title.textContent = 'Pagos 360Preventa';
-        copy.textContent = 'Los cobros de anticipo y entrega se abren desde tu cotización. Esta página confirma el retorno desde Paddle.';
+        copy.textContent = 'Los cobros de anticipo y entrega se abren desde tu cotización.';
+        return;
+      }
+
+      title.textContent = 'Abriendo checkout…';
+      copy.textContent = 'Si el overlay no aparece, recarga esta página o vuelve al cotizador.';
+
+      function open() {
+        var api = window.PreventaPaddle;
+        if (!api || typeof api.openCheckout !== 'function') {
+          title.textContent = 'No se pudo cargar el checkout';
+          copy.textContent = 'Recarga con Ctrl+F5 o vuelve a intentarlo desde la cotización.';
+          return;
+        }
+        Promise.resolve(api.openCheckout(txn, email)).catch(function (err) {
+          title.textContent = 'Error al abrir el pago';
+          copy.textContent = (err && err.message) || 'Inténtalo de nuevo desde la cotización.';
+        });
+      }
+
+      if (window.PreventaPaddle) open();
+      else {
+        var tries = 0;
+        var t = setInterval(function () {
+          tries += 1;
+          if (window.PreventaPaddle || tries > 40) {
+            clearInterval(t);
+            open();
+          }
+        }, 50);
       }
     })();
   </script>

@@ -115,9 +115,19 @@
     return data;
   }
 
+  function pagosCheckoutUrl(transactionId, email) {
+    var q = new URLSearchParams();
+    q.set('txn', String(transactionId || ''));
+    if (email) q.set('email', String(email));
+    return window.location.origin + '/pagos/?' + q.toString();
+  }
+
+  /** Abre el checkout en /pagos (URL limpia), no encima de /cotizar. */
   async function openCheckout(transactionId, email) {
-    var Paddle = await loadPaddle();
-    return new Promise(function (resolve) {
+    if (!transactionId) throw new Error('Falta transaction_id');
+    // Si ya estamos en /pagos, abrir overlay aquí.
+    if (/\/pagos\/?/i.test(window.location.pathname)) {
+      var Paddle = await loadPaddle();
       Paddle.Checkout.open({
         transactionId: transactionId,
         settings: {
@@ -128,8 +138,10 @@
         },
         customer: email ? { email: email } : undefined
       });
-      resolve(true);
-    });
+      return true;
+    }
+    window.location.assign(pagosCheckoutUrl(transactionId, email));
+    return true;
   }
 
   function scheduleHtml(totalCents, opts) {
@@ -424,9 +436,11 @@
     splitCents: splitCents,
     hunterSplit: hunterSplit,
     moneyFromCents: moneyFromCents,
+    openCheckout: openCheckout,
     productId: PRODUCT_REF,
     clientToken: CLIENT_TOKEN
   };
+  window.PreventaPaddle = window.PanelPaddle;
 
   // Bind estático en cuanto el DOM esté listo (botones del HTML del modal).
   if (document.readyState === 'loading') {
