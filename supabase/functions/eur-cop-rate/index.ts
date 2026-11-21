@@ -1,6 +1,9 @@
 /**
  * Tasa EUR→COP desde Google Finance (público).
  * GET /functions/v1/eur-cop-rate
+ *
+ * Markup real del precio:
+ *   <div class="N6SYTe"><span jsname="Pdsbrc">...<span>3,762.4000</span></span></div>
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
@@ -19,40 +22,42 @@ function json(status: number, body: Record<string, unknown>) {
     headers: {
       ...CORS,
       "Content-Type": "application/json",
-      "Cache-Control": "public, max-age=60",
+      "Cache-Control": "no-store",
     },
   });
 }
 
-function parseGoogleRate(html: string): number | null {
-  // Precio principal en Google Finance: class="N6SYTe" → 3,762.4000
-  const patterns = [
-    /class="N6SYTe"[^>]*>\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?)\s*</i,
-    /data-last-price="([0-9]+(?:\.[0-9]+)?)"/i,
-    /\[\[([0-9]{4}\.[0-9]+)\],\[/,
+function toRate(raw: string): number | null {
+  const n = Number(String(raw).replace(/,/g, ""));
+  if (!Number.isFinite(n) || n < 2500 || n > 8000) return null;
+  return n;
+}
+
+function parseGoogleRate(html: string): { rate: number; method: string } | null {
+  const patterns: Array<{ method: string; re: RegExp }> = [
+    // Precio principal anidado bajo N6SYTe → span → 3,762.4000
+    {
+      method: "n6syte-nested",
+      re: /class="N6SYTe"[\s\S]{0,240}?<span>([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]+)<\/span>/i,
+    },
+    {
+      method: "pdsbrc-nested",
+      re: /jsname="Pdsbrc"[\s\S]{0,160}?<span>([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]+)<\/span>/i,
+    },
+    // Formato típico del ticker principal (4 decimales + miles con coma)
+    {
+      method: "comma-4dp",
+      re: /\b([3-4],[0-9]{3}\.[0-9]{4})\b/,
+    },
   ];
-  for (const re of patterns) {
+
+  for (const { method, re } of patterns) {
     const m = html.match(re);
-    if (!m || !m[1]) continue;
-    const n = Number(String(m[1]).replace(/,/g, ""));
-    if (Number.isFinite(n) && n > 2000 && n < 10000) return n;
+    if (!m?.[1]) continue;
+    const rate = toRate(m[1]);
+    if (rate != null) return { rate, method };
   }
-  // Fallback: valor 3xxx más frecuente (rango típico EUR-COP)
-  const all = html.match(/\b(3[5-9][0-9]{2}\.[0-9]{1,4})\b/g) || [];
-  const counts = new Map<string, number>();
-  for (const v of all) counts.set(v, (counts.get(v) || 0) + 1);
-  let best: string | null = null;
-  let bestN = 0;
-  for (const [v, c] of counts) {
-    if (c > bestN) {
-      best = v;
-      bestN = c;
-    }
-  }
-  if (best && bestN >= 2) {
-    const n = Number(best);
-    if (Number.isFinite(n) && n > 2000 && n < 10000) return n;
-  }
+
   return null;
 }
 
@@ -69,8 +74,9 @@ Deno.serve(async (req) => {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Cache-Control": "no-cache",
       },
       redirect: "follow",
     });
@@ -78,16 +84,22 @@ Deno.serve(async (req) => {
       return json(502, { ok: false, error: "google_http_" + res.status });
     }
     const html = await res.text();
-    const rate = parseGoogleRate(html);
-    if (!rate) {
-      return json(502, { ok: false, error: "google_parse_failed" });
+    const parsed = parseGoogleRate(html);
+    if (!parsed) {
+      return json(502, {
+        ok: false,
+        error: "google_parse_failed",
+        html_len: html.length,
+        has_n6: html.includes("N6SYTe"),
+      });
     }
     return json(200, {
       ok: true,
       base: "EUR",
       quote: "COP",
-      rate,
+      rate: parsed.rate,
       source: "google-finance",
+      parse_method: parsed.method,
       google_url: GOOGLE_URL,
       fetched_at: new Date().toISOString(),
     });

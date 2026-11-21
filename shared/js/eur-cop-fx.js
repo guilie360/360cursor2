@@ -5,7 +5,7 @@
 (function () {
   var GOOGLE_FINANCE_URL = 'https://www.google.com/finance/quote/EUR-COP';
   var REFRESH_MS = 2 * 60 * 1000;
-  var STORAGE_KEY = 'preventa_eur_cop_fx_v3';
+  var STORAGE_KEY = 'preventa_eur_cop_fx_v4';
 
   var PAGES = [
     {
