@@ -700,12 +700,16 @@ function activeQuotePayload(){
   const raw=String($('orderTotal')?.textContent||'').replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',','.');
   total=Number(raw)||0;
  }
- const label=ctx.proyectoLabel||$('orderTitle')?.textContent||'Showroom 360Preventa';
+ const label=ctx.proyectoLabel||'Showroom 360Preventa';
  const snapshot=ctx.quoteSnapshot||{total,draft:typeof collectQuoteDraft==='function'?collectQuoteDraft():null};
  const testEl=$('quoteIsTest');
  return{
   customerName:$('customerName')?.value.trim()||'',
   customerEmail:$('customerEmail')?.value.trim()||'',
+  customerPhone:$('customerPhone')?.value.trim()||'',
+  customerCountry:$('customerCountry')?.value||'',
+  companyName:$('customerCompany')?.value.trim()||'',
+  vatId:$('customerVat')?.value.trim()||'',
   totalEuros:total,
   proyectoLabel:label,
   quoteSnapshot:snapshot,
@@ -1345,9 +1349,13 @@ document.addEventListener('click',e=>{
 function openSaleOrder(id){
  const sale=profileSalesData().find(s=>s.id===Number(id));if(!sale)return;
  $('orderTitle').textContent='Resumen del pedido';
- $('orderModal').querySelector('.order-dialog > .desc').textContent='Detalle del pedido asociado a esta venta.';
- $('customerName').parentElement.style.display='none';
+ const lead=$('orderModal')?.querySelector('.order-dialog-lead');
+ if(lead)lead.textContent='Detalle del pedido';
+ const fields=$('orderModal')?.querySelector('.order-client-fields');
+ if(fields)fields.style.display='none';
  $('exportCustomerName').textContent=sale.client;
+ const fold=$('orderModal')?.querySelector('.order-summary-fold');
+ if(fold)fold.open=true;
  const payHost=$('orderPaySchedule');if(payHost){payHost.hidden=true;payHost.style.display='none';}
  ['orderPayDeposit','orderPayBalance'].forEach(id=>{const el=$(id);if(el)el.style.display='none';});
  $('orderSummary').innerHTML=sale.quoteRows.map(([a,b])=>`<div class="order-detail-row"><span>${a}</span><strong>${b}</strong></div>`).join('');
@@ -1355,24 +1363,26 @@ function openSaleOrder(id){
  $('orderTotal').textContent=demoMoney(sale.amount);
  ['downloadImage','downloadPdf','shareQuote','quoteToProject','shareFormats'].forEach(id=>{const el=$(id);if(el)el.style.display='none';});
  const wa=$('orderModal')?.querySelector('.summary-actions .final-quote-whatsapp');if(wa)wa.style.display='none';
- const emailField=$('customerEmail')?.parentElement;if(emailField)emailField.style.display='none';
- $('confirmStatus').textContent='Registro demostrativo. El pedido y la comisión se vincularán a los datos reales al conectar Supabase.';
+ $('confirmStatus').textContent='Registro demostrativo.';
  $('orderModal').classList.remove('hidden');
 }
 function restoreOrderModal(){
- $('orderTitle').textContent='Resumen de configuración';
- $('orderModal').querySelector('.order-dialog > .desc').textContent='Ingresa tu nombre para identificar esta cotización.';
- $('customerName').parentElement.style.display='';
- const emailField=$('customerEmail')?.parentElement;if(emailField)emailField.style.display='';
- if($('downloadPdf')){$('downloadPdf').style.display='';$('downloadPdf').textContent='DESCARGAR COTIZACIÓN';}
+ $('orderTitle').textContent='Tu cotización';
+ const lead=$('orderModal')?.querySelector('.order-dialog-lead');
+ if(lead)lead.textContent='Datos del cliente';
+ const fields=$('orderModal')?.querySelector('.order-client-fields');
+ if(fields)fields.style.display='';
+ const fold=$('orderModal')?.querySelector('.order-summary-fold');
+ if(fold)fold.open=false;
+ if($('downloadPdf')){$('downloadPdf').style.display='';$('downloadPdf').textContent='Descargar PDF';}
  const wa=$('orderModal')?.querySelector('.summary-actions .final-quote-whatsapp');if(wa)wa.style.display='';
  ['downloadImage','shareQuote','quoteToProject','shareFormats'].forEach(id=>{const el=$(id);if(el)el.style.display='';});
  const payHost=$('orderPaySchedule');
  if(payHost){payHost.hidden=false;payHost.style.display='';}
  const payStatus=$('orderPayStatus');if(payStatus)payStatus.textContent='';
  const dep=$('orderPayDeposit'),bal=$('orderPayBalance');
- if(dep){dep.style.display='';dep.disabled=false;}
- if(bal){bal.style.display='';bal.disabled=true;}
+ if(dep){dep.style.display='';dep.disabled=false;dep.textContent='Contratar · pagar anticipo';}
+ if(bal){bal.style.display='none';bal.hidden=true;bal.disabled=true;}
 }
 function portalShowHome(){
  $('portalHome').classList.remove('portal-hidden');$('portalSubpage').classList.add('portal-hidden');

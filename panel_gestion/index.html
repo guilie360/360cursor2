@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="/shared/css/site-chrome.css?v=9">
   <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
   <link rel="stylesheet" href="css/base.css?v=panel45">
-  <link rel="stylesheet" href="css/patches.css?v=panel46">
+  <link rel="stylesheet" href="css/patches.css?v=panel47">
 </head>
 <body class="portal-mode">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat del equipo">
@@ -513,42 +513,72 @@
 </div>
 
 <div class="order-modal hidden" id="orderModal" role="dialog" aria-modal="true" aria-labelledby="orderTitle">
- <div class="order-dialog">
+ <div class="order-dialog order-dialog--compact">
   <button class="order-dialog-close" id="modalClose" type="button" aria-label="Cerrar">×</button>
-  <div class="eyebrow">Cotización 360Preventa · Showroom</div><h2 id="orderTitle">Resumen de configuración</h2>
-  <p class="desc">Ingresa tu nombre para identificar esta cotización.</p>
-  <div class="field name-field"><label for="customerName">Nombre de la persona</label><input id="customerName" type="text" placeholder="Escribe tu nombre" autocomplete="name" required></div>
-  <div class="field email-field"><label for="customerEmail">Correo electrónico</label><input id="customerEmail" type="email" placeholder="tu@correo.com" autocomplete="email" required></div>
-  <label class="field quote-test-flag" for="quoteIsTest" style="display:flex;align-items:center;gap:10px;margin:10px 0 0">
-   <input id="quoteIsTest" type="checkbox">
-   <span>Marcar como prueba (se puede borrar fácil en Pagos)</span>
-  </label>
-  <div id="exportCustomerName" class="export-customer-name"></div>
-  <div id="orderSummary" class="order-details"></div>
-  <div class="price-line total-line"><span>Total estimado · sin IVA</span><strong id="orderTotal">—</strong></div>
-  <small class="price-vat-note">€ sin IVA · + IVA si aplica (lo calcula Paddle en el pago)</small>
-  <div id="orderPaySchedule" class="order-pay-schedule quote-pay-schedule">
-   <div class="quote-pay-head">
-    <span class="eyebrow">PLAN DE PAGOS</span>
-    <p class="desc">Importes <strong>sin IVA</strong>. El IVA, si aplica, lo calcula Paddle en el checkout.</p>
+  <div class="eyebrow">360PREVENTA</div>
+  <h2 id="orderTitle">Tu cotización</h2>
+  <p class="desc order-dialog-lead">Datos del cliente</p>
+
+  <div class="order-client-fields">
+   <div class="field name-field"><label for="customerName">Nombre</label><input id="customerName" type="text" placeholder="Nombre completo" autocomplete="name" required></div>
+   <div class="field email-field"><label for="customerEmail">Email</label><input id="customerEmail" type="email" placeholder="correo@cliente.com" autocomplete="email" required></div>
+   <div class="field phone-field"><label for="customerPhone">WhatsApp / teléfono</label><input id="customerPhone" type="tel" placeholder="+34 …" autocomplete="tel"></div>
+   <div class="field country-field"><label for="customerCountry">País</label>
+    <select id="customerCountry" autocomplete="country">
+     <option value="ES" selected>España</option>
+     <option value="CO">Colombia</option>
+     <option value="MX">México</option>
+     <option value="AR">Argentina</option>
+     <option value="CL">Chile</option>
+     <option value="PE">Perú</option>
+     <option value="US">Estados Unidos</option>
+     <option value="OTHER">Otro</option>
+    </select>
    </div>
-   <div class="quote-pay-grid">
-    <div class="quote-pay-card"><small>Total</small><strong id="orderPayTotal">—</strong><span>Sin IVA</span></div>
-    <div class="quote-pay-card"><small>Anticipo · 50%</small><strong id="orderPayDepositAmt">—</strong><span>Para iniciar</span></div>
-    <div class="quote-pay-card"><small>Entrega · 50%</small><strong id="orderPayBalanceAmt">—</strong><span>Al entregar</span></div>
-   </div>
-   <div class="quote-pay-hunter" id="orderPayHunter" hidden>
-    <small>Comisión Hunter · 8%</small>
-    <div class="quote-pay-hunter-row"><span>Con anticipo</span><strong id="orderPayHunterDeposit">—</strong></div>
-    <div class="quote-pay-hunter-row"><span>Con entrega</span><strong id="orderPayHunterBalance">—</strong></div>
-   </div>
-   <p class="quote-pay-status muted" id="orderPayStatus" aria-live="polite"></p>
+   <details class="order-fold order-biz-fold">
+    <summary>Empresa / VAT (opcional)</summary>
+    <div class="field"><label for="customerCompany">Empresa</label><input id="customerCompany" type="text" placeholder="Razón social" autocomplete="organization"></div>
+    <div class="field"><label for="customerVat">NIF / VAT</label><input id="customerVat" type="text" placeholder="ESB12345678" autocomplete="off"></div>
+   </details>
+   <label class="field quote-test-flag" for="quoteIsTest">
+    <input id="quoteIsTest" type="checkbox">
+    <span>Marcar como prueba</span>
+   </label>
   </div>
+
+  <div id="exportCustomerName" class="export-customer-name portal-hidden" hidden></div>
+
+  <div class="order-total-bar">
+   <div>
+    <small>Total sin IVA</small>
+    <strong id="orderTotal">—</strong>
+   </div>
+   <small class="price-vat-note">+ IVA si aplica en el pago</small>
+  </div>
+
+  <details class="order-fold order-summary-fold">
+   <summary>Ver resumen</summary>
+   <div id="orderSummary" class="order-details"></div>
+   <div id="orderPaySchedule" class="order-pay-schedule quote-pay-schedule quote-pay-schedule--compact">
+    <div class="quote-pay-grid">
+     <div class="quote-pay-card"><small>Total</small><strong id="orderPayTotal">—</strong></div>
+     <div class="quote-pay-card"><small>Anticipo 50%</small><strong id="orderPayDepositAmt">—</strong></div>
+     <div class="quote-pay-card"><small>Entrega 50%</small><strong id="orderPayBalanceAmt">—</strong></div>
+    </div>
+    <div class="quote-pay-hunter" id="orderPayHunter" hidden>
+     <small>Hunter 8%</small>
+     <div class="quote-pay-hunter-row"><span>Con anticipo</span><strong id="orderPayHunterDeposit">—</strong></div>
+     <div class="quote-pay-hunter-row"><span>Con entrega</span><strong id="orderPayHunterBalance">—</strong></div>
+    </div>
+   </div>
+  </details>
+
+  <p class="quote-pay-status muted" id="orderPayStatus" aria-live="polite"></p>
   <div class="actions summary-actions">
-   <button class="btn primary" id="orderPayDeposit" type="button">PAGAR ANTICIPO (50%)</button>
-   <button class="btn" id="orderPayBalance" type="button" disabled>PAGAR ENTREGA (50%)</button>
-   <button class="btn final-quote-download" id="downloadPdf" type="button">DESCARGAR PDF</button>
-   <button type="button" class="btn final-quote-whatsapp" data-href="https://wa.me/573226834084" data-external="1" aria-label="Chatear con asesor">CHATEAR CON ASESOR</button>
+   <button class="btn primary" id="orderPayDeposit" type="button">Contratar · pagar anticipo</button>
+   <button class="btn" id="orderPayBalance" type="button" hidden disabled style="display:none">Pagar entrega</button>
+   <button class="btn final-quote-download" id="downloadPdf" type="button">Descargar PDF</button>
+   <button type="button" class="btn final-quote-whatsapp" data-href="https://wa.me/573226834084" data-external="1" aria-label="Chatear con asesor">WhatsApp</button>
   </div>
   <div id="shareFormats" class="share-formats hidden" aria-label="Formato para compartir" style="display:none">
    <button class="btn" id="downloadImage" type="button" tabindex="-1">Descargar imagen</button>
@@ -569,9 +599,9 @@
 <script src="/shared/js/fullscreen-persist.js?v=9"></script>
 <script src="/shared/js/nav-no-status.js?v=2"></script>
 <script src="/shared/js/global-nav.js?v=19"></script>
-<script src="js/quotes-store.js?v=3"></script>
-<script src="js/payments-paddle.js?v=11"></script>
-<script src="js/app.js?v=fs25"></script>
+<script src="js/quotes-store.js?v=4"></script>
+<script src="js/payments-paddle.js?v=12"></script>
+<script src="js/app.js?v=fs26"></script>
 <script src="js/panel-auth.js?v=6"></script>
 <script src="js/payments-stripe.js?v=1"></script>
 <script src="/shared/js/cursor-layer.js?v=2"></script>

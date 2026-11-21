@@ -1552,6 +1552,48 @@ body.hunter-mode main {
 }
 .summary-actions .final-quote-whatsapp{color:#e5d0aa!important;border:1px solid rgba(255,255,255,.22)!important;background:rgba(0,0,0,.25)!important}
 #orderModal .order-dialog{border:1px solid rgba(255,255,255,.14)!important;background:linear-gradient(180deg,#171717 0%,#101010 100%)!important;box-shadow:0 30px 70px -28px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.05)!important}
+#orderModal .order-dialog--compact{max-width:440px;width:min(440px,92vw);padding:22px 20px 20px}
+#orderModal .order-dialog-lead{margin:0 0 12px;color:rgba(255,255,255,.55)!important}
+#orderModal .order-client-fields{display:grid;gap:8px;margin-bottom:14px}
+#orderModal .order-client-fields .field{margin:0}
+#orderModal .order-client-fields .field label{color:rgba(255,255,255,.55);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+#orderModal .order-client-fields input,
+#orderModal .order-client-fields select{
+  width:100%;padding:11px 12px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.14);background:#0a0a0a;color:#f2f2f2;
+}
+#orderModal .order-fold{
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:12px;padding:0;background:rgba(255,255,255,.03);margin:4px 0 0;
+}
+#orderModal .order-fold>summary{
+  list-style:none;cursor:pointer;padding:12px 14px;
+  font:600 12px/1.3 Manrope,Arial,sans-serif;letter-spacing:.04em;
+  color:rgba(255,255,255,.78);
+}
+#orderModal .order-fold>summary::-webkit-details-marker{display:none}
+#orderModal .order-fold>summary:after{content:'＋';float:right;color:rgba(255,255,255,.45)}
+#orderModal .order-fold[open]>summary:after{content:'−'}
+#orderModal .order-fold[open]>summary{border-bottom:1px solid rgba(255,255,255,.08)}
+#orderModal .order-biz-fold .field{padding:0 14px}
+#orderModal .order-biz-fold .field:last-child{padding-bottom:12px}
+#orderModal .order-summary-fold .order-details,
+#orderModal .order-summary-fold .quote-pay-schedule{padding:10px 14px 14px}
+#orderModal .order-total-bar{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+  padding:14px 0 6px;margin:4px 0 10px;
+  border-top:1px solid rgba(255,255,255,.1);
+}
+#orderModal .order-total-bar small{display:block;color:rgba(255,255,255,.45);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+#orderModal .order-total-bar strong{font:32px/1 Italiana,Georgia,serif;color:#fff}
+#orderModal .quote-test-flag{
+  display:flex!important;align-items:center;gap:8px;margin:6px 0 0!important;
+  color:rgba(255,255,255,.62);font-size:13px;text-transform:none;letter-spacing:0;
+}
+#orderModal .quote-pay-schedule--compact{margin:8px 0 0}
+#orderModal .quote-pay-schedule--compact .quote-pay-grid{gap:8px}
+#orderModal .summary-actions{margin-top:12px!important}
+#orderModal .summary-actions #orderPayDeposit{width:100%}
 #orderModal .eyebrow{color:#8a8a8a!important;letter-spacing:.12em}
 #orderModal .field input{border:1px solid rgba(255,255,255,.14)!important;border-radius:12px!important;background:#0a0a0a!important}
 #orderModal .order-details{border-color:rgba(255,255,255,.1)!important}

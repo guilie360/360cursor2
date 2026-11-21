@@ -85,6 +85,10 @@
     var row = {
       customer_name: name,
       customer_email: email,
+      customer_phone: String(opts.customerPhone || opts.customer_phone || '').trim().slice(0, 40) || null,
+      customer_country: String(opts.customerCountry || opts.customer_country || '').trim().slice(0, 8) || null,
+      company_name: String(opts.companyName || opts.company_name || '').trim().slice(0, 200) || null,
+      vat_id: String(opts.vatId || opts.vat_id || '').trim().slice(0, 40) || null,
       proyecto_label: String(opts.proyectoLabel || opts.proyecto_label || 'Showroom 360Preventa').slice(0, 200),
       total_cents: totalCents,
       currency: 'eur',

@@ -230,8 +230,28 @@
     var status = meta.status || 'pendiente_anticipo';
     var depositDone = status === 'en_produccion' || status === 'pendiente_entrega' || status === 'pagado';
     var balanceDone = status === 'pagado';
-    if (depBtn) depBtn.disabled = !!depositDone;
-    if (balBtn) balBtn.disabled = !depositDone || balanceDone;
+    if (depBtn) {
+      depBtn.disabled = !!depositDone;
+      depBtn.style.display = depositDone ? 'none' : '';
+      if (!depositDone) {
+        depBtn.textContent = 'Contratar · anticipo ' + moneyFromCents(parts.deposit);
+      } else if (!balanceDone && balBtn) {
+        // Entrega solo cuando el anticipo ya está pagado
+        balBtn.hidden = false;
+        balBtn.style.display = '';
+        balBtn.disabled = false;
+        balBtn.textContent = 'Pagar entrega ' + moneyFromCents(parts.balance);
+      }
+    }
+    if (balBtn && !depositDone) {
+      balBtn.hidden = true;
+      balBtn.style.display = 'none';
+      balBtn.disabled = true;
+    }
+    if (balBtn && balanceDone) {
+      balBtn.disabled = true;
+      balBtn.style.display = 'none';
+    }
     var statusEl = document.getElementById('orderPayStatus');
     if (statusEl) statusEl.textContent = '';
   }
@@ -440,7 +460,10 @@
           return (
             '<div class="portal-list-item quote-crm-row" data-quote-id="' + escapeHtml(r.id) + '">' +
               '<span><b>' + escapeHtml(r.customer_name) + '</b>' +
-              '<small class="muted">' + escapeHtml(r.customer_email) + badge + '<br>' +
+              '<small class="muted">' + escapeHtml(r.customer_email) +
+              (r.customer_phone ? ' · ' + escapeHtml(r.customer_phone) : '') +
+              (r.customer_country ? ' · ' + escapeHtml(r.customer_country) : '') +
+              badge + '<br>' +
               escapeHtml(r.proyecto_label || '') + ' · ' + when + '</small></span>' +
               '<span style="text-align:right;display:flex;flex-direction:column;gap:8px;align-items:flex-end">' +
                 '<b>' + moneyFromCents(r.total_cents) + '</b>' +
