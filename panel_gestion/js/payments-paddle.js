@@ -447,6 +447,7 @@
                 '<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' +
                   '<button type="button" class="btn primary" data-quote-charge="deposit">Generar link cobro</button>' +
                   '<button type="button" class="btn" data-quote-open="1"' + (r.last_checkout_url ? '' : ' disabled') + '>Abrir link</button>' +
+                  '<button type="button" class="btn" data-quote-test="1">' + (r.is_test ? 'Quitar prueba' : 'Marcar prueba') + '</button>' +
                   '<button type="button" class="btn" data-quote-delete="1">Eliminar</button>' +
                 '</span>' +
               '</span>' +
@@ -454,12 +455,17 @@
           );
         }).join('');
 
+        if (hideTests && hideTests.checked && !rows.length) {
+          if (status) status.textContent = 'No hay cotizaciones reales visibles. Desmarca “Ocultar pruebas” o marca entradas como prueba.';
+        }
+
         list.querySelectorAll('.quote-crm-row').forEach(function (el) {
           var id = el.getAttribute('data-quote-id');
           var row = rows.find(function (x) { return x.id === id; });
           if (!row) return;
           var chargeBtn = el.querySelector('[data-quote-charge]');
           var openBtn = el.querySelector('[data-quote-open]');
+          var testBtn = el.querySelector('[data-quote-test]');
           var delBtn = el.querySelector('[data-quote-delete]');
           if (chargeBtn) {
             chargeBtn.addEventListener('click', async function () {
@@ -483,12 +489,25 @@
               if (row.last_checkout_url) window.open(row.last_checkout_url, '_blank', 'noopener');
             });
           }
+          if (testBtn) {
+            testBtn.addEventListener('click', async function () {
+              testBtn.disabled = true;
+              try {
+                await PreventaQuotes.setTestFlag(row.id, !row.is_test);
+                refresh();
+              } catch (err) {
+                if (status) status.textContent = err.message || 'No se pudo marcar.';
+                testBtn.disabled = false;
+              }
+            });
+          }
           if (delBtn) {
             delBtn.addEventListener('click', async function () {
               if (!window.confirm('¿Eliminar cotización de ' + row.customer_name + '?')) return;
               delBtn.disabled = true;
               try {
                 await PreventaQuotes.deleteQuote(row.id);
+                if (status) status.textContent = 'Cotización eliminada.';
                 refresh();
               } catch (err) {
                 if (status) status.textContent = err.message || 'No se pudo eliminar.';
@@ -515,12 +534,29 @@
         if (!window.confirm('¿Eliminar TODAS las cotizaciones marcadas como prueba?')) return;
         purgeTests.disabled = true;
         try {
-          await PreventaQuotes.deleteTestQuotes();
+          var n = await PreventaQuotes.deleteTestQuotes();
+          if (status) status.textContent = n ? ('Eliminadas ' + n + ' pruebas.') : 'No había cotizaciones marcadas como prueba. Usa “Marcar prueba” o “Vaciar todas”.';
           refresh();
         } catch (err) {
           if (status) status.textContent = err.message || 'No se pudieron borrar las pruebas.';
         } finally {
           purgeTests.disabled = false;
+        }
+      });
+    }
+    var purgeAll = root.querySelector('[data-quote-purge-all]');
+    if (purgeAll) {
+      purgeAll.addEventListener('click', async function () {
+        if (!window.confirm('¿Vaciar TODAS las cotizaciones guardadas? Esta acción no se puede deshacer.')) return;
+        purgeAll.disabled = true;
+        try {
+          var n = await PreventaQuotes.deleteAllQuotes();
+          if (status) status.textContent = 'Lista vaciada (' + n + ').';
+          refresh();
+        } catch (err) {
+          if (status) status.textContent = err.message || 'No se pudo vaciar.';
+        } finally {
+          purgeAll.disabled = false;
         }
       });
     }
@@ -538,7 +574,8 @@
           '<label>Buscar cliente<input type="search" data-quote-search placeholder="Nombre o correo…" autocomplete="off"></label>' +
           '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">' +
             '<label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" data-quote-hide-tests> Ocultar pruebas</label>' +
-            '<button type="button" class="btn" data-quote-purge-tests>Borrar todas las pruebas</button>' +
+            '<button type="button" class="btn" data-quote-purge-tests>Borrar pruebas</button>' +
+            '<button type="button" class="btn" data-quote-purge-all>Vaciar todas</button>' +
           '</div>' +
         '</div>' +
         '<p class="desc" data-quote-status aria-live="polite"></p>' +
