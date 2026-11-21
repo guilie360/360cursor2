@@ -1,0 +1,148 @@
+/*
+ * admin-auth.css — compatibility shim (NOT a parallel design system).
+ *
+ * Official pipeline:
+ *   variables.css → components.css → css/hall/hall.css → ThemeSystem → HallDesignSystem.paint()
+ *   → this file (legacy --admin-* bridge + auth utilities) → admin-widgets.css (CMS domain only)
+ *
+ * Do not invent new buttons, inputs, cards, sidebars, or tokens here.
+ */
+
+@import './admin-widgets.css';
+
+:root {
+  /* Legacy aliases → HALL tokens from variables.css / ThemeSystem */
+  --admin-bg: var(--bg-main);
+  --admin-panel: var(--glass-panel, var(--bg-popup));
+  --admin-border: var(--glass-border, var(--border));
+  --admin-border2: var(--glass-border, var(--border));
+  --admin-text: var(--text-primary);
+  --admin-muted: var(--text-secondary);
+  --admin-accent: var(--accent, var(--btn-border, var(--text-primary)));
+  --admin-accent-hover: var(--btn-border-hover, var(--accent, var(--text-primary)));
+  --admin-success: #7ed957;
+  --admin-error: #ff8a8a;
+  --admin-radius-lg: 18px;
+  --admin-radius-md: 14px;
+  --admin-radius-sm: 12px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+  background: var(--hall-bg, var(--bg-main));
+  color: var(--hall-text, var(--text-primary));
+  font-family: var(--font-ui, Inter, "Helvetica Neue", Arial, sans-serif);
+}
+
+/* Auth-page utilities (structure only; chrome from css/hall) */
+.field {
+  margin-bottom: 22px;
+}
+
+.auth-register-cta {
+  margin-bottom: 8px;
+}
+
+.auth-links a.auth-link-strong {
+  font-weight: 700;
+  border-bottom-width: 2px;
+}
+
+.modal-close {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  color: var(--text-primary);
+  font-size: 2.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0.8;
+  z-index: 1100;
+  transition: opacity 0.3s ease, color 0.3s ease;
+}
+
+.modal-close:hover {
+  opacity: 1;
+  color: var(--accent, var(--text-primary));
+}
+
+@media (max-width: 600px) {
+  .modal-close {
+    top: auto;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.9rem;
+  }
+}
+
+.spinner {
+  display: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid color-mix(in srgb, var(--text-primary) 30%, transparent);
+  border-top-color: var(--text-primary);
+  border-radius: 50%;
+  animation: hall-spin 0.8s linear infinite;
+}
+
+.btn-primary.loading .spinner {
+  display: block;
+}
+
+.btn-primary.loading {
+  pointer-events: none;
+}
+
+.forgot-link {
+  margin-top: 26px;
+  text-align: center;
+}
+
+.forgot-link a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.25s;
+  opacity: 0.75;
+}
+
+.forgot-link a:hover {
+  color: var(--text-primary);
+  opacity: 1;
+}
+
+.toggle-password,
+.auth-toggle-password {
+  position: absolute;
+  right: 16px;
+  top: 41px;
+  height: 32px;
+  padding: 0 10px;
+  background: transparent;
+  border: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+@keyframes hall-spin {
+  to { transform: rotate(360deg); }
+}
+
+.placeholder-card {
+  max-width: 640px;
+}
+
+.placeholder-copy code {
+  color: var(--text-primary);
+  font-size: 13px;
+}

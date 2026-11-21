@@ -1,0 +1,57 @@
+/**
+ * Theme Classic — stable BOXIES editor baseline.
+ *
+ * The existing builder CSS (shell, builder-tokens, quotation-builder, hall)
+ * defines Classic appearance. This file re-declares the same token values
+ * under body.theme-classic so switching back from Premium never leaks overrides.
+ *
+ * Do not add visual changes here — only lock values that Premium may override.
+ */
+
+body.theme-classic {
+  --editor-theme-id: classic;
+
+  /* HALL surfaces (production defaults) */
+  --hall-bg: #050505;
+  --hall-surface: rgba(255, 255, 255, 0.028);
+  --hall-surface-raised: rgba(255, 255, 255, 0.045);
+  --hall-surface-hover: rgba(255, 255, 255, 0.055);
+  --hall-border: rgba(255, 255, 255, 0.06);
+  --hall-border-strong: rgba(255, 255, 255, 0.11);
+  --hall-border-hairline: rgba(255, 255, 255, 0.04);
+  --hall-inset: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+
+  /* BOXIES shell */
+  --boxies-dock-bg: #050505;
+  --boxies-dock-border: rgba(255, 255, 255, 0.04);
+  --boxies-edge-fringe-w: 32px;
+  --boxies-edge-fringe-shadow: 12px 0 28px rgba(0, 0, 0, 0.55);
+
+  /* Builder tokens */
+  --builder-bg: rgba(8, 8, 8, 0.55);
+  --builder-bg-hover: rgba(255, 255, 255, 0.03);
+  --builder-border: rgba(255, 255, 255, 0.04);
+  --builder-divider: rgba(255, 255, 255, 0.05);
+  --builder-dock-bg: rgba(5, 5, 5, 0.82);
+  --builder-dock-border: rgba(255, 255, 255, 0.04);
+  --builder-float-bg: rgba(8, 8, 8, 0.92);
+  --builder-float-bg-hover: rgba(10, 10, 10, 0.96);
+  --builder-float-border: rgba(255, 255, 255, 0.07);
+
+  /* Quotation editor — cabin tokens (Classic = flat / current) */
+  --qe-theme-workspace-bg: transparent;
+  --qe-theme-canvas-well: transparent;
+  --qe-theme-canvas-frame-radius: 8px;
+  --qe-theme-canvas-frame-shadow: none;
+  --qe-theme-canvas-stage-border: rgba(255, 255, 255, 0.06);
+  --qe-theme-canvas-stage-bg: #0a0a0a;
+  --qe-theme-panel-bg: #0a0a0a;
+  --qe-theme-panel-border: rgba(255, 255, 255, 0.04);
+  --qe-theme-pill-bg: rgba(16, 16, 16, 0.94);
+  --qe-theme-pill-border: rgba(255, 255, 255, 0.1);
+  --qe-theme-pill-shadow: none;
+  --qe-theme-float-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  --qe-theme-header-bg: #050505;
+  --qe-theme-header-shadow: none;
+  --qe-theme-dock-shadow: none;
+}

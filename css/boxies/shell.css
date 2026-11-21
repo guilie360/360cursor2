@@ -1,0 +1,1217 @@
+/* BOXIES App Shell — chrome geometry only (canonical boxies-* names).
+ * V7.2.18 — no left sidebar; footer hosts user + create + module actions. */
+
+:root {
+  --boxies-header-h: var(--hall-header-h, 52px);
+  --boxies-sidebar-w: 0px;
+  --boxies-chrome-pad-x: 7px;
+  --boxies-chrome-pad-top: 12px;
+  --boxies-icon-cell: 36px;
+  --boxies-icon-size: 18px;
+  --boxies-icon-gap: 4px;
+  --boxies-dock-h: 56px;
+  --boxies-dock-safe: env(safe-area-inset-bottom, 0px);
+  --boxies-transition: var(--hall-duration, 0.28s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  --boxies-dock-bg: #050505;
+  --boxies-dock-border: var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
+  /*
+   * Intentional edge fringe — same mechanics as the closed main-menu bleed:
+   * an off-canvas slab casts glass shadow into the viewport (not a vignette).
+   * Tighter blur than the original 24/64 so the soft outer band is gone.
+   */
+  --boxies-edge-fringe-w: 32px;
+  --boxies-edge-fringe-shadow: 12px 0 28px rgba(0, 0, 0, 0.55);
+}
+
+html.boxies-has-dock,
+body.boxies-has-dock {
+  scroll-padding-bottom: calc(var(--boxies-dock-h) + var(--boxies-dock-safe) + 8px);
+}
+
+body.boxies-has-dock.boxies-shell {
+  padding: 0;
+  padding-bottom: calc(var(--boxies-dock-h) + var(--boxies-dock-safe));
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg-primary, #0a0a0a);
+  color: var(--hall-text, rgba(255, 255, 255, 0.86));
+}
+
+/*
+ * Ambient L/R fringe — recreate the closed-menu bleed:
+ * slab parked just off-canvas, glass shadow falls into the viewport.
+ *
+ * z-index 1 → above bare canvas gutters, BELOW columns / escenas / chrome
+ * (those use z-index ≥ 5 + opaque surfaces so the fringe cannot paint over them).
+ */
+body.boxies-shell::before,
+body.boxies-shell::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: var(--boxies-edge-fringe-w, 32px);
+  background: #050505;
+  pointer-events: none;
+  z-index: 1;
+}
+
+body.boxies-shell::before {
+  left: 0;
+  transform: translateX(-100%);
+  box-shadow: var(--boxies-edge-fringe-shadow, 12px 0 28px rgba(0, 0, 0, 0.55));
+}
+
+body.boxies-shell::after {
+  right: 0;
+  transform: translateX(100%);
+  box-shadow: -12px 0 28px rgba(0, 0, 0, 0.55);
+}
+
+.boxies-app {
+  position: relative;
+  min-height: 100vh;
+}
+
+.boxies-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10001;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  height: var(--boxies-header-h);
+  padding: 0 14px;
+  background: #050505;
+  border-bottom: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
+  box-sizing: border-box;
+}
+
+.boxies-header__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  justify-self: start;
+}
+
+.boxies-header__builder-steps {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.boxies-header__builder-steps[hidden] {
+  display: none !important;
+}
+
+/* Project name lives in the footer center (see .boxies-dock__project). */
+
+/* V7.2.17 — Main BOXIES menu (Hall / Proyectos / Builder) */
+.boxies-workspace-menu {
+  position: relative;
+  flex: 0 0 auto;
+  z-index: 40;
+}
+
+.boxies-workspace-menu__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition:
+    color var(--boxies-transition, 0.15s ease),
+    background var(--boxies-transition, 0.15s ease);
+}
+
+.boxies-workspace-menu__btn:hover,
+.boxies-workspace-menu__btn[aria-expanded="true"] {
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.boxies-workspace-menu__btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.boxies-workspace-menu__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 168px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0c0c0c;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 80;
+}
+
+.boxies-workspace-menu__panel[hidden] {
+  display: none !important;
+}
+
+.boxies-workspace-menu__item {
+  appearance: none;
+  margin: 0;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.boxies-workspace-menu__item:hover,
+.boxies-workspace-menu__item.is-current {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.boxies-workspace-menu__item--exit {
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.boxies-workspace-menu__sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.boxies-logout-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.38);
+  cursor: pointer;
+  transition:
+    color var(--boxies-transition),
+    background var(--boxies-transition);
+}
+
+.boxies-logout-icon:hover {
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.boxies-logout-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.boxies-header__title {
+  font-size: 0.75rem;
+  font-weight: 550;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+  text-align: center;
+  white-space: nowrap;
+  margin-right: -0.42em;
+  justify-self: center;
+}
+
+.boxies-header__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  justify-self: end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.boxies-header__fs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition:
+    color var(--boxies-transition),
+    background var(--boxies-transition);
+}
+
+.boxies-header__fs:hover {
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.boxies-header__fs:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.boxies-header__chrome-fold.is-active {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.boxies-header__chrome-fold[hidden] {
+  display: none !important;
+}
+
+.boxies-header__tools-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.boxies-header__tools-wrap[hidden] {
+  display: none !important;
+}
+
+.boxies-header__tools-btn.is-active {
+  color: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 0 14px rgba(255, 255, 255, 0.22),
+    0 0 28px rgba(255, 255, 255, 0.1);
+}
+
+.boxies-header__tools-btn.is-active svg {
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.45));
+}
+
+.boxies-header__tools-btn.is-absorbing {
+  animation: boxies-tools-absorb 320ms cubic-bezier(0.34, 1.35, 0.64, 1);
+}
+
+@keyframes boxies-tools-absorb {
+  0% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.14),
+      0 0 14px rgba(255, 255, 255, 0.22);
+  }
+  45% {
+    transform: scale(1.14);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.28),
+      0 0 22px rgba(255, 255, 255, 0.42),
+      0 0 36px rgba(255, 255, 255, 0.18);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.14),
+      0 0 14px rgba(255, 255, 255, 0.22);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boxies-header__tools-btn.is-absorbing {
+    animation: none;
+  }
+}
+
+.boxies-header__tools-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(12, 12, 12, 0.96);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  z-index: 20000;
+}
+
+.boxies-header__tools-panel[hidden] {
+  display: none !important;
+}
+
+.boxies-header__tools-title {
+  padding: 4px 10px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.boxies-header__tools-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.boxies-header__tools-item {
+  justify-content: flex-start;
+  text-align: left;
+  width: 100%;
+}
+
+/* Secondary actions — Guardar / Republicar / Visualizar */
+.boxies-btn-secondary {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 108px;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--boxies-transition),
+    border-color var(--boxies-transition),
+    color var(--boxies-transition),
+    opacity var(--boxies-transition);
+}
+
+.boxies-btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.boxies-btn-secondary:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.boxies-btn-secondary:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.boxies-btn-secondary--icon {
+  min-width: 32px;
+  width: 32px;
+  padding: 0;
+}
+
+.boxies-btn-secondary--icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* Kill Builder primary/white when promoted into Shell dock */
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary,
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary.is-primary,
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary.is-muted {
+  min-width: 108px;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* V7.1.10 — busy state: keep spinner visible inside the dock button */
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.is-busy {
+  color: transparent !important;
+  pointer-events: none;
+  opacity: 1 !important;
+}
+
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.is-busy .builder-dock-spinner {
+  border-color: rgba(255, 255, 255, 0.22);
+  border-top-color: rgba(255, 255, 255, 0.92);
+}
+
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary:hover:not(:disabled),
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary.is-primary:hover:not(:disabled),
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary.is-muted:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.boxies-action-btn {
+  padding: 8px 14px;
+  border: 1px solid var(--hall-btn-border, rgba(255, 255, 255, 0.14));
+  border-radius: var(--hall-radius-pill, 999px);
+  background: var(--hall-btn-bg, rgba(255, 255, 255, 0.03));
+  color: var(--hall-text, rgba(255, 255, 255, 0.86));
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--boxies-transition),
+    background var(--boxies-transition),
+    border-color var(--boxies-transition),
+    opacity var(--boxies-transition);
+}
+
+.boxies-action-btn:hover:not(:disabled) {
+  color: var(--hall-text, #fff);
+  background: var(--hall-btn-hover-bg, rgba(255, 255, 255, 0.07));
+  border-color: var(--hall-btn-hover-border, rgba(255, 255, 255, 0.22));
+}
+
+.boxies-action-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+a.boxies-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.boxies-sidebar {
+  position: fixed;
+  top: var(--boxies-header-h);
+  left: 0;
+  bottom: calc(var(--boxies-dock-h) + var(--boxies-dock-safe));
+  z-index: 9999;
+  width: var(--boxies-sidebar-w);
+  min-width: var(--boxies-sidebar-w);
+  max-width: var(--boxies-sidebar-w);
+  padding: var(--boxies-chrome-pad-top) var(--boxies-chrome-pad-x) 10px;
+  overflow: visible;
+  border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
+  background: transparent;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.boxies-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--boxies-icon-gap);
+  flex: 0 0 auto;
+}
+
+.boxies-sidebar__tools {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--boxies-icon-gap);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex: 0 0 auto;
+}
+
+.boxies-sidebar__preview:disabled {
+  opacity: 0.35;
+}
+
+.boxies-sidebar__spacer {
+  flex: 1 1 auto;
+  min-height: 12px;
+  width: 100%;
+}
+
+.boxies-sidebar__foot {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  width: auto;
+  z-index: 20;
+  padding-left: 4px;
+}
+
+.boxies-sidebar__user-card {
+  width: 168px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0c0c0c;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.boxies-sidebar__logout {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.48);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.boxies-sidebar__logout:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.boxies-sidebar__logout-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.boxies-sidebar__logout-icon svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.boxies-sidebar__logout-label {
+  flex: 1 1 auto;
+}
+
+.boxies-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--boxies-icon-cell);
+  height: var(--boxies-icon-cell);
+  min-width: var(--boxies-icon-cell);
+  min-height: var(--boxies-icon-cell);
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--hall-radius-nav, 10px);
+  background: transparent;
+  text-align: center;
+  cursor: pointer;
+  transition: background var(--boxies-transition);
+  font: inherit;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+.boxies-nav-item:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-primary, #fff) 4%, transparent);
+}
+
+.boxies-nav-item:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.boxies-nav-item__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: auto;
+  line-height: 0;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.boxies-nav-item__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--boxies-icon-size);
+  height: var(--boxies-icon-size);
+  flex-shrink: 0;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.boxies-nav-item__icon svg {
+  width: var(--boxies-icon-size);
+  height: var(--boxies-icon-size);
+  display: block;
+}
+
+/* Labels never render — icon-only rail is the sole platform sidebar. */
+.boxies-nav-item__label,
+.boxies-nav-item__mark,
+.boxies-nav-item__hint {
+  display: none !important;
+}
+
+.boxies-nav-item.is-current {
+  background: var(--hall-surface-raised, rgba(255, 255, 255, 0.045));
+  box-shadow: var(--hall-inset, inset 0 1px 0 rgba(255, 255, 255, 0.045));
+}
+
+.boxies-nav-item.is-current .boxies-nav-item__row {
+  color: var(--hall-text, rgba(255, 255, 255, 0.94));
+}
+
+.boxies-nav-item.is-current .boxies-nav-item__icon {
+  opacity: 1;
+}
+
+.boxies-sidebar {
+  display: none !important;
+}
+
+.boxies-workspace {
+  margin-top: var(--boxies-header-h);
+  margin-left: 0;
+  min-height: calc(100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe));
+}
+
+.boxies-workspace__panel {
+  width: 100%;
+  min-height: calc(100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe));
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+#boxiesContent {
+  max-height: none;
+  min-height: calc(100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe));
+  padding: 24px clamp(20px, 3vw, 40px) 28px;
+  overflow-y: auto;
+  opacity: 1;
+}
+
+/* Instant page swaps — no fade flash that feels like a remount */
+#boxiesContent.is-leave,
+#boxiesContent.is-enter {
+  opacity: 1;
+}
+
+#boxiesContent.is-builder-embed {
+  padding: 0;
+  overflow: hidden;
+}
+
+.boxies-dock {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  height: calc(var(--boxies-dock-h) + var(--boxies-dock-safe));
+  padding-bottom: var(--boxies-dock-safe);
+  background: var(--boxies-dock-bg);
+  backdrop-filter: blur(24px) saturate(130%);
+  -webkit-backdrop-filter: blur(24px) saturate(130%);
+  border-top: 1px solid var(--boxies-dock-border);
+}
+
+/* Toasts always sit above the footer dock, never under the header. */
+body.boxies-host .admin-toast-stack,
+body.boxies-shell .admin-toast-stack {
+  position: fixed;
+  top: auto !important;
+  bottom: calc(var(--boxies-dock-h, 56px) + var(--boxies-dock-safe, 0px) + 14px) !important;
+  right: 16px !important;
+  left: auto !important;
+  z-index: 10050;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  max-width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+body.boxies-host .admin-toast,
+body.boxies-shell .admin-toast {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(6, 6, 6, 0.96);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(20px) saturate(130%);
+  -webkit-backdrop-filter: blur(20px) saturate(130%);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: auto;
+}
+
+body.boxies-host .admin-toast.is-visible,
+body.boxies-shell .admin-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+body.boxies-host .admin-toast--success,
+body.boxies-host .admin-toast--error,
+body.boxies-host .admin-toast--info,
+body.boxies-shell .admin-toast--success,
+body.boxies-shell .admin-toast--error,
+body.boxies-shell .admin-toast--info {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+body.boxies-host .admin-toast--error,
+body.boxies-shell .admin-toast--error {
+  border-color: rgba(255, 138, 138, 0.4);
+}
+
+.boxies-dock__inner {
+  position: relative;
+  height: var(--boxies-dock-h);
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 16px;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+/* Left — account menu (opens upward) */
+.boxies-dock__user {
+  justify-self: start;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+  max-width: min(420px, 42vw);
+}
+
+.boxies-user-menu {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+  z-index: 90;
+}
+
+.boxies-user-menu__trigger {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.42);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+  transition:
+    color 0.12s ease,
+    background 0.12s ease,
+    border-color 0.12s ease,
+    box-shadow 0.18s ease;
+}
+
+.boxies-user-menu__trigger:hover,
+.boxies-user-menu__trigger[aria-expanded="true"] {
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 0 18px rgba(255, 255, 255, 0.14);
+}
+
+.boxies-user-menu__trigger .boxies-user__meta {
+  pointer-events: none;
+}
+
+.boxies-user-menu__panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  min-width: 188px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0c0c0c;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 120;
+}
+
+.boxies-user-menu__panel[hidden] {
+  display: none !important;
+}
+
+.boxies-user-menu__item {
+  appearance: none;
+  margin: 0;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.boxies-user-menu__item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.boxies-user-menu__item--profile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.boxies-user-menu__item--profile .boxies-user-menu__item-text {
+  flex: 0 0 auto;
+}
+
+.boxies-user-menu__role {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.42);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.boxies-user-menu__item--profile:hover .boxies-user-menu__role {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.boxies-user-menu__item--exit {
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.boxies-user-menu__item--exit:hover {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.boxies-user-menu__label {
+  padding: 8px 12px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.34);
+  user-select: none;
+  pointer-events: none;
+}
+
+.boxies-user-menu__item--theme {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.boxies-user-menu__item--theme.is-current {
+  color: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.boxies-user-menu__item-text {
+  min-width: 0;
+}
+
+.boxies-user-menu__check {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  opacity: 0.35;
+  box-sizing: border-box;
+}
+
+.boxies-user-menu__item--theme.is-current .boxies-user-menu__check {
+  opacity: 1;
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 0 0 2px #0c0c0c;
+}
+
+.boxies-user-menu__sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.boxies-dock__logout {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.42);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: color 0.12s ease;
+}
+
+.boxies-dock__logout:hover {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.boxies-dock__logout-icon {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+}
+
+.boxies-dock__logout-icon svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* Center — primary create action */
+.boxies-dock__center {
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+}
+
+.boxies-dock__center.is-empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.boxies-dock__center[hidden] {
+  display: flex !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.boxies-dock__center .boxies-btn-secondary--create {
+  min-width: 0;
+  height: 36px;
+  padding: 0 18px;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+/* Right — module actions + Visualizar */
+.boxies-dock__actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.boxies-dock__actions.is-empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.boxies-dock__actions[hidden] {
+  display: flex !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.boxies-dock__preview[hidden] {
+  display: none !important;
+}
+
+.boxies-dock__leading,
+.boxies-dock__spacer {
+  display: none !important;
+}
+
+/* Project name — true geometric center of the footer */
+.boxies-dock__project {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  max-width: min(42vw, 360px);
+  text-align: center;
+  pointer-events: none;
+}
+
+.boxies-dock__project[hidden] {
+  display: none !important;
+}
+
+.boxies-dock__project-name {
+  display: block;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.boxies-dock__tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.boxies-dock__ctrl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition:
+    color var(--boxies-transition),
+    background var(--boxies-transition),
+    transform var(--boxies-transition),
+    opacity var(--boxies-transition);
+}
+
+.boxies-dock__ctrl:not(:disabled):hover {
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.boxies-dock__ctrl:disabled {
+  cursor: default;
+}
+
+.boxies-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.boxies-user__avatar {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.boxies-user__avatar svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.boxies-user__meta {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.boxies-user__name,
+.boxies-user strong {
+  display: inline;
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.boxies-user__role {
+  display: inline;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.boxies-user__sep {
+  display: inline;
+  color: rgba(255, 255, 255, 0.28);
+  margin: 0 0.35em;
+}
+

@@ -10,7 +10,7 @@ var AdminDashboard = (function () {
     pendingImageFile: null
   };
 
-  var DEFAULT_BTN_1 = 'Ver 360°';
+  var DEFAULT_BTN_1 = 'Iniciar';
   var DEFAULT_BTN_2 = 'Explorar';
 
   function canAccess(profile) {
@@ -88,7 +88,7 @@ var AdminDashboard = (function () {
       hero_text_color: getSelectedHeroTextColor(),
       hero_button_text_color: getSelectedHeroButtonTextColor(),
       imagen_hero_url: state.pendingImageUrl || (state.config && state.config.imagen_hero_url) || null,
-      video_hero_url: state.pendingImageUrl ? null : (state.config && state.config.video_hero_url) || null,
+      video_hero_url: null,
       logo_url: state.config ? state.config.logo_url : null
     };
   }

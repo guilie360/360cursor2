@@ -1,0 +1,5 @@
+-- See applied migration panel_team_chat_payments_access on project emefdwzdfnqgjohbtvvn.
+-- Chat de equipo + solicitudes OTP de Pagos (admin aprueba → clave al chat).
+-- Tables: panel_team_messages, panel_payments_access
+-- RPCs: panel_chat_post, panel_payments_request_access, panel_payments_approve_access,
+--       panel_payments_reject_access, panel_payments_verify_otp, is_panel_admin

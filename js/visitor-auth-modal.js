@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-auth-modal.js');}catch(_e){}
 /* Single auth experience modal — gate, login, register */
 var VisitorAuthModal = (function () {
   var modal = null;
@@ -12,6 +13,21 @@ var VisitorAuthModal = (function () {
   function isRegisterViewActive() {
     var view = $('authViewRegister');
     return !!(view && view.classList.contains('is-active'));
+  }
+
+  function isLoginViewActive() {
+    var view = $('authViewLogin');
+    return !!(view && view.classList.contains('is-active'));
+  }
+
+  function isOpen() {
+    if (!modal) modal = $('authExperienceModal');
+    return !!(modal && modal.classList.contains('active'));
+  }
+
+  /** Bloquea cierre accidental (backdrop / Escape) al cargar datos en login o registro. */
+  function isSessionLocked() {
+    return isOpen() && (isLoginViewActive() || isRegisterViewActive());
   }
 
   function setMessage(text, type) {
@@ -54,6 +70,7 @@ var VisitorAuthModal = (function () {
     });
     if (modal) {
       modal.classList.toggle('is-register-locked', view === 'register');
+      modal.classList.toggle('is-auth-session-locked', view === 'login' || view === 'register');
     }
     setMessage('');
     $('authResendWrap').style.display = 'none';
@@ -89,6 +106,7 @@ var VisitorAuthModal = (function () {
     if (!modal) return;
     modal.classList.remove('active');
     modal.classList.remove('is-register-locked');
+    modal.classList.remove('is-auth-session-locked');
     unlockBodyScroll();
     showView('gate');
     resetRegisterForm();
@@ -286,14 +304,22 @@ var VisitorAuthModal = (function () {
 
     $('authExperienceModal').addEventListener('click', function (e) {
       if (e.target.id !== 'authExperienceModal') return;
-      if (isRegisterViewActive()) return;
+      /* Clic fuera: no cerrar en login/registro (evitar perder datos). */
+      if (isSessionLocked()) return;
       close();
     });
   }
 
   function init() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/visitor-auth-modal.js :: init');}catch(_bd){}
+  try {
+
     bindEvents();
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/visitor-auth-modal.js :: init');}catch(_bd){}
   }
+}
 
   return {
     init: init,
@@ -301,6 +327,11 @@ var VisitorAuthModal = (function () {
     close: close,
     transitionTo: transitionTo,
     handleGoogleAuth: handleGoogleAuth,
-    isRegisterViewActive: isRegisterViewActive
+    isRegisterViewActive: isRegisterViewActive,
+    isLoginViewActive: isLoginViewActive,
+    isOpen: isOpen,
+    isSessionLocked: isSessionLocked
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-auth-modal.js');}catch(_e){}

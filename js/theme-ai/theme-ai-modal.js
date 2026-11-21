@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-ai-modal.js');}catch(_e){}
 /* Modal y orquestación del flujo "Generar tema con IA" */
 var ThemeAIModal = (function () {
   var STEPS = {
@@ -127,12 +128,12 @@ var ThemeAIModal = (function () {
     if (restoreFromSession(state.fingerprint)) return;
 
     setStep(STEPS.analyzing);
-    setStatusText('Extrayendo colores del logo...');
+    setStatusText('Analizando identidad visual del logo...');
 
     ThemeAISource.analyze(ThemeAISource.SOURCE_TYPES.image, file).then(function (profile) {
       state.brandProfile = profile;
       setStep(STEPS.generating);
-      setStatusText('Construyendo propuestas con la paleta extraída...');
+      setStatusText('Construyendo sistema cromático y propuestas de diseño...');
       return ThemeAIGenerator.generate(profile);
     }).then(function (proposals) {
       state.proposals = proposals;
@@ -298,8 +299,15 @@ var ThemeAIModal = (function () {
   }
 
   function init() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/theme-ai/theme-ai-modal.js :: init');}catch(_bd){}
+  try {
+
     bind();
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/theme-ai/theme-ai-modal.js :: init');}catch(_bd){}
   }
+}
 
   return {
     init: init,
@@ -308,3 +316,5 @@ var ThemeAIModal = (function () {
     isOpen: isOpen
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-ai-modal.js');}catch(_e){}

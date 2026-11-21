@@ -1,0 +1,76 @@
+/* Espacio seguro móvil: notch + toolbar/URL del navegador (Safari/Chrome) */
+:root{
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-right:env(safe-area-inset-right,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-left:env(safe-area-inset-left,0px);
+  /* La barra inferior del browser NO entra en safe-area; hay que estimarla */
+  --chrome-bottom:0px;
+  --float-bottom:max(16px,calc(var(--safe-bottom) + 12px));
+}
+@media (max-width:900px){
+  :root{
+    --chrome-bottom:64px;
+    --float-bottom:max(20px,calc(var(--safe-bottom) + var(--chrome-bottom)));
+  }
+}
+@media (max-width:600px){
+  :root{
+    --chrome-bottom:72px;
+    --float-bottom:max(24px,calc(var(--safe-bottom) + var(--chrome-bottom)));
+  }
+}
+
+/* Modales / overlays a pantalla completa */
+.order-modal,
+.payments-export-backdrop,
+.payments-gate-backdrop,
+.showroom-lightbox{
+  padding-top:max(16px,var(--safe-top))!important;
+  padding-right:max(16px,var(--safe-right))!important;
+  padding-left:max(16px,var(--safe-left))!important;
+  padding-bottom:max(24px,calc(var(--safe-bottom) + var(--chrome-bottom)))!important;
+  box-sizing:border-box;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  align-items:center;
+}
+
+@media (max-width:760px){
+  .order-modal{
+    align-items:flex-end!important;
+    justify-content:center;
+  }
+  .order-dialog{
+    max-height:calc(100svh - var(--safe-top) - var(--safe-bottom) - var(--chrome-bottom) - 28px)!important;
+    width:min(680px,100%);
+    margin:0 auto;
+  }
+}
+
+/* Controles flotantes inferiores (back/chat ya viven en el footer: no elevar). */
+.float-actions,
+.chat-float,
+.quote-float,
+#profileFloat{
+  bottom:var(--float-bottom)!important;
+}
+#hunterGoalFooter #portalBack,
+#hunterGoalFooter #teamChatFloat,
+#hunterGoalFooter .footer-back,
+.quote-goal-footer .quote-footer-back,
+.quote-goal-footer #headerReset,
+.quote-goal-footer #teamChatFloat{
+  bottom:auto!important;
+  position:static!important;
+}
+
+/* Icono flotante de fullscreen retirado: la acción vive en el menú global */
+.fullscreen-toggle,
+.global-fullscreen-btn,
+#fullscreenToggle,
+#globalFullscreenBtn{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}

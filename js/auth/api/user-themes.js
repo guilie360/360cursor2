@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/user-themes.js');}catch(_e){}
 /* Saved user themes API — Mis temas */
 var UserThemesApi = (function () {
   var SELECT = 'id, profile_id, nombre, configuracion, created_at, updated_at';
@@ -124,3 +125,5 @@ var UserThemesApi = (function () {
     normalizeRow: normalizeRow
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/user-themes.js');}catch(_e){}

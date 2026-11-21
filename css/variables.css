@@ -30,6 +30,7 @@
   --backdrop-90: color-mix(in srgb, var(--bg-main) 90%, transparent);
   --backdrop-94: color-mix(in srgb, var(--bg-main) 94%, transparent);
   --modal-backdrop: var(--backdrop-94);
+  --overlay-mask: var(--modal-backdrop);
   --modal-backdrop-blur: 0px;
   /* Glass material tokens */
   --glass-panel: color-mix(in srgb, var(--bg-main) 28%, transparent);
@@ -50,10 +51,16 @@
   --btn-glass-hover: var(--hover);
   --btn-glass-blur: 8px;
   --btn-border: var(--glass-border);
-  --hero-btn-bg: var(--btn-surface);
-  --hero-btn-bg-hover: var(--hover);
-  --hero-btn-blur: 4px;
-  --hero-btn-border: var(--glass-border);
+  --btn-border-width: 2px;
+  --btn-border-hover: var(--btn-border, var(--glass-border));
+  --btn-border-width-hover: 1.4px;
+  --btn-text-hover: var(--text-primary);
+  --btn-hover-blur: 0px;
+  --hero-btn-bg: var(--btn-glass-surface, var(--btn-surface));
+  --hero-btn-bg-hover: var(--btn-glass-hover, var(--hover));
+  --hero-btn-blur: var(--btn-glass-blur, 4px);
+  --hero-btn-border: var(--btn-border, var(--glass-border));
+  --hero-btn-border-hover: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
   /* Contraste inteligente — sobrescritos por ThemeSystem.applyVars */
   --text-secondary: #ffffff;
   --text-muted: #ffffff;

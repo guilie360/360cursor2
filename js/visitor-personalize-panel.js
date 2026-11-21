@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-personalize-panel.js');}catch(_e){}
 /* Personalizar panel — inside left navigation */
 var VisitorPersonalizePanel = (function () {
   var panelEl = null;
@@ -8,18 +9,22 @@ var VisitorPersonalizePanel = (function () {
   var popoverHsv = { h: 0, s: 1, v: 1 };
   var colorPopoverBound = false;
   var editingSavedThemeId = null;
+  var editingOfficialPresetId = null;
+  var pendingDeletePresetId = null;
+  var activeOfficialPresetId = null;
   var savedThemesCache = [];
   var pendingOfficialTheme = null;
   var EDITOR_SESSION_KEY = 'guilie_personalize_editor_v1';
   var EDITOR_SESSION_VERSION = 2;
-  var PANEL_DOM_VERSION = '5';
+  var PANEL_DOM_VERSION = '12';
 
   var COLOR_FIELD_BY_ACTION = {
     'pick-bg': 'bg',
     'pick-menu': 'menuColor',
     'pick-surface': 'surface',
     'pick-accent': 'accent',
-    'pick-hero-surface': 'heroSurface'
+    'pick-hero-surface': 'heroSurface',
+    'pick-mask': 'maskColor'
   };
   var AVATAR_COLOR_FIELD = 'avatar';
 
@@ -34,6 +39,10 @@ var VisitorPersonalizePanel = (function () {
   var MIS_TEMA_ICON_DELETE =
     '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
       '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>' +
+    '</svg>';
+  var PRESET_ICON_TEMPLATE =
+    '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>' +
     '</svg>';
   var MIS_TEMA_ICON_STAR =
     '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
@@ -236,10 +245,20 @@ var VisitorPersonalizePanel = (function () {
     );
   }
 
-  function renderSurfaceBlock(title, colorField, colorAction, swatchColor, effectField) {
+  function renderMaskBlurButtons() {
+    return (
+      '<button type="button" class="custom-theme-mask-blur-btn" data-mask-blur-mode="low" data-theme-visual-action="mask-blur-low">Baja</button>' +
+      '<button type="button" class="custom-theme-mask-blur-btn" data-mask-blur-mode="medium" data-theme-visual-action="mask-blur-medium">Media</button>' +
+      '<button type="button" class="custom-theme-mask-blur-btn" data-mask-blur-mode="high" data-theme-visual-action="mask-blur-high">Alta</button>'
+    );
+  }
+
+  function renderSurfaceBlock(title, colorField, colorAction, swatchColor, effectField, hint, options) {
+    options = options || {};
     return (
       '<div class="custom-theme-block">' +
         '<div class="custom-theme-block-label">' + escapeHtml(title) + '</div>' +
+        (hint ? '<p class="personalize-hint personalize-theme-block-hint">' + escapeHtml(hint) + '</p>' : '') +
         '<div class="custom-theme-block-body">' +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Efecto</span>' +
@@ -247,6 +266,14 @@ var VisitorPersonalizePanel = (function () {
               renderGlassModeButtons() +
             '</div>' +
           '</div>' +
+          (options.maskBlur
+            ? '<div class="custom-theme-row custom-theme-row--tight">' +
+                '<span class="custom-theme-row-label">Blur</span>' +
+                '<div class="custom-theme-text-toggle custom-theme-mask-blur-toggle">' +
+                  renderMaskBlurButtons() +
+                '</div>' +
+              '</div>'
+            : '') +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Color</span>' +
             '<button type="button" class="outline-btn custom-theme-pick-btn" data-theme-visual-action="' + colorAction + '" data-theme-color-field="' + colorField + '" style="--pick-swatch:' + escapeHtml(swatchColor) + '">Elegir color</button>' +
@@ -261,10 +288,15 @@ var VisitorPersonalizePanel = (function () {
     return '<div class="custom-theme-divider" role="separator" aria-hidden="true"></div>';
   }
 
-  function renderButtonSection(title, colorField, colorAction, swatchColor, effectField, borderField) {
+  function renderThemeGroupHeader(title) {
+    return '<div class="custom-theme-group-header">' + escapeHtml(title) + '</div>';
+  }
+
+  function renderButtonSection(title, colorField, colorAction, swatchColor, effectField, borderField, hint) {
     return (
       '<div class="custom-theme-section">' +
         '<div class="custom-theme-section-label">' + escapeHtml(title) + '</div>' +
+        (hint ? '<p class="personalize-hint personalize-theme-block-hint">' + escapeHtml(hint) + '</p>' : '') +
         '<div class="custom-theme-section-body">' +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Color</span>' +
@@ -291,6 +323,7 @@ var VisitorPersonalizePanel = (function () {
   function glassFieldToDraftKey(field) {
     if (field === 'hero-button') return 'heroButtonGlass';
     if (field === 'hero-border') return 'heroBorderGlass';
+    if (field === 'mask') return 'maskGlass';
     if (field === 'button') return 'buttonGlass';
     if (field === 'border') return 'borderGlass';
     if (field === 'panel') return 'panelGlass';
@@ -337,11 +370,14 @@ var VisitorPersonalizePanel = (function () {
     customThemeDraft.shadowGlass = readShadowFieldFromPanel();
     customThemeDraft.heroButtonGlass = readGlassFieldFromPanel('hero-button');
     customThemeDraft.heroBorderGlass = readGlassFieldFromPanel('hero-border');
+    customThemeDraft.maskGlass = readGlassFieldFromPanel('mask');
+    customThemeDraft.maskBlur = readMaskBlurFromPanel();
     return {
       bg: customThemeDraft.bg,
       menuColor: customThemeDraft.menuColor,
       surface: customThemeDraft.surface,
       accent: customThemeDraft.accent,
+      maskColor: customThemeDraft.maskColor,
       heroSurface: customThemeDraft.heroSurface,
       textMode: customThemeDraft.textMode,
       bgTextMode: customThemeDraft.bgTextMode,
@@ -352,8 +388,28 @@ var VisitorPersonalizePanel = (function () {
       borderGlass: customThemeDraft.borderGlass,
       shadowGlass: customThemeDraft.shadowGlass,
       heroButtonGlass: customThemeDraft.heroButtonGlass,
-      heroBorderGlass: customThemeDraft.heroBorderGlass
+      heroBorderGlass: customThemeDraft.heroBorderGlass,
+      maskGlass: customThemeDraft.maskGlass,
+      maskBlur: customThemeDraft.maskBlur
     };
+  }
+
+  function readMaskBlurFromPanel() {
+    var selected = 'medium';
+    document.querySelectorAll('.custom-theme-mask-blur-btn').forEach(function (btn) {
+      if (btn.classList.contains('selected')) {
+        selected = btn.getAttribute('data-mask-blur-mode') || 'medium';
+      }
+    });
+    return ThemeSystem.normalizeMaskBlur(selected);
+  }
+
+  function syncCustomThemeMaskBlurButtons() {
+    if (!customThemeDraft) return;
+    var blur = ThemeSystem.normalizeMaskBlur(customThemeDraft.maskBlur || 'medium');
+    document.querySelectorAll('.custom-theme-mask-blur-btn').forEach(function (btn) {
+      btn.classList.toggle('selected', btn.getAttribute('data-mask-blur-mode') === blur);
+    });
   }
 
   function syncCustomThemeDepthButtons() {
@@ -401,6 +457,8 @@ var VisitorPersonalizePanel = (function () {
     syncShadowToggle(customThemeDraft.shadowGlass);
     syncGlassToggle('hero-button', customThemeDraft.heroButtonGlass);
     syncGlassToggle('hero-border', customThemeDraft.heroBorderGlass);
+    syncGlassToggle('mask', customThemeDraft.maskGlass);
+    syncCustomThemeMaskBlurButtons();
   }
 
   function syncCustomThemeEditorValues(config) {
@@ -409,6 +467,7 @@ var VisitorPersonalizePanel = (function () {
       btn.classList.toggle('selected', btn.getAttribute('data-text-mode') === customThemeDraft.textMode);
     });
     syncCustomThemeDepthButtons();
+    syncCustomThemeMaskBlurButtons();
     syncCustomThemeGlassButtons();
     updatePickButtonSwatches();
   }
@@ -427,12 +486,13 @@ var VisitorPersonalizePanel = (function () {
     });
   }
 
-  function openCustomThemeEditor(config, savedThemeId, themeName) {
+  function openCustomThemeEditor(config, savedThemeId, themeName, officialPresetId) {
     try {
-      if (savedThemeId || config) {
+      if (savedThemeId || config || officialPresetId) {
         clearEditorSessionState();
       }
       editingSavedThemeId = savedThemeId || null;
+      editingOfficialPresetId = officialPresetId || null;
       var draftConfig = config;
       if (!draftConfig) {
         draftConfig = ThemeSystem.exportCustomConfigFromKey(ThemeSystem.getCurrentKey());
@@ -446,6 +506,14 @@ var VisitorPersonalizePanel = (function () {
       onCustomThemeDraftChange();
       var nameInput = document.getElementById('customThemeNameInput');
       if (nameInput) nameInput.value = themeName || '';
+      var titleEl = document.querySelector('.custom-theme-editor-title');
+      if (titleEl) {
+        titleEl.textContent = editingOfficialPresetId ? 'Editar tema oficial' : 'Crear mi tema';
+      }
+      var nameLabel = document.querySelector('.custom-theme-name-field span');
+      if (nameLabel) {
+        nameLabel.textContent = editingOfficialPresetId ? 'Nombre del tema oficial' : 'Nombre del tema';
+      }
       showThemeEditor();
       scrollToThemeVisualPanel();
       setMessage('customThemeMessage', '', false);
@@ -462,6 +530,7 @@ var VisitorPersonalizePanel = (function () {
       menuColor: customThemeDraft.menuColor,
       surface: customThemeDraft.surface,
       accent: customThemeDraft.accent,
+      maskColor: customThemeDraft.maskColor,
       heroSurface: customThemeDraft.heroSurface
     };
     Object.keys(map).forEach(function (field) {
@@ -585,6 +654,7 @@ var VisitorPersonalizePanel = (function () {
       popoverOpen: popoverOpen,
       draft: customThemeDraft || (editing ? getCustomThemeDraftFromPanel() : null),
       editingSavedThemeId: editingSavedThemeId,
+      editingOfficialPresetId: editingOfficialPresetId,
       scrollTop: 0,
       themeName: ''
     };
@@ -630,6 +700,7 @@ var VisitorPersonalizePanel = (function () {
 
       customThemeDraft = ThemeSystem.normalizeCustomConfig(saved.draft);
       editingSavedThemeId = saved.editingSavedThemeId || null;
+      editingOfficialPresetId = saved.editingOfficialPresetId || null;
       showThemeEditor();
       syncCustomThemeEditorValues(customThemeDraft);
       if (saved.themeName) {
@@ -983,6 +1054,7 @@ var VisitorPersonalizePanel = (function () {
   function showThemePicker() {
     closeColorPopover(false);
     editingSavedThemeId = null;
+    editingOfficialPresetId = null;
     var panel = document.getElementById('themeVisualPanel');
     if (panel) panel.classList.remove('is-editing');
     syncThemeEditorNavControls();
@@ -1024,7 +1096,7 @@ var VisitorPersonalizePanel = (function () {
     saveThemeExitTimer = window.setTimeout(function () {
       saveThemeExitTimer = null;
       showThemePicker();
-      ThemeSystem.renderGrid('personalizeThemeGrid', onThemeSelect);
+      renderPresetThemeGrid();
       if (VisitorPersonalization.getAvatarColorMode() === 'auto') updatePreview();
       clearEditorSessionState();
     }, 1200);
@@ -1033,9 +1105,12 @@ var VisitorPersonalizePanel = (function () {
   function syncThemeEditorNavControls() {
     var saveBtn = document.getElementById('menuNavSaveTheme');
     var saveCol = document.getElementById('menuNavSaveCol');
+    var deleteBtn = document.getElementById('menuNavDeleteOfficialPreset');
     var editing = isThemeEditorOpen() && isOnPersonalizarPanel();
+    var editingOfficial = editing && !!editingOfficialPresetId && canManageOfficialPresets();
     if (saveBtn) saveBtn.hidden = !editing;
     if (saveCol) saveCol.hidden = !editing;
+    if (deleteBtn) deleteBtn.hidden = !editingOfficial;
     if (!editing) setSaveThemeNavMessage('');
   }
 
@@ -1087,6 +1162,7 @@ var VisitorPersonalizePanel = (function () {
     if (panel) panel.classList.remove('is-editing');
     customThemeDraft = null;
     editingSavedThemeId = null;
+    editingOfficialPresetId = null;
     syncThemeEditorNavControls();
     clearEditorSessionState();
   }
@@ -1108,6 +1184,14 @@ var VisitorPersonalizePanel = (function () {
     if (!draft) return;
     var saveBtn = triggerEl;
     if (saveBtn) saveBtn.disabled = true;
+
+    if (editingOfficialPresetId) {
+      var nameInputOfficial = document.getElementById('customThemeNameInput');
+      var officialName = nameInputOfficial ? nameInputOfficial.value.trim() : '';
+      saveOfficialPresetAction(draft, officialName, saveBtn);
+      return;
+    }
+
     var savedThemeId = editingSavedThemeId;
     var nameInput = document.getElementById('customThemeNameInput');
     var themeName = nameInput ? nameInput.value.trim() : '';
@@ -1180,6 +1264,239 @@ var VisitorPersonalizePanel = (function () {
   function canApplyThemeToProject() {
     return typeof ProjectThemeAuthority !== 'undefined' &&
       ProjectThemeAuthority.canSetOfficialTheme(VisitorSession.getProfile());
+  }
+
+  function canManageOfficialPresets() {
+    return typeof ProjectPresetThemes !== 'undefined' &&
+      ProjectPresetThemes.canManage(VisitorSession.getProfile());
+  }
+
+  function renderPresetActionIcon(action, iconSvg, label) {
+    return (
+      '<button type="button" class="theme-preset-action-btn" data-preset-action="' + action + '" aria-label="' + escapeHtml(label) + '" title="' + escapeHtml(label) + '">' +
+        iconSvg +
+      '</button>'
+    );
+  }
+
+  function isPresetActive(preset) {
+    if (!preset) return false;
+    if (activeOfficialPresetId && activeOfficialPresetId === preset.id) return true;
+    if (preset.config) {
+      return typeof ThemeSystem.isCustomThemeActive === 'function' && ThemeSystem.isCustomThemeActive();
+    }
+    return ThemeSystem.getCurrentKey() === preset.builtinKey && !ThemeSystem.isCustomThemeActive();
+  }
+
+  function renderPresetThemeGrid() {
+    var grid = document.getElementById('personalizeThemeGrid');
+    if (!grid) return;
+    if (typeof ProjectPresetThemes === 'undefined') {
+      ThemeSystem.renderGrid('personalizeThemeGrid', onThemeSelect);
+      return;
+    }
+
+    var presets = ProjectPresetThemes.getPresets();
+    var isAdmin = canManageOfficialPresets();
+    grid.innerHTML = '';
+    grid.className = 'theme-swatch-grid personalize-theme-grid' + (isAdmin ? ' personalize-preset-grid' : '');
+
+    presets.forEach(function (preset) {
+      var sw = ProjectPresetThemes.getPresetSwatchColors(preset);
+      var wrap = document.createElement('div');
+      wrap.className = 'theme-preset-wrap';
+      wrap.setAttribute('data-preset-id', preset.id);
+
+      var swatch = document.createElement('button');
+      swatch.type = 'button';
+      swatch.className = 'theme-swatch theme-preset-swatch' + (isPresetActive(preset) ? ' selected' : '');
+      swatch.title = preset.name;
+      swatch.setAttribute('aria-label', preset.name);
+
+      swatch.style.setProperty('--swatch-bg', sw.bg);
+      swatch.style.setProperty('--swatch-accent', sw.accent);
+
+      var base = document.createElement('span');
+      base.className = 'theme-swatch-base';
+      base.setAttribute('aria-hidden', 'true');
+      var accent = document.createElement('span');
+      accent.className = 'theme-swatch-accent';
+      accent.setAttribute('aria-hidden', 'true');
+      swatch.appendChild(base);
+      swatch.appendChild(accent);
+
+      swatch.addEventListener('click', function (e) {
+        if (e.target.closest('[data-preset-action]')) return;
+        var result = ProjectPresetThemes.applyPreset(preset);
+        if (result && result.ok === false) return;
+        activeOfficialPresetId = preset.id;
+        renderPresetThemeGrid();
+        onThemeSelect(preset.builtinKey && !preset.config ? preset.builtinKey : ThemeSystem.CUSTOM_THEME_KEY);
+        if (typeof playSound === 'function') playSound('buttonTap');
+        if (typeof vibrate === 'function') vibrate(6);
+      });
+
+      var label = document.createElement('span');
+      label.className = 'theme-preset-name';
+      label.textContent = preset.name;
+
+      wrap.appendChild(swatch);
+      wrap.appendChild(label);
+
+      if (isAdmin) {
+        var actions = document.createElement('div');
+        actions.className = 'theme-preset-actions theme-preset-actions--edit-only';
+        actions.innerHTML = renderPresetActionIcon('edit-official', MIS_TEMA_ICON_EDIT, 'Editar tema oficial');
+        wrap.appendChild(actions);
+      }
+
+      grid.appendChild(wrap);
+    });
+  }
+
+  function openOfficialPresetEditor(preset) {
+    if (!canManageOfficialPresets() || !preset) return;
+    openCustomThemeEditor(
+      ProjectPresetThemes.exportPresetConfig(preset),
+      null,
+      preset.name,
+      preset.id
+    );
+    syncThemeEditorNavControls();
+  }
+
+  function openPresetAsTemplate(preset) {
+    if (!preset) return;
+    editingOfficialPresetId = null;
+    openCustomThemeEditor(
+      ProjectPresetThemes.exportPresetConfig(preset),
+      null,
+      preset.name + ' (variante)',
+      null
+    );
+  }
+
+  function openOfficialPresetDeleteConfirm(preset) {
+    if (!canManageOfficialPresets() || !preset) return;
+    pendingDeletePresetId = preset.id;
+    var copy = document.getElementById('officialPresetDeleteCopy');
+    if (copy) {
+      copy.textContent = '¿Eliminar "' + preset.name + '" de la lista oficial? Deben quedar al menos ' +
+        ProjectPresetThemes.MIN_PRESETS + ' temas.';
+    }
+    var modal = document.getElementById('officialPresetDeleteModal');
+    if (!modal) return;
+    modal.classList.add('active');
+    if (typeof GlobalClose !== 'undefined') GlobalClose.update();
+  }
+
+  function closeOfficialPresetDeleteConfirm() {
+    pendingDeletePresetId = null;
+    var modal = document.getElementById('officialPresetDeleteModal');
+    if (modal) modal.classList.remove('active');
+    if (typeof GlobalClose !== 'undefined') GlobalClose.update();
+  }
+
+  async function confirmDeleteOfficialPreset() {
+    if (!pendingDeletePresetId || !canManageOfficialPresets()) return;
+    try {
+      await ProjectPresetThemes.deletePreset(pendingDeletePresetId);
+      if (activeOfficialPresetId === pendingDeletePresetId) activeOfficialPresetId = null;
+      if (editingOfficialPresetId === pendingDeletePresetId) {
+        editingOfficialPresetId = null;
+        showThemePicker();
+        customThemeDraft = null;
+      }
+      closeOfficialPresetDeleteConfirm();
+      renderPresetThemeGrid();
+      syncThemeEditorNavControls();
+      setMessage('customThemeMessage', 'Tema oficial eliminado.', false);
+      if (typeof playSound === 'function') playSound('buttonTap');
+    } catch (err) {
+      setMessage('customThemeMessage', err.message || 'No se pudo eliminar el tema.', true);
+    }
+  }
+
+  function deleteEditingOfficialPreset() {
+    if (!editingOfficialPresetId || !canManageOfficialPresets()) return;
+    var preset = ProjectPresetThemes.findPreset(editingOfficialPresetId);
+    if (preset) openOfficialPresetDeleteConfirm(preset);
+  }
+
+  function bindOfficialPresetDeleteModal() {
+    var modal = document.getElementById('officialPresetDeleteModal');
+    if (!modal || modal.dataset.bound === '1') return;
+    modal.dataset.bound = '1';
+    var cancelBtn = document.getElementById('officialPresetDeleteCancelBtn');
+    var confirmBtn = document.getElementById('officialPresetDeleteConfirmBtn');
+    if (cancelBtn) cancelBtn.addEventListener('click', closeOfficialPresetDeleteConfirm);
+    if (confirmBtn) confirmBtn.addEventListener('click', confirmDeleteOfficialPreset);
+    modal.addEventListener('click', function (e) {
+      if (e.target.id === 'officialPresetDeleteModal') closeOfficialPresetDeleteConfirm();
+    });
+  }
+
+  function bindPresetThemeGrid() {
+    var grid = document.getElementById('personalizeThemeGrid');
+    if (!grid || grid.dataset.presetBound === '1') return;
+    grid.dataset.presetBound = '1';
+    grid.addEventListener('click', function (e) {
+      var actionEl = e.target.closest('[data-preset-action]');
+      if (!actionEl || !grid.contains(actionEl)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var wrap = actionEl.closest('[data-preset-id]');
+      if (!wrap) return;
+      var preset = typeof ProjectPresetThemes !== 'undefined'
+        ? ProjectPresetThemes.findPreset(wrap.getAttribute('data-preset-id'))
+        : null;
+      if (!preset) return;
+      var action = actionEl.getAttribute('data-preset-action');
+      if (action === 'template') {
+        openPresetAsTemplate(preset);
+        return;
+      }
+      if (action === 'edit-official') {
+        openOfficialPresetEditor(preset);
+        return;
+      }
+    });
+  }
+
+  async function saveOfficialPresetAction(draft, themeName, saveBtn) {
+    if (!editingOfficialPresetId || !canManageOfficialPresets()) return;
+    var presetId = editingOfficialPresetId;
+    try {
+      await ProjectPresetThemes.updatePreset(presetId, {
+        name: themeName || undefined,
+        config: draft,
+        swatchBg: draft.bg,
+        swatchAccent: draft.accent
+      });
+      var updated = ProjectPresetThemes.findPreset(presetId);
+      editingOfficialPresetId = null;
+      activeOfficialPresetId = presetId;
+      if (saveThemeExitTimer) {
+        clearTimeout(saveThemeExitTimer);
+        saveThemeExitTimer = null;
+      }
+      setSaveThemeNavMessage('TEMA OFICIAL GUARDADO', draft.accent);
+      saveThemeExitTimer = window.setTimeout(function () {
+        saveThemeExitTimer = null;
+        showThemePicker();
+        renderPresetThemeGrid();
+        if (updated) ProjectPresetThemes.applyPreset(updated);
+        if (VisitorPersonalization.getAvatarColorMode() === 'auto') updatePreview();
+        clearEditorSessionState();
+      }, 1200);
+      setMessage('customThemeMessage', 'Tema oficial actualizado en la lista prediseñada.', false);
+    } catch (err) {
+      setSaveThemeNavMessage('');
+      setMessage('customThemeMessage', err.message || 'No se pudo guardar el tema oficial.', true);
+    } finally {
+      if (saveBtn) saveBtn.disabled = false;
+      if (typeof playSound === 'function') playSound('buttonTap');
+    }
   }
 
   function renderMisTemasList(themes) {
@@ -1261,6 +1578,14 @@ var VisitorPersonalizePanel = (function () {
     }
     if (applyBtn) {
       applyBtn.addEventListener('click', function () {
+        if (typeof VisitorPersonalizeV2Panel !== 'undefined' &&
+            typeof VisitorPersonalizeV2Panel.hasPendingProjectConfirm === 'function' &&
+            VisitorPersonalizeV2Panel.hasPendingProjectConfirm()) {
+          if (typeof VisitorPersonalizeV2Panel.confirmApplyAsProjectDefault === 'function') {
+            VisitorPersonalizeV2Panel.confirmApplyAsProjectDefault();
+          }
+          return;
+        }
         confirmApplyThemeToProject();
       });
     }
@@ -1295,6 +1620,7 @@ var VisitorPersonalizePanel = (function () {
   function dismissThemeEditorForApply() {
     closeColorPopover(false);
     editingSavedThemeId = null;
+    editingOfficialPresetId = null;
     customThemeDraft = null;
     var panel = document.getElementById('themeVisualPanel');
     if (panel) panel.classList.remove('is-editing');
@@ -1338,7 +1664,7 @@ var VisitorPersonalizePanel = (function () {
           applyResult.warning || 'Tema aplicado.',
           false
         );
-        ThemeSystem.renderGrid('personalizeThemeGrid', onThemeSelect);
+        renderPresetThemeGrid();
         updatePreview();
         if (typeof playSound === 'function') playSound('buttonTap');
         return;
@@ -1348,23 +1674,7 @@ var VisitorPersonalizePanel = (function () {
         clearEditorSessionState();
         var config = theme.configuracion || {};
         openCustomThemeEditor(
-          ThemeSystem.normalizeCustomConfig({
-            bg: config.bg || config.background,
-            menuColor: config.menuColor || config.panelColor || config.bg || config.background,
-            surface: config.surface,
-            accent: config.accent,
-            heroSurface: config.heroSurface || config.surface,
-            textMode: config.textMode,
-            bgTextMode: config.bgTextMode,
-            visualDepth: config.visualDepth,
-            bgGlass: config.bgGlass || config.panelGlass,
-            panelGlass: config.panelGlass,
-            buttonGlass: config.buttonGlass,
-            borderGlass: config.borderGlass,
-            shadowGlass: config.shadowGlass,
-            heroButtonGlass: config.heroButtonGlass || config.buttonGlass,
-            heroBorderGlass: config.heroBorderGlass || config.borderGlass
-          }),
+          ThemeSystem.normalizeCustomConfig(config),
           theme.id,
           theme.nombre
         );
@@ -1396,6 +1706,14 @@ var VisitorPersonalizePanel = (function () {
         e.preventDefault();
         if (!isThemeEditorOpen()) return;
         runSaveThemeAction(topSave);
+      });
+    }
+    var deleteBtn = document.getElementById('menuNavDeleteOfficialPreset');
+    if (deleteBtn && !deleteBtn.dataset.bound) {
+      deleteBtn.dataset.bound = '1';
+      deleteBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        deleteEditingOfficialPreset();
       });
     }
     syncThemeEditorNavControls();
@@ -1450,6 +1768,16 @@ var VisitorPersonalizePanel = (function () {
         onCustomThemeDraftChange();
         return;
       }
+      if (action === 'mask-blur-low' || action === 'mask-blur-medium' || action === 'mask-blur-high') {
+        e.preventDefault();
+        var maskBlurMode = action === 'mask-blur-low' ? 'low' : action === 'mask-blur-high' ? 'high' : 'medium';
+        document.querySelectorAll('.custom-theme-mask-blur-btn').forEach(function (btn) {
+          btn.classList.toggle('selected', btn.getAttribute('data-mask-blur-mode') === maskBlurMode);
+        });
+        if (customThemeDraft) customThemeDraft.maskBlur = maskBlurMode;
+        onCustomThemeDraftChange();
+        return;
+      }
       if (action === 'glass-solid' || action === 'glass-soft' || action === 'glass-crystal') {
         e.preventDefault();
         var glassMode = action === 'glass-solid' ? 'solid' : action === 'glass-crystal' ? 'glass' : 'soft';
@@ -1499,6 +1827,7 @@ var VisitorPersonalizePanel = (function () {
     if (!panelEl) return;
     if (isPanelMounted()) {
       syncThemeEditorNavControls();
+      renderPresetThemeGrid();
       return;
     }
 
@@ -1511,6 +1840,10 @@ var VisitorPersonalizePanel = (function () {
     var colorMode = VisitorPersonalization.getAvatarColorMode();
     var avatarPickSwatch = getAvatarPickSwatchColor();
     var defaultCustom = ThemeSystem.getDefaultCustomTheme();
+    var isPresetAdmin = canManageOfficialPresets();
+    var presetHint = isPresetAdmin
+      ? 'Temas oficiales del proyecto. Solo tú puedes editarlos o eliminarlos (mín. ' + (typeof ProjectPresetThemes !== 'undefined' ? ProjectPresetThemes.MIN_PRESETS : 3) + ', máx. ' + (typeof ProjectPresetThemes !== 'undefined' ? ProjectPresetThemes.MAX_PRESETS : 15) + '). Los visitantes solo pueden aplicarlos o usarlos como plantilla.'
+      : 'Elige un tema de la lista. Puedes crear tu propia variante con «Crear variante».';
 
     panelEl.innerHTML =
       '<div class="personalize-scroll" data-panel-version="' + PANEL_DOM_VERSION + '">' +
@@ -1534,11 +1867,11 @@ var VisitorPersonalizePanel = (function () {
         '</div>' +
 
         '<div class="personalize-block personalize-block--plain" id="themeVisualBlock">' +
-          '<div class="personalize-block-label">Tema visual</div>' +
+          '<div class="personalize-block-label">Tema visual' + (isPresetAdmin ? ' <span class="personalize-admin-badge">Admin</span>' : '') + '</div>' +
           '<div class="personalize-block-body theme-visual-panel" id="themeVisualPanel">' +
             '<div id="themeVisualPicker" class="theme-visual-picker">' +
               '<div class="theme-swatch-grid personalize-theme-grid" id="personalizeThemeGrid"></div>' +
-              '<p class="personalize-hint personalize-theme-picker-hint">Elige un tema base de la lista.</p>' +
+              '<p class="personalize-hint personalize-theme-picker-hint">' + escapeHtml(presetHint) + '</p>' +
               '<button type="button" class="outline-btn personalize-create-theme-btn" data-theme-visual-action="open-editor">Crear variante</button>' +
               '<button type="button" class="outline-btn personalize-ai-theme-btn" data-theme-visual-action="open-ai-theme">✨ Generar tema con IA</button>' +
             '</div>' +
@@ -1553,26 +1886,33 @@ var VisitorPersonalizePanel = (function () {
                 '<input type="text" id="customThemeNameInput" maxlength="60" placeholder="Mi tema 1" autocomplete="off">' +
               '</label>' +
               '<div class="custom-theme-rows">' +
-                renderSurfaceBlock('Contenedores', 'bg', 'pick-bg', defaultCustom.bg, 'bg') +
+                renderThemeGroupHeader('Capas') +
+                renderSurfaceBlock('Máscara de fondo', 'maskColor', 'pick-mask', defaultCustom.maskColor || defaultCustom.bg, 'mask', 'Oscurece el fondo detrás del menú y los popups.', { maskBlur: true }) +
+                renderSurfaceBlock('Superficies', 'bg', 'pick-bg', defaultCustom.bg, 'bg', 'Tarjetas 360°, tarjetas de vivienda y cuadro comparador.') +
+                renderSurfaceBlock('Menú lateral', 'menuColor', 'pick-menu', defaultCustom.menuColor || defaultCustom.bg, 'panel', 'Panel del menú Explorar y fondo general de la app.') +
+                renderThemeDivider() +
+                renderThemeGroupHeader('Acento') +
                 '<div class="custom-theme-row custom-theme-row--tight">' +
                   '<span class="custom-theme-row-label">Color de acento</span>' +
                   '<button type="button" class="outline-btn custom-theme-pick-btn" data-theme-visual-action="pick-accent" data-theme-color-field="accent" style="--pick-swatch:' + escapeHtml(defaultCustom.accent) + '">Elegir color</button>' +
                 '</div>' +
+                '<p class="personalize-hint personalize-theme-block-hint">Badges, precios destacados y estados como Reservado.</p>' +
                 renderThemeDivider() +
-                renderSurfaceBlock('Menú y fondos', 'menuColor', 'pick-menu', defaultCustom.menuColor || defaultCustom.bg, 'panel') +
-                renderButtonSection('Botones 1', 'surface', 'pick-surface', defaultCustom.surface, 'button', 'border') +
-                renderButtonSection('Botones 2', 'heroSurface', 'pick-hero-surface', defaultCustom.heroSurface || defaultCustom.surface, 'hero-button', 'hero-border') +
+                renderThemeGroupHeader('Botones') +
+                renderButtonSection('Secundarios', 'surface', 'pick-surface', defaultCustom.surface, 'button', 'border', 'Ver 360°, Explorar (hero), pestañas del footer, Calcular cuota y Ver planos.') +
+                renderButtonSection('Principal (CTA)', 'heroSurface', 'pick-hero-surface', defaultCustom.heroSurface || defaultCustom.accent || defaultCustom.surface, 'hero-button', 'hero-border', 'Ingresar, Continuar y acciones principales de cada pantalla.') +
+                renderThemeDivider() +
+                renderThemeGroupHeader('Detalle visual') +
                 '<div class="custom-theme-row custom-theme-row--tight">' +
                   '<span class="custom-theme-row-label">Sombras</span>' +
                   '<div class="custom-theme-text-toggle custom-theme-glass-toggle" data-glass-field="shadow">' +
                     renderShadowModeButtons() +
                   '</div>' +
                 '</div>' +
-                renderThemeDivider() +
                 '<div class="custom-theme-section custom-theme-section--plain">' +
                   '<div class="custom-theme-section-body">' +
                 '<div class="custom-theme-row">' +
-                  '<span class="custom-theme-row-label">Profundidad visual</span>' +
+                  '<span class="custom-theme-row-label">Viñeta</span>' +
                   '<div class="custom-theme-text-toggle custom-theme-depth-toggle">' +
                     '<button type="button" class="custom-theme-depth-btn" data-depth-mode="low" data-theme-visual-action="depth-low">Baja</button>' +
                     '<button type="button" class="custom-theme-depth-btn selected" data-depth-mode="medium" data-theme-visual-action="depth-medium">Media</button>' +
@@ -1642,10 +1982,12 @@ var VisitorPersonalizePanel = (function () {
       '</div>';
 
     bindAvatarColorModes();
-    ThemeSystem.renderGrid('personalizeThemeGrid', onThemeSelect);
+    bindPresetThemeGrid();
+    renderPresetThemeGrid();
     bindCustomThemeEditor();
     bindMisTemasPanel();
     bindProjectThemeConfirmModal();
+    bindOfficialPresetDeleteModal();
     if (typeof ThemeAIModal !== 'undefined') ThemeAIModal.init();
     refreshMisTemasList();
     bindSoundsToggle();
@@ -1683,7 +2025,7 @@ var VisitorPersonalizePanel = (function () {
   }
 
   function refreshThemePicker() {
-    ThemeSystem.renderGrid('personalizeThemeGrid', onThemeSelect);
+    renderPresetThemeGrid();
   }
 
   bindEditorSessionPersistence();
@@ -1695,6 +2037,7 @@ var VisitorPersonalizePanel = (function () {
     upsertSavedThemeInCache: upsertSavedThemeInCache,
     refreshThemePicker: refreshThemePicker,
     closeProjectThemeConfirm: closeProjectThemeConfirm,
+    closeOfficialPresetDeleteConfirm: closeOfficialPresetDeleteConfirm,
     dismissThemeEditorLayer: dismissThemeEditorLayer,
     resetThemeEditorOnLeave: resetThemeEditorOnLeave,
     isThemeEditorOpen: isThemeEditorOpen,
@@ -1709,3 +2052,5 @@ var VisitorPersonalizePanel = (function () {
     clearEditorSessionState: clearEditorSessionState
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-personalize-panel.js');}catch(_e){}

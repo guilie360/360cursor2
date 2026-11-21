@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-email-verification.js');}catch(_e){}
 /* Progressive email verification — showroom + gated features */
 var VisitorEmailVerification = (function () {
   var FEATURES = {
@@ -156,8 +157,15 @@ var VisitorEmailVerification = (function () {
   }
 
   function init() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/visitor-email-verification.js :: init');}catch(_bd){}
+  try {
+
     bindEvents();
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/visitor-email-verification.js :: init');}catch(_bd){}
   }
+}
 
   return {
     FEATURES: FEATURES,
@@ -169,3 +177,5 @@ var VisitorEmailVerification = (function () {
     init: init
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-email-verification.js');}catch(_e){}

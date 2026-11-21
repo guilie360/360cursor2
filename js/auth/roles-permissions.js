@@ -1,15 +1,20 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/roles-permissions.js');}catch(_e){}
 /* Platform roles and permissions — showroom architecture */
 var PlatformRoles = (function () {
   var ROLES = {
     USUARIO: 'usuario',
     ASESOR: 'asesor',
-    ADMIN: 'admin'
+    HUNTER: 'hunter',
+    ADMIN: 'admin',
+    SUPER_ADMIN: 'super_admin'
   };
 
   var ROLE_LABELS = {
     usuario: 'Usuario',
     asesor: 'Asesor',
-    admin: 'Administrador'
+    hunter: 'Hunter',
+    admin: 'Administrador',
+    super_admin: 'Super administrador'
   };
 
   function getPlatformProfile(profile) {
@@ -18,9 +23,12 @@ var PlatformRoles = (function () {
   }
 
   function getRole(profile) {
+    if (!profile) return ROLES.USUARIO;
     var platform = getPlatformProfile(profile);
-    if (!platform) return ROLES.USUARIO;
-    return platform.rol || ROLES.USUARIO;
+    if (platform && platform.rol) return platform.rol;
+    /* Top-level rol is set by VisitantesApi.enrichProfile — keep as fallback */
+    if (profile.rol) return profile.rol;
+    return ROLES.USUARIO;
   }
 
   function getRoleLabel(profile) {
@@ -35,12 +43,22 @@ var PlatformRoles = (function () {
     return getRole(profile) === ROLES.ASESOR;
   }
 
+  function isHunter(profile) {
+    return getRole(profile) === ROLES.HUNTER;
+  }
+
   function isAdmin(profile) {
     return getRole(profile) === ROLES.ADMIN;
   }
 
+  /* Global Dashboard + project admin surfaces: platform profiles.rol */
+  function isPlatformAdmin(profile) {
+    var role = getRole(profile);
+    return role === ROLES.ADMIN || role === ROLES.SUPER_ADMIN;
+  }
+
   function isStaff(profile) {
-    return isAsesor(profile) || isAdmin(profile);
+    return isAsesor(profile) || isHunter(profile) || isPlatformAdmin(profile);
   }
 
   return {
@@ -50,7 +68,9 @@ var PlatformRoles = (function () {
     getRoleLabel: getRoleLabel,
     isUsuario: isUsuario,
     isAsesor: isAsesor,
+    isHunter: isHunter,
     isAdmin: isAdmin,
+    isPlatformAdmin: isPlatformAdmin,
     isStaff: isStaff
   };
 })();
@@ -84,7 +104,7 @@ var PlatformPermissions = (function () {
 
   function has(profile, key) {
     if (!key) return false;
-    if (PlatformRoles.isAdmin(profile)) return true;
+    if (PlatformRoles.isPlatformAdmin(profile)) return true;
     return !!getPermissions(profile)[key];
   }
 
@@ -109,7 +129,7 @@ var PlatformPermissions = (function () {
 var PlatformVisibility = (function () {
   var RULES = {
     'dashboard.admin': function (profile) {
-      return PlatformRoles.isAdmin(profile);
+      return PlatformRoles.isPlatformAdmin(profile);
     },
     'project.edit': function (profile) {
       return PlatformPermissions.has(profile, PlatformPermissions.KEYS.EDITAR_PROYECTO);
@@ -127,7 +147,7 @@ var PlatformVisibility = (function () {
       return PlatformPermissions.has(profile, PlatformPermissions.KEYS.GESTIONAR_USUARIOS);
     },
     'project.officialTheme': function (profile) {
-      return PlatformRoles.isAdmin(profile);
+      return PlatformRoles.isPlatformAdmin(profile);
     }
   };
 
@@ -149,3 +169,5 @@ var PlatformVisibility = (function () {
     RULES: RULES
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/roles-permissions.js');}catch(_e){}

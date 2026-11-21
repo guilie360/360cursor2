@@ -1,0 +1,5 @@
+supabase/.management-token*
+.env
+.env.*
+node_modules/
+.vscode/
