@@ -1561,6 +1561,16 @@ body.hunter-mode main {
 #orderModal .order-client-fields select{
   width:100%;padding:11px 12px;border-radius:10px;
   border:1px solid rgba(255,255,255,.14);background:#0a0a0a;color:#f2f2f2;
+  color-scheme:dark;accent-color:#cfcfcf;
+}
+#orderModal .order-client-fields select option{
+  background:#111;color:#f2f2f2;color-scheme:dark;
+}
+#orderModal .order-client-fields select option:checked,
+#orderModal .order-client-fields select option:hover{
+  background:#2e2e2e!important;
+  background:linear-gradient(#2e2e2e,#2e2e2e)!important;
+  color:#fff!important;
 }
 #orderModal .order-fold{
   border:1px solid rgba(255,255,255,.1);
@@ -1577,18 +1587,25 @@ body.hunter-mode main {
 #orderModal .order-fold[open]>summary{border-bottom:1px solid rgba(255,255,255,.08)}
 #orderModal .order-biz-fold .field{padding:0 14px}
 #orderModal .order-biz-fold .field:last-child{padding-bottom:12px}
+#orderModal .order-summary-fold{margin-top:18px}
 #orderModal .order-summary-fold .order-details,
 #orderModal .order-summary-fold .quote-pay-schedule{padding:10px 14px 14px}
 #orderModal .order-total-bar{
   display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
-  padding:14px 0 6px;margin:4px 0 10px;
+  padding:14px 0 4px;margin:8px 0 0;
   border-top:1px solid rgba(255,255,255,.1);
 }
 #orderModal .order-total-bar small{display:block;color:rgba(255,255,255,.45);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
 #orderModal .order-total-bar strong{font:32px/1 Italiana,Georgia,serif;color:#fff}
 #orderModal .quote-test-flag{
-  display:flex!important;align-items:center;gap:8px;margin:6px 0 0!important;
-  color:rgba(255,255,255,.62);font-size:13px;text-transform:none;letter-spacing:0;
+  display:inline-flex!important;align-items:center;gap:6px;margin:10px 0 0!important;
+  width:auto;max-width:max-content;
+  color:rgba(255,255,255,.38);font-size:11px;font-weight:500;
+  text-transform:none;letter-spacing:0;line-height:1.2;cursor:pointer;
+}
+#orderModal .quote-test-flag input{
+  width:13px;height:13px;margin:0;flex:none;
+  accent-color:#8a8a8a;opacity:.85;
 }
 #orderModal .quote-pay-schedule--compact{margin:8px 0 0}
 #orderModal .quote-pay-schedule--compact .quote-pay-grid{gap:8px}
@@ -1900,4 +1917,26 @@ html.has-cur .btn{
 .breakdown .price-vat-note{
   margin:6px 0 0;
   text-align:right;
+}
+
+/* Selects dark sitewide — evita highlight azul de sistema */
+html,body,:root{color-scheme:dark;accent-color:#cfcfcf}
+select{
+  color-scheme:dark;
+  accent-color:#cfcfcf;
+  background-color:#111;
+  color:#f2f2f2;
+}
+select option{
+  color-scheme:dark;
+  background-color:#111;
+  color:#f2f2f2;
+}
+select option:checked,
+select option:hover,
+select option:focus,
+select option:active{
+  background-color:#2e2e2e!important;
+  background:linear-gradient(#2e2e2e,#2e2e2e)!important;
+  color:#fff!important;
 }

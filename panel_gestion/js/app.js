@@ -1,4 +1,7 @@
 const $=id=>document.getElementById(id);
+if(typeof window.fillPaddleCountrySelect==='function'){
+ try{window.fillPaddleCountrySelect($('customerCountry'),'ES')}catch(_){/* ignore */}
+}
 const money=n=>new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format(n);
 const num=(id,min=0,max=100000)=>Math.max(min,Math.min(max,Number($(id).value)||min));
 /* Precios sin IVA · + IVA si aplica (checkout / Paddle) */

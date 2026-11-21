@@ -606,11 +606,26 @@ button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid #cf
 /* Mi perfil: secciones plegables y foto de perfil */
 .profile-photo-identity{display:flex;flex-direction:column;align-items:center;gap:9px;flex:0 0 140px}.profile-name-input{width:140px;max-width:100%;padding:8px 9px;text-align:center;background:#101010;border:1px solid var(--line);border-radius:8px;color:var(--ink);font:12px Manrope,Arial,sans-serif}.profile-name-input::placeholder{color:var(--muted)}.profile-photo-row{display:flex;align-items:center;gap:18px;padding:18px 0 24px;margin-bottom:22px;border-bottom:1px solid var(--line,rgba(255,255,255,.12))}.profile-avatar-wrap{width:82px;height:82px;border-radius:50%;overflow:hidden;border:1px solid rgba(255,255,255,.2);display:grid;place-items:center;flex:0 0 82px;cursor:pointer;background:rgba(255,255,255,.045)}.profile-avatar-img{width:100%;height:100%;object-fit:cover}.profile-avatar-placeholder{font-size:30px;color:rgba(255,255,255,.6)}.profile-photo-copy{display:grid;gap:6px}.profile-photo-copy .desc{margin:0}.profile-photo-button{width:max-content;cursor:pointer}.profile-photo-copy small{max-width:520px;line-height:1.5}.profile-accordion-list{display:grid;gap:10px}.profile-accordion{border:1px solid rgba(255,255,255,.13);border-radius:12px;background:rgba(255,255,255,.018);overflow:hidden}.profile-accordion summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:19px 20px;cursor:pointer;font-weight:600}.profile-accordion summary::-webkit-details-marker{display:none}.profile-accordion summary:hover{background:rgba(255,255,255,.035)}.accordion-chevron{font-size:20px;color:rgba(255,255,255,.6);transition:transform .2s}.profile-accordion[open] .accordion-chevron{transform:rotate(45deg)}.profile-accordion-content{padding:0 20px 22px}.profile-accordion-content>.desc:first-child{margin-top:0}.profile-accordion-content .portal-dashboard-kpis{margin-top:4px}
 
-/* Ajuste global: todos los estados hover en gris con texto blanco */
-:root{color-scheme:dark}
-select,select option{color:#f5f5f5;background-color:#111}
-select option:hover,select option:focus,select option:checked{background-color:#555!important;color:#fff!important}
-button:hover,a:hover,[role="button"]:hover,.btn:hover,.choice:hover,.path-card:hover,.package-type:hover,.portal-card:hover,.step summary:hover,.addon-card:hover,.resource-card:hover,.hunter-goal:hover,.profile-accordion summary:hover,.field input:hover,.field select:hover,.textinput:hover,.portal-toolbar input:hover,.portal-toolbar select:hover{background-color:#3b3b3b!important;color:#fff!important}
+/* Ajuste global: estados hover/select en gris dark (sin azul de sistema) */
+:root{color-scheme:dark;accent-color:#cfcfcf}
+html,body{color-scheme:dark}
+select,
+select option{
+  color-scheme:dark;
+  color:#f5f5f5;
+  background-color:#111;
+  accent-color:#cfcfcf;
+}
+select option:hover,
+select option:focus,
+select option:checked,
+select option:active{
+  background-color:#2e2e2e!important;
+  background:linear-gradient(#2e2e2e,#2e2e2e)!important;
+  color:#fff!important;
+}
+button:hover,a:hover,[role="button"]:hover,.btn:hover,.choice:hover,.path-card:hover,.package-type:hover,.portal-card:hover,.step summary:hover,.addon-card:hover,.resource-card:hover,.hunter-goal:hover,.profile-accordion summary:hover,.field input:hover,.textinput:hover,.portal-toolbar input:hover{background-color:#3b3b3b!important;color:#fff!important}
+.field select:hover,.portal-toolbar select:hover{background-color:#1c1c1c!important;color:#fff!important;border-color:rgba(255,255,255,.28)!important}
 .demo-visual:hover,.btn.primary:hover,.login-submit:hover{background-color:#3b3b3b!important;color:#fff!important}
 
 /* Acceso restringido al módulo Pagos (demo local) */
