@@ -96,10 +96,19 @@ body.cotizador-app .quote-goal-footer-inner{
 }
 /* Spacer absorbe el centro (equivalente a la meta del panel); botones anclados izq/der */
 body.cotizador-app .quote-footer-spacer{flex:1 1 auto;min-width:8px}
+/* Identidad footer: negro + radio 13px (como Reiniciar). Comisión queda aparte. */
+body.cotizador-app .quote-footer-back,
+body.cotizador-app .quote-footer-fx,
+body.cotizador-app .quote-footer-charge,
+body.cotizador-app .quote-footer-reset{
+  border:1px solid rgba(255,255,255,.16)!important;
+  border-radius:13px!important;
+  background:rgba(10,10,10,.96)!important;
+  color:#eee!important;
+  box-sizing:border-box;
+}
 body.cotizador-app .quote-footer-back{
   flex:0 0 40px;width:40px;height:40px;margin:0;padding:0;z-index:5;
-  border:1px solid rgba(255,255,255,.16);border-radius:12px;
-  background:rgba(255,255,255,.04);color:#eee;
   display:grid;place-items:center;cursor:pointer;pointer-events:auto;
   transition:background .18s ease,border-color .18s ease,color .18s ease;
 }
@@ -111,12 +120,18 @@ body.cotizador-app .quote-footer-back svg{
 /* Mismo hover que el botón de mensaje del panel — al final del bloque para ganar al estado base */
 body.cotizador-app .quote-goal-footer .quote-footer-back:hover,
 body.cotizador-app .quote-goal-footer .quote-footer-back:focus-visible,
+body.cotizador-app .quote-goal-footer .quote-footer-fx:hover,
+body.cotizador-app .quote-goal-footer .quote-footer-fx:focus-visible,
+body.cotizador-app .quote-goal-footer .quote-footer-charge:hover,
+body.cotizador-app .quote-goal-footer .quote-footer-charge:focus-visible,
 body.cotizador-app .quote-goal-footer .quote-footer-reset:hover,
 body.cotizador-app .quote-goal-footer .quote-footer-reset:focus-visible{
   background:#3b3b3b!important;color:#fff!important;border:1px solid #fff!important;
   outline:none;box-shadow:none!important;transform:none!important;
 }
 body.cotizador-app .quote-goal-footer .quote-footer-back:active,
+body.cotizador-app .quote-goal-footer .quote-footer-fx:active,
+body.cotizador-app .quote-goal-footer .quote-footer-charge:active,
 body.cotizador-app .quote-goal-footer .quote-footer-reset:active{
   background:#4a4a4a!important;border:1px solid #fff!important;
 }
@@ -137,12 +152,11 @@ body.cotizador-app.modo-interno .quote-footer-commission.portal-hidden{
   display:flex!important;
 }
 body.cotizador-app .quote-footer-charge{
-  display:none;flex:0 0 auto;margin:0 8px 0 0;padding:8px 12px;
-  border:1px solid rgba(255,255,255,.22);border-radius:999px;background:transparent;
-  color:#d6d0c8;font:600 10px/1 var(--font-ui);letter-spacing:.12em;text-transform:uppercase;cursor:pointer
+  display:none;flex:0 0 auto;margin:0 8px 0 0;padding:0 14px;height:40px;
+  font:600 10px/1 var(--font-ui);letter-spacing:.12em;text-transform:uppercase;cursor:pointer;
+  align-items:center;justify-content:center;
 }
-body.cotizador-app.modo-interno .quote-footer-charge{display:inline-flex;align-items:center}
-body.cotizador-app .quote-footer-charge:hover{border-color:#fff;color:#fff}
+body.cotizador-app.modo-interno .quote-footer-charge{display:inline-flex}
 body.cotizador-app .quote-footer-commission small{
   font:600 var(--t-xs)/1 var(--font-ui);letter-spacing:.1em;text-transform:uppercase;
   color:#6f6a64;
@@ -160,11 +174,7 @@ body.cotizador-app .quote-footer-commission:hover strong{color:#d6d0c8}
 body.cotizador-app .quote-footer-fx{
   flex:0 0 auto;
   display:inline-flex;align-items:center;gap:7px;
-  margin:0 8px 0 0;padding:7px 10px;
-  border:1px solid rgba(255,255,255,.16);
-  border-radius:12px;
-  background:rgba(255,255,255,.04);
-  color:#d6d0c8;
+  margin:0 8px 0 0;padding:0 12px;height:40px;
   cursor:pointer;
   max-width:min(46vw,210px);
 }
@@ -178,9 +188,8 @@ body.cotizador-app .quote-footer-fx small{
   color:rgba(255,255,255,.72);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-body.cotizador-app .quote-footer-fx:hover,
 body.cotizador-app .quote-footer-fx[aria-expanded="true"]{
-  border-color:#fff;color:#fff;background:rgba(255,255,255,.07);
+  border-color:#fff!important;color:#fff!important;background:#3b3b3b!important;
 }
 body.cotizador-app .quote-footer-fx:hover small,
 body.cotizador-app .quote-footer-fx[aria-expanded="true"] small{color:#fff}
@@ -292,10 +301,7 @@ body.cotizador-app .quote-footer-reset{
   flex:0 0 40px!important;width:40px!important;height:40px!important;
   min-width:40px!important;max-width:40px!important;
   padding:0!important;margin:0;
-  border:1px solid rgba(255,255,255,.16)!important;border-radius:12px!important;
-  background:rgba(255,255,255,.04)!important;color:#eee!important;
   display:inline-flex!important;align-items:center;justify-content:center;
-  box-sizing:border-box;
 }
 body.cotizador-app .quote-footer-reset svg{
   width:18px;height:18px;stroke:currentColor;fill:none;
