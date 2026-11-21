@@ -185,7 +185,7 @@
     commissionBtn.classList.remove('portal-hidden');
   }
 
-  /* Cobrar cotización actual vía Stripe (panel Pagos) */
+  /* Cobrar: abre Panel → Pagos (cotizaciones + link Paddle) */
   if (modo === 'interno') {
     var chargeBtn = document.getElementById('internoChargeBtn');
     if (!chargeBtn) {
@@ -194,7 +194,7 @@
       chargeBtn.type = 'button';
       chargeBtn.className = 'quote-footer-charge mag';
       chargeBtn.textContent = 'Cobrar';
-      chargeBtn.title = 'Generar enlace Stripe con este presupuesto';
+      chargeBtn.title = 'Abrir Pagos: cotizaciones y link de cobro Paddle';
       chargeBtn.setAttribute('data-cursor', 'COBRAR');
       var footerInner = document.querySelector('.quote-goal-footer-inner');
       var priceBox = document.querySelector('.quote-footer-price');
