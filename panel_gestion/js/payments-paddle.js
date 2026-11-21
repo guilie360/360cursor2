@@ -638,78 +638,346 @@
     refresh();
   }
 
+  var PADDLE_FEE_RATE = 0.05; // estimado hasta reconciliar payouts reales
+
+  function isPaidCobro(r) {
+    return r && (r.status === 'cobrado' || r.status === 'paid' || r.status === 'completed');
+  }
+
+  function isOpenCobro(r) {
+    return r && (r.status === 'pending' || r.status === 'pendiente');
+  }
+
+  function looksLikeTestPay(row) {
+    var meta = row && row.metadata;
+    if (meta && (meta.is_test === true || meta.is_test === 'true')) return true;
+    var blob = [
+      row && row.customer_email,
+      row && row.customer_name,
+      row && row.concepto,
+      row && row.proyecto_label
+    ].join(' ').toLowerCase();
+    return /\b(test|prueba|testing|demo|asdf|testeo)\b/i.test(blob);
+  }
+
+  function cobroWhen(r) {
+    return r.paid_at || r.updated_at || r.created_at;
+  }
+
+  function monthKeyFromIso(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  function monthLabel(key) {
+    var parts = String(key || '').split('-');
+    if (parts.length < 2) return key || '—';
+    var d = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+    var label = d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  }
+
+  function currentMonthKey() {
+    var n = new Date();
+    return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0');
+  }
+
+  function stageLabel(stage) {
+    if (stage === 'deposit' || stage === 'anticipo') return 'Anticipo';
+    if (stage === 'balance' || stage === 'entrega') return 'Entrega';
+    return stage || 'Cobro';
+  }
+
+  function estimateFeeCents(amountCents) {
+    return Math.round((Number(amountCents) || 0) * PADDLE_FEE_RATE);
+  }
+
+  function estimateHunterCents(amountCents) {
+    return Math.round((Number(amountCents) || 0) * HUNTER_RATE);
+  }
+
+  function csvEscape(v) {
+    var s = String(v == null ? '' : v);
+    if (/[",\n;]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function downloadCsv(filename, rows) {
+    var csv = rows.map(function (line) {
+      return line.map(csvEscape).join(';');
+    }).join('\n');
+    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 500);
+  }
+
   function renderPanel(root) {
-    // Panel centrado en cotizaciones guardadas (PDF). Pedidos/cobros solo si hay actividad real.
     root.innerHTML =
       '<div class="panel-pay-stripe panel-pay-paddle">' +
-        '<div class="eyebrow">COTIZACIONES</div>' +
-        '<div class="portal-form quote-crm-toolbar">' +
-          '<label>Buscar<input type="search" data-quote-search placeholder="Nombre o email…" autocomplete="off"></label>' +
-          '<label class="quote-crm-sort-label">Ordenar' +
-            '<select data-quote-sort>' +
-              '<option value="newest" selected>Más recientes</option>' +
-              '<option value="oldest">Más antiguas</option>' +
-            '</select>' +
-          '</label>' +
-          '<div class="quote-crm-toolbar-actions">' +
-            '<label class="quote-crm-check"><input type="checkbox" data-quote-hide-tests> Ocultar pruebas</label>' +
-            '<button type="button" class="btn" data-quote-purge-tests>Borrar pruebas</button>' +
-            '<button type="button" class="btn" data-quote-purge-all>Vaciar</button>' +
+        '<section class="pay-books" data-pay-books>' +
+          '<div class="pay-books-head">' +
+            '<div>' +
+              '<div class="eyebrow">CONTABILIDAD</div>' +
+              '<p class="desc pay-books-lead">Ingresos reales del mes · solo cobros confirmados</p>' +
+            '</div>' +
+            '<div class="pay-books-controls">' +
+              '<label class="quote-crm-sort-label">Mes<select data-pay-month></select></label>' +
+              '<button type="button" class="btn" data-pay-export>Exportar CSV</button>' +
+            '</div>' +
           '</div>' +
-        '</div>' +
-        '<p class="desc" data-quote-status aria-live="polite"></p>' +
-        '<div class="portal-list" data-quote-list></div>' +
-        '<details class="quote-crm-activity">' +
-          '<summary><h3>Cobros</h3></summary>' +
-          '<div data-pay-activity><p class="desc">Cargando…</p></div>' +
+          '<div class="pay-kpi-grid" data-pay-kpis></div>' +
+          '<div class="eyebrow pay-ledger-eyebrow">LIBRO DEL MES</div>' +
+          '<div class="pay-ledger" data-pay-ledger><p class="desc">Cargando…</p></div>' +
+          '<p class="desc pay-books-note" data-pay-note></p>' +
+        '</section>' +
+
+        '<details class="quote-crm-activity pay-section-fold" open>' +
+          '<summary><h3>Cotizaciones</h3><span class="pay-fold-hint">pipeline comercial</span></summary>' +
+          '<div class="portal-form quote-crm-toolbar">' +
+            '<label>Buscar<input type="search" data-quote-search placeholder="Nombre o email…" autocomplete="off"></label>' +
+            '<label class="quote-crm-sort-label">Ordenar' +
+              '<select data-quote-sort>' +
+                '<option value="newest" selected>Más recientes</option>' +
+                '<option value="oldest">Más antiguas</option>' +
+              '</select>' +
+            '</label>' +
+            '<div class="quote-crm-toolbar-actions">' +
+              '<label class="quote-crm-check"><input type="checkbox" data-quote-hide-tests checked> Ocultar pruebas</label>' +
+              '<button type="button" class="btn" data-quote-purge-tests>Borrar pruebas</button>' +
+              '<button type="button" class="btn" data-quote-purge-all>Vaciar</button>' +
+            '</div>' +
+          '</div>' +
+          '<p class="desc" data-quote-status aria-live="polite"></p>' +
+          '<div class="portal-list" data-quote-list></div>' +
+        '</details>' +
+
+        '<details class="quote-crm-activity pay-section-fold">' +
+          '<summary><h3>Pedidos en curso</h3><span class="pay-fold-hint">anticipo / entrega</span></summary>' +
+          '<div data-pay-pedidos><p class="desc">Cargando…</p></div>' +
         '</details>' +
       '</div>';
     bindQuotesPanel(root);
-    loadPayActivity(root.querySelector('[data-pay-activity]'));
+    bindAccountingPanel(root);
   }
 
-  function loadPayActivity(host) {
-    if (!host) return;
-    Promise.all([fetchPedidos(), fetchCobros()]).then(function (pair) {
-      // Solo actividad útil: cobrado / en producción / pagado, o cobros no-pending
-      var pedidos = (pair[0] || []).filter(function (p) {
-        return p.status && p.status !== 'pendiente_anticipo';
+  function bindAccountingPanel(root) {
+    var monthEl = root.querySelector('[data-pay-month]');
+    var kpisEl = root.querySelector('[data-pay-kpis]');
+    var ledgerEl = root.querySelector('[data-pay-ledger]');
+    var noteEl = root.querySelector('[data-pay-note]');
+    var exportBtn = root.querySelector('[data-pay-export]');
+    var pedidosEl = root.querySelector('[data-pay-pedidos]');
+    if (!monthEl || !kpisEl || !ledgerEl) return;
+
+    var cache = { cobros: [], pedidos: [], month: currentMonthKey() };
+
+    function buildMonthOptions(cobros, pedidos) {
+      var keys = {};
+      keys[currentMonthKey()] = true;
+      (cobros || []).forEach(function (r) {
+        var k = monthKeyFromIso(cobroWhen(r));
+        if (k) keys[k] = true;
       });
-      var cobros = (pair[1] || []).filter(function (r) {
-        return (r.provider === 'paddle' || r.paddle_transaction_id) && r.status && r.status !== 'pending';
+      (pedidos || []).forEach(function (p) {
+        var k = monthKeyFromIso(p.created_at);
+        if (k) keys[k] = true;
+      });
+      return Object.keys(keys).sort().reverse();
+    }
+
+    function accountingRows(month) {
+      return (cache.cobros || []).filter(function (r) {
+        if (looksLikeTestPay(r)) return false;
+        if (!(r.provider === 'paddle' || r.paddle_transaction_id || r.provider === 'stripe' || !r.provider)) {
+          return false;
+        }
+        return monthKeyFromIso(cobroWhen(r)) === month;
+      });
+    }
+
+    function renderKpis(month) {
+      var rows = accountingRows(month);
+      var paid = rows.filter(isPaidCobro);
+      var open = rows.filter(isOpenCobro);
+      var bruto = paid.reduce(function (s, r) { return s + (Number(r.amount_cents) || 0); }, 0);
+      var fee = paid.reduce(function (s, r) { return s + estimateFeeCents(r.amount_cents); }, 0);
+      var hunter = paid.reduce(function (s, r) { return s + estimateHunterCents(r.amount_cents); }, 0);
+      var neto = Math.max(0, bruto - fee);
+      var pendiente = open.reduce(function (s, r) { return s + (Number(r.amount_cents) || 0); }, 0);
+
+      // Entregas aún no cobradas de pedidos ya en producción
+      (cache.pedidos || []).forEach(function (p) {
+        if (looksLikeTestPay(p)) return;
+        if (p.status === 'en_produccion' || p.status === 'pendiente_entrega') {
+          pendiente += Number(p.balance_cents) || 0;
+        } else if (p.status === 'pendiente_anticipo') {
+          pendiente += Number(p.deposit_cents) || 0;
+        }
       });
 
-      if (!pedidos.length && !cobros.length) {
-        host.innerHTML = '<p class="desc">Sin cobros confirmados todavía.</p>';
+      kpisEl.innerHTML =
+        '<div class="pay-kpi"><small>Cobrado bruto</small><strong>' + moneyFromCents(bruto) + '</strong><em>' + paid.length + ' cobros</em></div>' +
+        '<div class="pay-kpi"><small>Neto estimado</small><strong>' + moneyFromCents(neto) + '</strong><em>−' + Math.round(PADDLE_FEE_RATE * 100) + '% fee Paddle</em></div>' +
+        '<div class="pay-kpi"><small>Hunter a pagar</small><strong>' + moneyFromCents(hunter) + '</strong><em>8% sobre cobrado</em></div>' +
+        '<div class="pay-kpi"><small>Pendiente</small><strong>' + moneyFromCents(pendiente) + '</strong><em>links / entregas</em></div>';
+    }
+
+    function renderLedger(month) {
+      var rows = accountingRows(month).slice().sort(function (a, b) {
+        return new Date(cobroWhen(b)) - new Date(cobroWhen(a));
+      });
+      if (!rows.length) {
+        ledgerEl.innerHTML = '<p class="desc">Sin movimientos en ' + escapeHtml(monthLabel(month)) + '.</p>';
+        if (noteEl) noteEl.textContent = 'Cuando un checkout Paddle se confirme, aparecerá aquí automáticamente.';
         return;
       }
 
-      var pedidosHtml = pedidos.length
-        ? pedidos.map(function (p) {
-            return (
-              '<div class="portal-list-item quote-pay-pedido">' +
-                '<span><b>' + escapeHtml(p.proyecto_label || p.customer_name || 'Pedido') + '</b>' +
-                '<small class="muted">' + escapeHtml(p.customer_email || '') + ' · ' + statusLabel(p.status) + '</small></span>' +
-                '<span style="text-align:right"><b>' + moneyFromCents(p.quote_total_cents) + '</b>' +
-                '<small class="muted">Anticipo ' + moneyFromCents(p.deposit_cents) + ' · Entrega ' + moneyFromCents(p.balance_cents) + '</small></span>' +
-              '</div>'
-            );
-          }).join('')
-        : '<p class="desc">Sin pedidos activos todavía.</p>';
+      var paid = rows.filter(isPaidCobro);
+      var open = rows.filter(isOpenCobro);
+      var other = rows.filter(function (r) { return !isPaidCobro(r) && !isOpenCobro(r); });
+      var ordered = paid.concat(open, other);
 
-      var cobrosHtml = cobros.length
-        ? '<table class="panel-pay-table"><thead><tr><th>Concepto</th><th>Estado</th><th>Importe</th></tr></thead><tbody>' +
-          cobros.map(function (r) {
-            return '<tr><td>' + escapeHtml(r.concepto) + '</td><td>' + statusLabel(r.status) + '</td><td>' + moneyFromCents(r.amount_cents) + '</td></tr>';
-          }).join('') + '</tbody></table>'
-        : '';
+      ledgerEl.innerHTML =
+        '<div class="portal-list pay-ledger-list">' +
+        ordered.map(function (r) {
+          var when = cobroWhen(r);
+          var day = when ? new Date(when).toLocaleString('es-ES', {
+            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+          }) : '—';
+          var stage = stageLabel(r.payment_stage || (r.metadata && r.metadata.stage));
+          var fee = estimateFeeCents(r.amount_cents);
+          var stateClass = isPaidCobro(r) ? 'is-paid' : (isOpenCobro(r) ? 'is-open' : 'is-other');
+          return (
+            '<details class="quote-crm-row pay-ledger-row ' + stateClass + '">' +
+              '<summary class="quote-crm-row-summary">' +
+                '<span class="quote-crm-row-title">' + escapeHtml(r.customer_email || r.proyecto_label || 'Cobro') + '</span>' +
+                '<span class="quote-crm-row-time">' + escapeHtml(day) + '</span>' +
+                '<span class="pay-ledger-amount">' + moneyFromCents(r.amount_cents) + '</span>' +
+                '<span class="quote-crm-row-chevron" aria-hidden="true"></span>' +
+              '</summary>' +
+              '<div class="quote-crm-row-body">' +
+                '<div class="quote-crm-row-meta">' +
+                  '<small class="muted">' +
+                    escapeHtml(stage) + ' · ' + escapeHtml(statusLabel(r.status)) +
+                    (r.proyecto_label ? ' · ' + escapeHtml(r.proyecto_label) : '') +
+                    (r.concepto ? ' · ' + escapeHtml(r.concepto) : '') +
+                  '</small>' +
+                  '<small class="muted">Fee est. ' + moneyFromCents(fee) +
+                    ' · Neto est. ' + moneyFromCents(Math.max(0, (Number(r.amount_cents) || 0) - fee)) +
+                    ' · Hunter ' + moneyFromCents(estimateHunterCents(r.amount_cents)) +
+                  '</small>' +
+                  (r.paddle_transaction_id
+                    ? '<small class="muted">Txn ' + escapeHtml(r.paddle_transaction_id) + '</small>'
+                    : '') +
+                '</div>' +
+              '</div>' +
+            '</details>'
+          );
+        }).join('') +
+        '</div>';
 
-      host.innerHTML =
-        '<div class="portal-list">' + pedidosHtml + '</div>' +
-        (cobrosHtml ? '<h4 style="margin-top:18px">Cobros</h4>' + cobrosHtml : '');
-    }).catch(function (err) {
-      host.innerHTML = '<div class="portal-note">No se pudo cargar la actividad: ' + escapeHtml(err.message) + '</div>';
-    });
+      if (noteEl) {
+        noteEl.textContent = 'Fee e IVA son estimados hasta reconciliar con el payout de Paddle. Las pruebas no entran en contabilidad.';
+      }
+    }
+
+    function renderPedidos() {
+      if (!pedidosEl) return;
+      var rows = (cache.pedidos || []).filter(function (p) {
+        return !looksLikeTestPay(p);
+      });
+      if (!rows.length) {
+        pedidosEl.innerHTML = '<p class="desc">Sin pedidos todavía.</p>';
+        return;
+      }
+      pedidosEl.innerHTML =
+        '<div class="portal-list">' +
+        rows.map(function (p) {
+          return (
+            '<div class="portal-list-item quote-pay-pedido">' +
+              '<span><b>' + escapeHtml(p.proyecto_label || p.customer_name || 'Pedido') + '</b>' +
+              '<small class="muted">' + escapeHtml(p.customer_email || '') + ' · ' + statusLabel(p.status) + '</small></span>' +
+              '<span style="text-align:right"><b>' + moneyFromCents(p.quote_total_cents) + '</b>' +
+              '<small class="muted">Anticipo ' + moneyFromCents(p.deposit_cents) +
+                ' · Entrega ' + moneyFromCents(p.balance_cents) + '</small></span>' +
+            '</div>'
+          );
+        }).join('') +
+        '</div>';
+    }
+
+    function paint() {
+      var month = monthEl.value || currentMonthKey();
+      cache.month = month;
+      renderKpis(month);
+      renderLedger(month);
+      renderPedidos();
+    }
+
+    function fillMonthSelect(keys) {
+      var selected = monthEl.value || currentMonthKey();
+      if (keys.indexOf(selected) < 0) selected = keys[0] || currentMonthKey();
+      monthEl.innerHTML = keys.map(function (k) {
+        return '<option value="' + escapeHtml(k) + '"' + (k === selected ? ' selected' : '') + '>' +
+          escapeHtml(monthLabel(k)) + '</option>';
+      }).join('');
+    }
+
+    async function refresh() {
+      kpisEl.innerHTML = '<p class="desc">Cargando…</p>';
+      ledgerEl.innerHTML = '<p class="desc">Cargando…</p>';
+      try {
+        var pair = await Promise.all([fetchCobros(), fetchPedidos()]);
+        cache.cobros = pair[0] || [];
+        cache.pedidos = pair[1] || [];
+        fillMonthSelect(buildMonthOptions(cache.cobros, cache.pedidos));
+        paint();
+      } catch (err) {
+        kpisEl.innerHTML = '';
+        ledgerEl.innerHTML = '<div class="portal-note">No se pudo cargar contabilidad: ' + escapeHtml(err.message) + '</div>';
+        if (pedidosEl) pedidosEl.innerHTML = '<div class="portal-note">' + escapeHtml(err.message) + '</div>';
+      }
+    }
+
+    monthEl.addEventListener('change', paint);
+    if (exportBtn) {
+      exportBtn.addEventListener('click', function () {
+        var month = monthEl.value || currentMonthKey();
+        var rows = accountingRows(month).slice().sort(function (a, b) {
+          return new Date(cobroWhen(b)) - new Date(cobroWhen(a));
+        });
+        var lines = [[
+          'fecha', 'email', 'concepto', 'etapa', 'estado', 'bruto_eur', 'fee_est_eur', 'neto_est_eur', 'hunter_eur', 'txn'
+        ]];
+        rows.forEach(function (r) {
+          var amount = Number(r.amount_cents) || 0;
+          var fee = estimateFeeCents(amount);
+          lines.push([
+            cobroWhen(r) || '',
+            r.customer_email || '',
+            r.concepto || r.proyecto_label || '',
+            stageLabel(r.payment_stage || (r.metadata && r.metadata.stage)),
+            r.status || '',
+            (amount / 100).toFixed(2),
+            (fee / 100).toFixed(2),
+            (Math.max(0, amount - fee) / 100).toFixed(2),
+            (estimateHunterCents(amount) / 100).toFixed(2),
+            r.paddle_transaction_id || ''
+          ]);
+        });
+        downloadCsv('contabilidad-' + month + '.csv', lines);
+      });
+    }
+
+    refresh();
   }
 
   window.PanelPaddle = {
