@@ -1,0 +1,2 @@
+-- Approve access posts two chat messages: authorization info + OTP code.
+-- Applied on project via MCP as panel_payments_approve_two_messages.

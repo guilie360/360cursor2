@@ -48,10 +48,44 @@ body:not(.workspace-authenticated) #profileFloat{display:none!important}
 
 /* El acceso al chat solo existe dentro del espacio autenticado */
 body:not(.workspace-authenticated) #teamChatFloat,body:not(.workspace-authenticated) #teamChatPopup{display:none!important}
-#teamChatFloat .chat-unread-badge{position:absolute;right:-7px;top:-7px;min-width:19px;height:19px;padding:0 5px;border-radius:20px;background:#c33;color:#fff;font:700 10px/19px Manrope,Arial,sans-serif;text-align:center;border:1px solid #151515;display:none}
-.team-chat-message.is-pay-request{border-color:rgba(205,178,138,.45);background:#1a1814}
-.team-chat-message.is-pay-key{border-color:rgba(120,200,140,.4);background:#141a16}
-.team-chat-message.is-mine{align-self:flex-end;background:#262626}
+#teamChatFloat.footer-chat-btn,
+#hunterGoalFooter #teamChatFloat{
+ overflow:visible!important;
+}
+#teamChatFloat .chat-unread-badge{
+ position:absolute!important;
+ right:-4px!important;top:-6px!important;
+ left:auto!important;bottom:auto!important;
+ min-width:18px;height:18px;padding:0 5px;border-radius:20px;
+ background:#c33;color:#fff;
+ font:700 10px/18px Manrope,Arial,sans-serif;text-align:center;
+ border:2px solid #0a0a0a;display:none;z-index:6;
+ box-shadow:0 2px 8px rgba(0,0,0,.45);
+ pointer-events:none;
+}
+/* Gris = yo · Negro = otros */
+.team-chat-message{
+ background:#0a0a0a!important;
+ border:1px solid rgba(255,255,255,.12)!important;
+ color:#f2f2f2;
+ align-self:flex-start;
+}
+.team-chat-message.is-mine{
+ align-self:flex-end!important;
+ background:#2c2c2c!important;
+ border-color:rgba(255,255,255,.16)!important;
+}
+.team-chat-message.is-pay-request,
+.team-chat-message.is-pay-key,
+.team-chat-message.is-pay-key-info{
+ border-color:rgba(255,255,255,.14)!important;
+}
+.team-chat-message.is-pay-key .chat-otp-code{
+ font:700 22px/1.2 Manrope,Arial,sans-serif;
+ letter-spacing:.18em;
+ color:#fff;
+ margin:4px 0 10px;
+}
 .chat-msg-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .chat-msg-actions .btn{min-height:36px;padding:8px 12px;border-radius:13px;font-size:11px}
 .chat-msg-status{margin:8px 0 0;font-size:11px;color:rgba(255,255,255,.5)}
@@ -811,11 +845,13 @@ body.hunter-mode .portal{min-height:0}
  border-top:1px solid rgba(255,255,255,.14);
  background:rgba(10,10,10,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
  padding-bottom:env(safe-area-inset-bottom,0px)!important;
+ overflow:visible!important;
 }
 #hunterGoalFooter .hunter-goal-footer-inner{
  width:100%;max-width:none;margin:0;box-sizing:border-box;
  display:flex;align-items:center;gap:12px;
  padding:10px max(16px,var(--chrome-side,22px));
+ overflow:visible!important;
 }
 /* Anula por completo el .portal-back flotante/gold si alguien lo reusa */
 /* Estado base: sin body.* para no ganar al :hover */

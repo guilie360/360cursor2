@@ -107,6 +107,8 @@
     var isMine = m.sender_id === state.userId;
     var cls = 'team-chat-message' + (isMine ? ' is-mine' : '');
     var actions = '';
+    var bodyHtml = '<p>' + escapeHtml(m.body || '') + '</p>';
+
     if (m.kind === 'payments_key_request') {
       cls += ' is-pay-request';
       if (isAdmin() && status !== 'approved' && status !== 'rejected') {
@@ -121,13 +123,28 @@
         actions = '<p class="chat-msg-status">Rechazada</p>';
       }
     }
-    if (m.kind === 'payments_key') cls += ' is-pay-key';
+
+    if (m.kind === 'payments_key_info') {
+      cls += ' is-pay-key-info';
+    }
+
+    if (m.kind === 'payments_key') {
+      cls += ' is-pay-key';
+      var otp = String(meta.otp || m.body || '').replace(/\D/g, '');
+      bodyHtml =
+        '<div class="chat-otp-code" data-otp-value="' + escapeHtml(otp) + '">' + escapeHtml(otp) + '</div>';
+      actions =
+        '<div class="chat-msg-actions">' +
+          '<button type="button" class="btn" data-copy-otp="' + escapeHtml(otp) + '">Copiar código</button>' +
+        '</div>';
+    }
+
     return (
       '<div class="' + cls + '" data-msg-id="' + escapeHtml(m.id) + '">' +
         '<strong>' + escapeHtml(m.sender_name || 'Equipo') +
           (m.sender_rol ? ' · ' + escapeHtml(m.sender_rol) : '') +
         '</strong>' +
-        '<p>' + escapeHtml(m.body || '') + '</p>' +
+        bodyHtml +
         actions +
         '<time>' + new Date(m.created_at).toLocaleString('es-ES') + '</time>' +
       '</div>'
@@ -294,6 +311,28 @@
     if (box && !box.dataset.liveBound) {
       box.dataset.liveBound = '1';
       box.addEventListener('click', async function (e) {
+        var copyBtn = e.target.closest('[data-copy-otp]');
+        if (copyBtn) {
+          e.preventDefault();
+          var code = copyBtn.getAttribute('data-copy-otp') || '';
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(code);
+            } else {
+              var ta = document.createElement('textarea');
+              ta.value = code;
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand('copy');
+              ta.remove();
+            }
+            copyBtn.textContent = 'Copiado';
+            setTimeout(function () { copyBtn.textContent = 'Copiar código'; }, 1400);
+          } catch (err) {
+            alert('No se pudo copiar. Código: ' + code);
+          }
+          return;
+        }
         var approve = e.target.closest('[data-pay-approve]');
         var reject = e.target.closest('[data-pay-reject]');
         if (!approve && !reject) return;
