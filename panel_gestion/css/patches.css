@@ -1659,6 +1659,21 @@ html.has-cur .btn{
 }
 
 /* ===== Pagos (dark chrome · sin dorado) ===== */
+/* Restaurar selección de texto solo en Pagos (copiar montos, emails, IDs…) */
+#portalSubpage:has(#panelPaymentsRoot),
+#portalSubpage:has(#panelPaymentsRoot) *,
+#portalSubpage[data-module="payments"],
+#portalSubpage[data-module="payments"] *,
+.panel-payments,
+.panel-payments *,
+.panel-pay-paddle,
+.panel-pay-paddle *,
+.panel-pay-stripe,
+.panel-pay-stripe *{
+  -webkit-user-select:text!important;
+  user-select:text!important;
+  caret-color:auto!important;
+}
 #portalSubpage:has(#panelPaymentsRoot),
 #portalSubpage[data-module="payments"]{
   background:linear-gradient(180deg,#121212 0%,#0c0c0c 100%);
@@ -1848,7 +1863,6 @@ html.has-cur .btn{
   gap:12px;
   padding:14px 16px;
   cursor:pointer;
-  user-select:none;
 }
 .panel-pay-paddle .quote-crm-row-summary::-webkit-details-marker{display:none}
 .panel-pay-paddle .quote-crm-row-title{
