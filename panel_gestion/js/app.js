@@ -1732,6 +1732,12 @@ $('portalSubpage').addEventListener('click',e=>{
 });
 let activeChatThread='team';
 window.setActiveChatThread=function(thread){activeChatThread=String(thread||'team');};
+window.clearActiveLocalChat=function(){
+ if(!String(activeChatThread||'').startsWith('dm:'))return;
+ const keep=readTeamChat().filter(m=>chatThreadForMessage(m)!==activeChatThread);
+ try{localStorage.setItem('boxiesTeamChat',JSON.stringify(keep));}catch(e){}
+ renderTeamChat();
+};
 const DEFAULT_CHAT_MEMBERS=['Guille (Admin)','Toby (Hunter)'];
 function readChatMembers(){try{localStorage.setItem('boxiesChatMembers',JSON.stringify(DEFAULT_CHAT_MEMBERS));}catch(e){}return DEFAULT_CHAT_MEMBERS;}
 function readTeamChat(){try{return JSON.parse(localStorage.getItem('boxiesTeamChat')||'[]');}catch(e){return [];}}

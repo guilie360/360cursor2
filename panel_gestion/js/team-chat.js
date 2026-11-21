@@ -338,6 +338,42 @@
     await reload();
   }
 
+  function currentChatLabel() {
+    if (state.activeView === 'clave') return 'Clave dinámica';
+    if (state.activeView === 'dm') {
+      var title = $('chatPopupTitle');
+      return (title && title.textContent) || 'este chat privado';
+    }
+    return 'Equipo';
+  }
+
+  async function clearCurrentChat() {
+    var label = currentChatLabel();
+    var ok = window.confirm(
+      '¿Seguro que quieres borrar el chat “' + label + '”?\n\n' +
+      'Se eliminarán todos los mensajes y no se podrán recuperar.'
+    );
+    if (!ok) return;
+
+    // DMs locales: limpia solo ese hilo en localStorage (app.js).
+    if (state.activeView === 'dm') {
+      if (typeof window.clearActiveLocalChat === 'function') {
+        window.clearActiveLocalChat();
+      }
+      return;
+    }
+
+    var client = getClient();
+    if (!client) {
+      alert('Entra con tu cuenta de equipo para borrar el chat.');
+      return;
+    }
+    var scope = state.activeView === 'clave' ? 'clave' : 'team';
+    var result = await client.rpc('panel_chat_clear', { p_scope: scope });
+    if (result.error) throw new Error(result.error.message || 'No se pudo borrar el chat');
+    await reload();
+  }
+
   async function requestPaymentsKey() {
     if (isAdmin()) {
       window.boxiesPaymentsUnlocked = true;
@@ -483,6 +519,21 @@
         setTimeout(injectClaveInMemberList, 30);
       });
     }
+
+    var clearBtn = $('teamChatClearBtn');
+    if (clearBtn && !clearBtn.dataset.liveBound) {
+      clearBtn.dataset.liveBound = '1';
+      clearBtn.addEventListener('click', async function () {
+        try {
+          clearBtn.disabled = true;
+          await clearCurrentChat();
+        } catch (err) {
+          alert(err.message || 'No se pudo borrar el chat');
+        } finally {
+          clearBtn.disabled = false;
+        }
+      });
+    }
   }
 
   async function start() {
@@ -500,6 +551,7 @@
     openClaveView: openClaveView,
     openTeamView: openTeamView,
     openDmMode: openDmMode,
+    clearCurrentChat: clearCurrentChat,
     verifyOtp: verifyOtp,
     isAdmin: isAdmin,
     markRead: markRead
