@@ -853,17 +853,7 @@
     return Math.round((Number(amountCents) || 0) * HUNTER_RATE);
   }
 
-  function csvEscape(v) {
-    var s = String(v == null ? '' : v);
-    if (/[",\n;]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-    return s;
-  }
-
-  function downloadCsv(filename, rows) {
-    var csv = rows.map(function (line) {
-      return line.map(csvEscape).join(';');
-    }).join('\n');
-    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  function downloadBlob(blob, filename) {
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
@@ -871,7 +861,278 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 500);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+
+  function createSinglePagePdf(jpegDataUrl, canvas) {
+    var pageW = 595.28;
+    var pageH = 841.89;
+    var pxW = canvas.width;
+    var pxH = Math.round(pxW * pageH / pageW);
+    var sc = Math.min(1, pxH / canvas.height);
+    var dw = canvas.width * sc;
+    var dh = canvas.height * sc;
+    var ox = (pxW - dw) / 2;
+    var slice = document.createElement('canvas');
+    slice.width = pxW;
+    slice.height = pxH;
+    var ctx = slice.getContext('2d');
+    ctx.fillStyle = '#0d0d0d';
+    ctx.fillRect(0, 0, pxW, pxH);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(canvas, ox, 0, dw, dh);
+    var data = slice.toDataURL('image/jpeg', 0.96).split(',')[1];
+    var binary = atob(data);
+    var bytes = new Uint8Array(binary.length);
+    for (var j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+    var enc = new TextEncoder();
+    var chunks = [];
+    var offsets = [0];
+    var length = 0;
+    function addBytes(b) { chunks.push(b); length += b.length; }
+    function addText(t) { addBytes(enc.encode(t)); }
+    var content = 'q\n' + pageW + ' 0 0 ' + pageH + ' 0 0 cm\n/Im0 Do\nQ';
+    addText('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+    offsets[1] = length; addText('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+    offsets[2] = length; addText('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
+    offsets[3] = length; addText('3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + pageW + ' ' + pageH + '] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n');
+    offsets[4] = length; addText('4 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + pxW + ' /Height ' + pxH + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + bytes.length + ' >>\nstream\n');
+    addBytes(bytes); addText('\nendstream\nendobj\n');
+    offsets[5] = length; addText('5 0 obj\n<< /Length ' + enc.encode(content).length + ' >>\nstream\n' + content + '\nendstream\nendobj\n');
+    var total = 6;
+    var xref = length;
+    addText('xref\n0 ' + total + '\n0000000000 65535 f \n');
+    for (var i = 1; i < total; i++) addText(String(offsets[i]).padStart(10, '0') + ' 00000 n \n');
+    addText('trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF');
+    return new Blob(chunks, { type: 'application/pdf' });
+  }
+
+  async function loadPdfLogo() {
+    var logo = new Image();
+    var candidates = [
+      '/panel_gestion/assets/logo-pdf.png',
+      '/panel_gestion/assets/logo.png',
+      'assets/logo-pdf.png',
+      'assets/logo.png'
+    ];
+    await new Promise(function (resolve) {
+      var i = 0;
+      function tryNext() {
+        if (i >= candidates.length) {
+          logo.removeAttribute('src');
+          return resolve();
+        }
+        logo.onload = function () { resolve(); };
+        logo.onerror = function () { i += 1; tryNext(); };
+        logo.src = candidates[i++];
+      }
+      tryNext();
+    });
+    return logo;
+  }
+
+  async function buildAccountingCanvas(opts) {
+    opts = opts || {};
+    try {
+      await Promise.all([
+        document.fonts.load('400 52px Italiana'),
+        document.fonts.load('400 22px Manrope'),
+        document.fonts.load('700 22px Manrope')
+      ]);
+    } catch (e) {}
+
+    var logo = await loadPdfLogo();
+    var T = {
+      bg: '#0d0d0d',
+      ink: '#f1eee8',
+      muted: '#b2a797',
+      acc: '#c5a675',
+      gold: '#d0b88f'
+    };
+    var SERIF = 'Italiana,Georgia,serif';
+    var SANS = 'Manrope,Arial,sans-serif';
+    var monthTitle = opts.monthLabel || 'Mes';
+    var kpis = opts.kpis || {};
+    var rows = (opts.rows || []).slice(0, 18);
+    var more = Math.max(0, (opts.rows || []).length - rows.length);
+
+    var W = 1200;
+    var pad = 92;
+    var right = W - pad;
+    var headerH = 390;
+    var kpiH = 150;
+    var rowH = 54;
+    var footerH = 110;
+    var H = headerH + kpiH + 40 + rows.length * rowH + (more ? 36 : 0) + footerH + 40;
+    H = Math.max(H, 1697);
+
+    var canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    var c = canvas.getContext('2d');
+    function rr(x, y, w, h, r) {
+      c.beginPath();
+      c.moveTo(x + r, y);
+      c.arcTo(x + w, y, x + w, y + h, r);
+      c.arcTo(x + w, y + h, x, y + h, r);
+      c.arcTo(x, y + h, x, y, r);
+      c.arcTo(x, y, x + w, y, r);
+      c.closePath();
+    }
+
+    c.fillStyle = T.bg;
+    c.fillRect(0, 0, W, H);
+    var ambient = c.createRadialGradient(W * 0.78, 90, 20, W * 0.78, 90, 720);
+    ambient.addColorStop(0, 'rgba(205,178,138,.045)');
+    ambient.addColorStop(0.42, 'rgba(205,178,138,.012)');
+    ambient.addColorStop(1, 'rgba(205,178,138,0)');
+    c.fillStyle = ambient;
+    c.fillRect(0, 0, W, H);
+
+    var cx = 30;
+    var cy = 30;
+    var cw = W - 60;
+    var ch = H - 60;
+    c.save();
+    c.shadowColor = 'rgba(0,0,0,.88)';
+    c.shadowBlur = 58;
+    c.shadowOffsetY = 22;
+    var card = c.createLinearGradient(cx, cy, cx, cy + ch);
+    card.addColorStop(0, '#1b1b1b');
+    card.addColorStop(0.48, '#151515');
+    card.addColorStop(1, '#101010');
+    rr(cx, cy, cw, ch, 22);
+    c.fillStyle = card;
+    c.fill();
+    c.restore();
+    rr(cx, cy, cw, ch, 22);
+    c.strokeStyle = 'rgba(205,178,138,.20)';
+    c.lineWidth = 1.5;
+    c.stroke();
+
+    var logoW = 0;
+    if (logo.naturalWidth) {
+      var logoH = 72;
+      logoW = logoH * logo.naturalWidth / logo.naturalHeight;
+      c.drawImage(logo, pad, 70, logoW, logoH);
+      logoW += 24;
+    }
+    c.textAlign = 'left';
+    c.textBaseline = 'alphabetic';
+    c.fillStyle = T.acc;
+    c.font = '700 15px ' + SANS;
+    c.fillText('360PREVENTA  ·  CONTABILIDAD', pad + logoW, 108);
+    c.fillStyle = T.ink;
+    c.font = '400 52px ' + SERIF;
+    c.fillText(monthTitle, pad, 210);
+    c.fillStyle = T.muted;
+    c.font = '400 20px ' + SANS;
+    c.fillText('Resumen de ingresos y movimientos del mes', pad, 252);
+    c.textAlign = 'right';
+    c.fillStyle = '#918777';
+    c.font = '500 14px ' + SANS;
+    c.fillText(new Intl.DateTimeFormat('es-ES', {
+      day: '2-digit', month: 'long', year: 'numeric'
+    }).format(new Date()), right, 108);
+
+    c.strokeStyle = 'rgba(205,178,138,.45)';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(pad, 290);
+    c.lineTo(right, 290);
+    c.stroke();
+
+    var kpiItems = [
+      { label: 'Cobrado bruto', value: kpis.bruto || '—' },
+      { label: 'Neto estimado', value: kpis.neto || '—' },
+      { label: 'Hunter 8%', value: kpis.hunter || '—' },
+      { label: 'Pendiente', value: kpis.pendiente || '—' }
+    ];
+    var gap = 16;
+    var boxW = (W - 2 * pad - gap * 3) / 4;
+    var kpiY = 318;
+    kpiItems.forEach(function (item, i) {
+      var x = pad + i * (boxW + gap);
+      c.save();
+      c.shadowColor = 'rgba(0,0,0,.5)';
+      c.shadowBlur = 18;
+      c.shadowOffsetY = 8;
+      rr(x, kpiY, boxW, 118, 13);
+      c.fillStyle = '#111111';
+      c.fill();
+      c.restore();
+      rr(x, kpiY, boxW, 118, 13);
+      c.strokeStyle = 'rgba(205,178,138,.18)';
+      c.lineWidth = 1;
+      c.stroke();
+      c.textAlign = 'left';
+      c.fillStyle = T.muted;
+      c.font = '600 12px ' + SANS;
+      c.fillText(item.label.toUpperCase(), x + 18, kpiY + 36);
+      c.fillStyle = T.gold;
+      c.font = '400 28px ' + SERIF;
+      c.fillText(item.value, x + 18, kpiY + 84);
+    });
+
+    var y = kpiY + 150;
+    c.fillStyle = T.acc;
+    c.font = '700 13px ' + SANS;
+    c.textAlign = 'left';
+    c.fillText('MOVIMIENTOS', pad, y);
+    y += 24;
+
+    if (!rows.length) {
+      c.fillStyle = T.muted;
+      c.font = '400 18px ' + SANS;
+      c.fillText('Sin movimientos en este mes.', pad, y + 28);
+    } else {
+      rows.forEach(function (r, i) {
+        var rh = rowH;
+        if (i % 2 === 0) {
+          c.save();
+          c.shadowColor = 'rgba(0,0,0,.4)';
+          c.shadowBlur = 12;
+          c.shadowOffsetY = 4;
+          rr(pad - 12, y, W - 2 * pad + 24, rh - 4, 9);
+          c.fillStyle = 'rgba(255,255,255,.025)';
+          c.fill();
+          c.restore();
+        }
+        var mid = y + rh / 2 + 5;
+        c.textAlign = 'left';
+        c.fillStyle = T.ink;
+        c.font = '600 16px ' + SANS;
+        c.fillText(r.when || '—', pad, mid);
+        c.fillStyle = T.muted;
+        c.font = '400 15px ' + SANS;
+        c.fillText(r.client || '—', pad + 150, mid);
+        c.fillText(r.stage || '', pad + 520, mid);
+        c.fillText(r.status || '', pad + 680, mid);
+        c.textAlign = 'right';
+        c.fillStyle = T.ink;
+        c.font = '700 16px ' + SANS;
+        c.fillText(r.amount || '—', right, mid);
+        c.strokeStyle = 'rgba(205,178,138,.12)';
+        c.lineWidth = 1;
+        c.beginPath();
+        c.moveTo(pad, y + rh - 2);
+        c.lineTo(right, y + rh - 2);
+        c.stroke();
+        y += rh;
+      });
+      if (more > 0) {
+        c.textAlign = 'left';
+        c.fillStyle = T.muted;
+        c.font = '400 14px ' + SANS;
+        c.fillText('… y ' + more + ' movimiento' + (more === 1 ? '' : 's') + ' más en el panel.', pad, y + 22);
+      }
+    }
+
+    c.fillStyle = '#8f887d';
+    c.font = '400 13px ' + SANS;
+    c.textAlign = 'center';
+    c.fillText('360PREVENTA.COM  ·  INFORME INTERNO DE PAGOS', W / 2, H - 56);
+    return canvas;
   }
 
   function renderPanel(root) {
@@ -912,7 +1173,7 @@
               '<div class="quote-crm-toolbar-actions">' +
                 '<label class="quote-crm-check"><input type="checkbox" data-pay-hide-tests checked> Ocultar pruebas</label>' +
                 '<button type="button" class="btn" data-pay-purge-tests>Borrar pruebas</button>' +
-                '<button type="button" class="btn" data-pay-export>Exportar CSV</button>' +
+                '<button type="button" class="btn" data-pay-export>Descargar PDF</button>' +
               '</div>' +
             '</div>' +
             '<p class="desc" data-pay-status aria-live="polite"></p>' +
@@ -1167,32 +1428,63 @@
       });
     }
     if (exportBtn) {
-      exportBtn.addEventListener('click', function () {
+      exportBtn.addEventListener('click', async function () {
         var month = monthEl.value || currentMonthKey();
         var rows = accountingRows(month).slice().sort(function (a, b) {
           return new Date(cobroWhen(b)) - new Date(cobroWhen(a));
         });
-        var lines = [[
-          'fecha', 'email', 'concepto', 'etapa', 'estado', 'prueba', 'bruto_eur', 'fee_est_eur', 'neto_est_eur', 'hunter_eur', 'txn'
-        ]];
-        rows.forEach(function (r) {
-          var amount = Number(r.amount_cents) || 0;
-          var fee = estimateFeeCents(amount);
-          lines.push([
-            cobroWhen(r) || '',
-            r.customer_email || '',
-            r.concepto || r.proyecto_label || '',
-            stageLabel(r.payment_stage || (r.metadata && r.metadata.stage)),
-            r.status || '',
-            looksLikeTestPay(r) ? 'si' : 'no',
-            (amount / 100).toFixed(2),
-            (fee / 100).toFixed(2),
-            (Math.max(0, amount - fee) / 100).toFixed(2),
-            (estimateHunterCents(amount) / 100).toFixed(2),
-            r.paddle_transaction_id || ''
-          ]);
+        var paid = rows.filter(isPaidCobro);
+        var open = rows.filter(isOpenCobro);
+        var bruto = paid.reduce(function (s, r) { return s + (Number(r.amount_cents) || 0); }, 0);
+        var fee = paid.reduce(function (s, r) { return s + estimateFeeCents(r.amount_cents); }, 0);
+        var hunter = paid.reduce(function (s, r) { return s + estimateHunterCents(r.amount_cents); }, 0);
+        var pendiente = open.reduce(function (s, r) { return s + (Number(r.amount_cents) || 0); }, 0);
+        (cache.pedidos || []).forEach(function (p) {
+          if (hideTestsOn() && looksLikeTestPay(p)) return;
+          if (p.status === 'en_produccion' || p.status === 'pendiente_entrega') {
+            pendiente += Number(p.balance_cents) || 0;
+          } else if (p.status === 'pendiente_anticipo') {
+            pendiente += Number(p.deposit_cents) || 0;
+          }
         });
-        downloadCsv('contabilidad-' + month + '.csv', lines);
+        exportBtn.disabled = true;
+        var prev = exportBtn.textContent;
+        exportBtn.textContent = 'Generando PDF…';
+        if (statusEl) statusEl.textContent = 'Preparando informe…';
+        try {
+          var canvas = await buildAccountingCanvas({
+            monthLabel: monthLabel(month),
+            kpis: {
+              bruto: moneyFromCents(bruto),
+              neto: moneyFromCents(Math.max(0, bruto - fee)),
+              hunter: moneyFromCents(hunter),
+              pendiente: moneyFromCents(pendiente)
+            },
+            rows: rows.map(function (r) {
+              var when = cobroWhen(r);
+              var client = String(r.customer_name || r.customer_email || 'Cobro').trim();
+              if (client.length > 28) client = client.slice(0, 27) + '…';
+              return {
+                when: when ? new Date(when).toLocaleDateString('es-ES', {
+                  day: '2-digit', month: 'short'
+                }) : '—',
+                client: client,
+                stage: stageLabel(r.payment_stage || (r.metadata && r.metadata.stage)),
+                status: statusLabel(r.status),
+                amount: moneyFromCents(r.amount_cents)
+              };
+            })
+          });
+          var jpeg = canvas.toDataURL('image/jpeg', 0.96);
+          var pdf = createSinglePagePdf(jpeg, canvas);
+          downloadBlob(pdf, 'Contabilidad_' + month + '.pdf');
+          if (statusEl) statusEl.textContent = 'PDF descargado.';
+        } catch (err) {
+          if (statusEl) statusEl.textContent = err.message || 'No se pudo generar el PDF.';
+        } finally {
+          exportBtn.disabled = false;
+          exportBtn.textContent = prev || 'Descargar PDF';
+        }
       });
     }
 
