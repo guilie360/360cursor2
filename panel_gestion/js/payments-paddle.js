@@ -431,7 +431,7 @@
           hideTests: !!(hideTests && hideTests.checked)
         });
         if (!rows.length) {
-          list.innerHTML = '<p class="desc">No hay cotizaciones guardadas. Se crean al descargar el PDF desde el cotizador.</p>';
+          list.innerHTML = '<p class="desc">Sin cotizaciones. Se crean al descargar el PDF.</p>';
           return;
         }
         list.innerHTML = rows.map(function (r) {
@@ -445,10 +445,10 @@
               '<span style="text-align:right;display:flex;flex-direction:column;gap:8px;align-items:flex-end">' +
                 '<b>' + moneyFromCents(r.total_cents) + '</b>' +
                 '<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' +
-                  '<button type="button" class="btn primary" data-quote-charge="deposit">Generar link cobro</button>' +
-                  '<button type="button" class="btn" data-quote-open="1"' + (r.last_checkout_url ? '' : ' disabled') + '>Abrir link</button>' +
-                  '<button type="button" class="btn" data-quote-test="1">' + (r.is_test ? 'Quitar prueba' : 'Marcar prueba') + '</button>' +
-                  '<button type="button" class="btn" data-quote-delete="1">Eliminar</button>' +
+                  '<button type="button" class="btn primary" data-quote-charge="deposit">Cobrar</button>' +
+                  '<button type="button" class="btn" data-quote-open="1"' + (r.last_checkout_url ? '' : ' disabled') + '>Link</button>' +
+                  '<button type="button" class="btn" data-quote-test="1">' + (r.is_test ? 'No prueba' : 'Prueba') + '</button>' +
+                  '<button type="button" class="btn" data-quote-delete="1">Borrar</button>' +
                 '</span>' +
               '</span>' +
             '</div>'
@@ -456,7 +456,7 @@
         }).join('');
 
         if (hideTests && hideTests.checked && !rows.length) {
-          if (status) status.textContent = 'No hay cotizaciones reales visibles. Desmarca “Ocultar pruebas” o marca entradas como prueba.';
+          if (status) status.textContent = 'Solo hay pruebas. Desmarca el filtro o bórralas.';
         }
 
         list.querySelectorAll('.quote-crm-row').forEach(function (el) {
@@ -535,7 +535,7 @@
         purgeTests.disabled = true;
         try {
           var n = await PreventaQuotes.deleteTestQuotes();
-          if (status) status.textContent = n ? ('Eliminadas ' + n + ' pruebas.') : 'No había cotizaciones marcadas como prueba. Usa “Marcar prueba” o “Vaciar todas”.';
+          if (status) status.textContent = n ? ('Eliminadas: ' + n) : 'No había pruebas marcadas.';
           refresh();
         } catch (err) {
           if (status) status.textContent = err.message || 'No se pudieron borrar las pruebas.';
@@ -567,21 +567,19 @@
     // Panel centrado en cotizaciones guardadas (PDF). Pedidos/cobros solo si hay actividad real.
     root.innerHTML =
       '<div class="panel-pay-stripe panel-pay-paddle">' +
-        '<div class="eyebrow">360PREVENTA · PAGOS</div>' +
-        '<h3>Cotizaciones guardadas</h3>' +
-        '<p class="desc">Cada descarga de PDF registra nombre, email y total. Busca al cliente, genera el link de cobro (anticipo 50%) y ábrelo en <code>/pagos</code>.</p>' +
+        '<div class="eyebrow">COTIZACIONES</div>' +
         '<div class="portal-form quote-crm-toolbar">' +
-          '<label>Buscar cliente<input type="search" data-quote-search placeholder="Nombre o correo…" autocomplete="off"></label>' +
+          '<label>Buscar<input type="search" data-quote-search placeholder="Nombre o email…" autocomplete="off"></label>' +
           '<div class="quote-crm-toolbar-actions">' +
             '<label class="quote-crm-check"><input type="checkbox" data-quote-hide-tests> Ocultar pruebas</label>' +
             '<button type="button" class="btn" data-quote-purge-tests>Borrar pruebas</button>' +
-            '<button type="button" class="btn" data-quote-purge-all>Vaciar todas</button>' +
+            '<button type="button" class="btn" data-quote-purge-all>Vaciar</button>' +
           '</div>' +
         '</div>' +
         '<p class="desc" data-quote-status aria-live="polite"></p>' +
         '<div class="portal-list" data-quote-list></div>' +
         '<details class="quote-crm-activity">' +
-          '<summary><h3>Actividad de cobro</h3><small class="muted">Solo pagos confirmados</small></summary>' +
+          '<summary><h3>Cobros</h3></summary>' +
           '<div data-pay-activity><p class="desc">Cargando…</p></div>' +
         '</details>' +
       '</div>';
@@ -601,7 +599,7 @@
       });
 
       if (!pedidos.length && !cobros.length) {
-        host.innerHTML = '<p class="desc">Aún no hay cobros confirmados. Cuando un cliente pague (o marques un cobro), aparecerá aquí.</p>';
+        host.innerHTML = '<p class="desc">Sin cobros confirmados todavía.</p>';
         return;
       }
 
