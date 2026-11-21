@@ -528,10 +528,46 @@
   }
 
   function renderPanel(root) {
-    root.innerHTML = '<div class="portal-note">Cargando pagos…</div>';
+    // Panel centrado en cotizaciones guardadas (PDF). Pedidos/cobros solo si hay actividad real.
+    root.innerHTML =
+      '<div class="panel-pay-stripe panel-pay-paddle">' +
+        '<div class="eyebrow">CLIENTES · COTIZACIONES</div>' +
+        '<h3>Cotizaciones guardadas</h3>' +
+        '<p class="desc">Cada descarga de PDF registra nombre, email y total. Aquí buscas al cliente, generas el link de cobro (anticipo 50%) y lo abres en <code>/pagos</code>.</p>' +
+        '<div class="portal-form quote-crm-toolbar" style="margin-bottom:14px;display:grid;gap:12px">' +
+          '<label>Buscar cliente<input type="search" data-quote-search placeholder="Nombre o correo…" autocomplete="off"></label>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">' +
+            '<label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" data-quote-hide-tests> Ocultar pruebas</label>' +
+            '<button type="button" class="btn" data-quote-purge-tests>Borrar todas las pruebas</button>' +
+          '</div>' +
+        '</div>' +
+        '<p class="desc" data-quote-status aria-live="polite"></p>' +
+        '<div class="portal-list" data-quote-list></div>' +
+        '<details class="quote-crm-activity" style="margin-top:28px">' +
+          '<summary style="cursor:pointer;list-style:none"><h3 style="display:inline;margin:0">Actividad de cobro</h3> <small class="muted">Pedidos y cobros Paddle (solo con pago iniciado)</small></summary>' +
+          '<div data-pay-activity style="margin-top:14px"><p class="desc">Cargando…</p></div>' +
+        '</details>' +
+      '</div>';
+    bindQuotesPanel(root);
+    loadPayActivity(root.querySelector('[data-pay-activity]'));
+  }
+
+  function loadPayActivity(host) {
+    if (!host) return;
     Promise.all([fetchPedidos(), fetchCobros()]).then(function (pair) {
-      var pedidos = pair[0];
-      var cobros = pair[1].filter(function (r) { return r.provider === 'paddle' || r.paddle_transaction_id; });
+      // Solo actividad útil: cobrado / en producción / pagado, o cobros no-pending
+      var pedidos = (pair[0] || []).filter(function (p) {
+        return p.status && p.status !== 'pendiente_anticipo';
+      });
+      var cobros = (pair[1] || []).filter(function (r) {
+        return (r.provider === 'paddle' || r.paddle_transaction_id) && r.status && r.status !== 'pending';
+      });
+
+      if (!pedidos.length && !cobros.length) {
+        host.innerHTML = '<p class="desc">Aún no hay cobros confirmados. Cuando un cliente pague (o marques un cobro), aparecerá aquí.</p>';
+        return;
+      }
+
       var pedidosHtml = pedidos.length
         ? pedidos.map(function (p) {
             return (
@@ -543,36 +579,20 @@
               '</div>'
             );
           }).join('')
-        : '<p class="desc">Aún no hay pedidos 50/50. Se crean al pagar el anticipo o al generar un link desde cotizaciones.</p>';
+        : '<p class="desc">Sin pedidos activos todavía.</p>';
 
       var cobrosHtml = cobros.length
         ? '<table class="panel-pay-table"><thead><tr><th>Concepto</th><th>Estado</th><th>Importe</th></tr></thead><tbody>' +
           cobros.map(function (r) {
             return '<tr><td>' + escapeHtml(r.concepto) + '</td><td>' + statusLabel(r.status) + '</td><td>' + moneyFromCents(r.amount_cents) + '</td></tr>';
           }).join('') + '</tbody></table>'
-        : '<p class="desc">Sin cobros Paddle todavía.</p>';
+        : '';
 
-      root.innerHTML =
-        '<div class="panel-pay-stripe panel-pay-paddle">' +
-          '<div class="eyebrow">PADDLE · SANDBOX</div>' +
-          '<h3>Cotizaciones guardadas</h3>' +
-          '<p class="desc">Busca por nombre o email, genera el link de cobro (anticipo 50%) y ábrelo en <code>/pagos</code>. Puedes eliminar pruebas.</p>' +
-          '<div class="portal-form" style="margin-bottom:14px">' +
-            '<label>Buscar cliente<input type="search" data-quote-search placeholder="Nombre o correo…" autocomplete="off"></label>' +
-            '<label style="display:flex;align-items:center;gap:8px;margin-top:8px"><input type="checkbox" data-quote-hide-tests> Ocultar pruebas</label>' +
-            '<button type="button" class="btn" data-quote-purge-tests style="margin-top:8px">Borrar todas las pruebas</button>' +
-          '</div>' +
-          '<p class="desc" data-quote-status aria-live="polite"></p>' +
-          '<div class="portal-list" data-quote-list></div>' +
-          '<h3 style="margin-top:28px">Pedidos con anticipo y entrega</h3>' +
-          '<p class="desc">Totales sin IVA. El impuesto lo calcula Paddle en el checkout.</p>' +
-          '<div class="portal-list">' + pedidosHtml + '</div>' +
-          '<h3 style="margin-top:22px">Cobros</h3>' +
-          cobrosHtml +
-        '</div>';
-      bindQuotesPanel(root);
+      host.innerHTML =
+        '<div class="portal-list">' + pedidosHtml + '</div>' +
+        (cobrosHtml ? '<h4 style="margin-top:18px">Cobros</h4>' + cobrosHtml : '');
     }).catch(function (err) {
-      root.innerHTML = '<div class="portal-note">No se pudieron cargar los pagos: ' + escapeHtml(err.message) + '</div>';
+      host.innerHTML = '<div class="portal-note">No se pudo cargar la actividad: ' + escapeHtml(err.message) + '</div>';
     });
   }
 
