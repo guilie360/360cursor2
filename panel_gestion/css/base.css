@@ -295,7 +295,7 @@ a.portal-card,button.portal-card{appearance:none}
 .login-wordmark{font:36px Italiana,Georgia,serif;letter-spacing:.34em;margin:0 0 10px 0;padding-left:.34em;color:#f5f5f5}
 .login-subtitle{color:#9a9a9a;margin:0 auto 34px;max-width:430px;font-size:14px}
 .login-google,.login-submit{width:100%;padding:17px 15px;border:1px solid rgba(255,255,255,.16);background:#0c0c0c;color:#f0f0f0;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
-.login-google{margin-bottom:24px}.login-submit{background:#f2f2f2;color:#0a0a0a;border-color:#f2f2f2;margin-top:12px}
+.login-google{margin-bottom:24px}.login-submit{background:#000;color:#f0f0f0;border-color:rgba(255,255,255,.10);margin-top:12px}
 .login-divider{display:flex;align-items:center;gap:14px;color:#6e6e6e;font-size:11px;margin:8px 0 22px}.login-divider:before,.login-divider:after{content:"";height:1px;background:rgba(255,255,255,.1);flex:1}
 .login-field{text-align:left;margin:13px 0}.login-field label{display:block;color:#8f8f8f;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}.login-field input{width:100%;padding:15px;background:#080808;border:1px solid rgba(255,255,255,.14);color:#eee;outline:none;color-scheme:dark;caret-color:#eee}.login-field input:focus{border-color:rgba(255,255,255,.42);background:#080808}
 .login-field input:-webkit-autofill,
@@ -491,8 +491,8 @@ button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid #cf
  animation:rise .7s var(--ease) backwards}
 .login-google,.login-submit{border-radius:var(--r-ctl);transition:transform .2s var(--ease),border-color .2s ease,background-color .2s ease,box-shadow .25s ease}
 .login-google:hover{border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.04)}
-.login-submit{font-weight:700;background:#f2f2f2!important;color:#0a0a0a!important;border-color:#f2f2f2!important;box-shadow:0 10px 22px -12px rgba(0,0,0,.95)}
-.login-submit:hover{transform:translateY(-1px);background:#fff!important;color:#000!important;border-color:#fff!important;box-shadow:0 16px 28px -14px rgba(0,0,0,.95)}
+.login-submit{font-weight:700;background:#000!important;color:#f0f0f0!important;border-color:var(--edge,rgba(255,255,255,.10))!important;box-shadow:none}
+.login-submit:hover{transform:translateY(-1px);background:#0a0a0a!important;color:#fff!important;border-color:rgba(255,255,255,.18)!important;box-shadow:none}
 .login-submit:active,.login-google:active{transform:translateY(1px)}
 .login-submit::after{display:none!important;animation:none!important;opacity:0!important}
 .login-field input:focus{border-color:rgba(255,255,255,.4)!important;box-shadow:0 0 0 3px rgba(255,255,255,.06)!important}
