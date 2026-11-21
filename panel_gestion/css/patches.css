@@ -1915,6 +1915,50 @@ html.has-cur .btn{
   font:500 12px/1 Manrope,Arial,sans-serif;
   letter-spacing:.02em;
 }
+.pay-tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin:0 0 18px;
+}
+.pay-tab{
+  appearance:none;
+  border:1px solid rgba(255,255,255,.14);
+  background:#101010;
+  color:rgba(255,255,255,.62);
+  border-radius:12px;
+  padding:14px 16px;
+  font:600 13px/1.2 Manrope,Arial,sans-serif;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.pay-tab:hover{border-color:rgba(255,255,255,.28);color:#fff;background:#161616}
+.pay-tab.is-active{
+  background:#fff;
+  color:#111;
+  border-color:#fff;
+}
+.pay-tab-panel{margin-top:2px}
+.pay-toolbar{margin-top:10px}
+.pay-meta-grid{display:grid;gap:8px;padding-top:12px}
+.pay-meta-row{
+  display:flex;justify-content:space-between;gap:16px;align-items:baseline;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  padding:0 0 8px;
+}
+.pay-meta-row span{
+  color:rgba(255,255,255,.42);
+  font:600 10px/1.2 Manrope,Arial,sans-serif;
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.pay-meta-row strong{
+  color:rgba(255,255,255,.86);
+  font:500 13px/1.35 Manrope,Arial,sans-serif;
+  text-align:right;
+  word-break:break-word;
+}
+.pay-auto-hint{margin:10px 0 0!important;font-size:11px!important;color:rgba(255,255,255,.38)!important}
 .pay-books{margin:4px 0 8px}
 .pay-books-head{
   display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;

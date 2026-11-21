@@ -463,8 +463,57 @@
     return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   }
 
+  function metaRow(label, value) {
+    if (value == null || value === '') return '';
+    return '<div class="pay-meta-row"><span>' + escapeHtml(label) + '</span><strong>' + value + '</strong></div>';
+  }
+
+  function clientCardHtml(opts) {
+    opts = opts || {};
+    return (
+      '<details class="quote-crm-row pay-client-card ' + escapeHtml(opts.extraClass || '') + '"' +
+        (opts.attrs || '') + '>' +
+        '<summary class="quote-crm-row-summary">' +
+          '<span class="quote-crm-row-title">' + escapeHtml(opts.title || 'Sin nombre') + '</span>' +
+          (opts.time ? '<span class="quote-crm-row-time">' + escapeHtml(opts.time) + '</span>' : '') +
+          '<span class="pay-ledger-amount">' + escapeHtml(opts.amount || '—') + '</span>' +
+          '<span class="quote-crm-row-chevron" aria-hidden="true"></span>' +
+        '</summary>' +
+        '<div class="quote-crm-row-body">' +
+          (opts.bodyHtml || '') +
+        '</div>' +
+      '</details>'
+    );
+  }
+
+  function bindPayTabs(root) {
+    var tabs = root.querySelectorAll('[data-pay-tab]');
+    var panels = {
+      quotes: root.querySelector('[data-pay-panel="quotes"]'),
+      books: root.querySelector('[data-pay-panel="books"]')
+    };
+    function activate(name) {
+      tabs.forEach(function (btn) {
+        var on = btn.getAttribute('data-pay-tab') === name;
+        btn.classList.toggle('is-active', on);
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      Object.keys(panels).forEach(function (key) {
+        if (!panels[key]) return;
+        panels[key].hidden = key !== name;
+      });
+    }
+    tabs.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        activate(btn.getAttribute('data-pay-tab') || 'quotes');
+      });
+    });
+    activate('quotes');
+  }
+
   function bindQuotesPanel(root) {
     var search = root.querySelector('[data-quote-search]');
+    var monthEl = root.querySelector('[data-quote-month]');
     var sortEl = root.querySelector('[data-quote-sort]');
     var list = root.querySelector('[data-quote-list]');
     var status = root.querySelector('[data-quote-status]');
@@ -472,124 +521,150 @@
     var purgeTests = root.querySelector('[data-quote-purge-tests]');
     if (!list || !window.PreventaQuotes) return;
 
+    var cacheRows = [];
+
+    function fillMonthOptions(rows) {
+      if (!monthEl) return;
+      var keys = {};
+      keys[currentMonthKey()] = true;
+      (rows || []).forEach(function (r) {
+        var k = monthKeyFromIso(r.created_at);
+        if (k) keys[k] = true;
+      });
+      var selected = monthEl.value || 'all';
+      var ordered = Object.keys(keys).sort().reverse();
+      monthEl.innerHTML =
+        '<option value="all"' + (selected === 'all' ? ' selected' : '') + '>Todos los meses</option>' +
+        ordered.map(function (k) {
+          return '<option value="' + escapeHtml(k) + '"' + (k === selected ? ' selected' : '') + '>' +
+            escapeHtml(monthLabel(k)) + '</option>';
+        }).join('');
+    }
+
+    function paint() {
+      var month = monthEl ? monthEl.value : 'all';
+      var rows = cacheRows.filter(function (r) {
+        if (month && month !== 'all' && monthKeyFromIso(r.created_at) !== month) return false;
+        return true;
+      });
+      if (!rows.length) {
+        list.innerHTML = '<p class="desc">Sin cotizaciones en este periodo.</p>';
+        return;
+      }
+      var html = '';
+      var lastDay = null;
+      rows.forEach(function (r) {
+        var day = quoteDayKey(r.created_at);
+        if (day !== lastDay) {
+          lastDay = day;
+          html += '<div class="quote-crm-day">' + escapeHtml(quoteDayLabel(r.created_at)) + '</div>';
+        }
+        var title = String(r.customer_name || '').trim() || String(r.customer_email || '').trim() || 'Sin nombre';
+        var time = r.created_at ? new Date(r.created_at).toLocaleString('es-ES', {
+          day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+        }) : '';
+        var body =
+          '<div class="pay-meta-grid">' +
+            (r.is_test ? '<div class="quote-crm-test-tag">prueba</div>' : '') +
+            metaRow('Email', escapeHtml(r.customer_email || '—')) +
+            metaRow('Teléfono', escapeHtml(r.customer_phone || '—')) +
+            metaRow('País', escapeHtml(r.customer_country || '—')) +
+            metaRow('Proyecto', escapeHtml(r.proyecto_label || '—')) +
+            metaRow('Creada', escapeHtml(r.created_at ? new Date(r.created_at).toLocaleString('es-ES') : '—')) +
+            metaRow('Total cotización', moneyFromCents(r.total_cents)) +
+          '</div>' +
+          '<div class="quote-crm-row-actions">' +
+            '<button type="button" class="btn primary" data-quote-charge="deposit">Cobrar</button>' +
+            '<button type="button" class="btn" data-quote-open="1"' + (r.last_checkout_url ? '' : ' disabled') + '>Link</button>' +
+            '<button type="button" class="btn" data-quote-test="1">' + (r.is_test ? 'No prueba' : 'Prueba') + '</button>' +
+            '<button type="button" class="btn" data-quote-delete="1">Borrar</button>' +
+          '</div>' +
+          '<p class="desc pay-auto-hint">Se crea sola al descargar el PDF del cotizador</p>';
+        html += clientCardHtml({
+          title: title,
+          time: time,
+          amount: moneyFromCents(r.total_cents),
+          bodyHtml: body,
+          attrs: ' data-quote-id="' + escapeHtml(r.id) + '"'
+        });
+      });
+      list.innerHTML = html;
+
+      list.querySelectorAll('.quote-crm-row').forEach(function (el) {
+        var id = el.getAttribute('data-quote-id');
+        var row = cacheRows.find(function (x) { return x.id === id; });
+        if (!row) return;
+        var chargeBtn = el.querySelector('[data-quote-charge]');
+        var openBtn = el.querySelector('[data-quote-open]');
+        var testBtn = el.querySelector('[data-quote-test]');
+        var delBtn = el.querySelector('[data-quote-delete]');
+        if (chargeBtn) {
+          chargeBtn.addEventListener('click', async function () {
+            chargeBtn.disabled = true;
+            if (status) status.textContent = 'Generando checkout Paddle…';
+            try {
+              var out = await generateLinkForQuote(row, 'deposit');
+              if (status) status.textContent = 'Link listo. Copiado al portapapeles si el navegador lo permite.';
+              try { await navigator.clipboard.writeText(out.url); } catch (eClip) {}
+              var go = window.confirm('Link de cobro creado.\n\n' + out.url + '\n\n¿Abrir checkout ahora?');
+              if (go) window.location.assign(out.url);
+              else refresh();
+            } catch (err) {
+              if (status) status.textContent = err.message || 'No se pudo generar el link.';
+              chargeBtn.disabled = false;
+            }
+          });
+        }
+        if (openBtn) {
+          openBtn.addEventListener('click', function () {
+            if (row.last_checkout_url) window.open(row.last_checkout_url, '_blank', 'noopener');
+          });
+        }
+        if (testBtn) {
+          testBtn.addEventListener('click', async function () {
+            testBtn.disabled = true;
+            try {
+              await PreventaQuotes.setTestFlag(row.id, !row.is_test);
+              refresh();
+            } catch (err) {
+              if (status) status.textContent = err.message || 'No se pudo marcar.';
+              testBtn.disabled = false;
+            }
+          });
+        }
+        if (delBtn) {
+          delBtn.addEventListener('click', async function () {
+            if (!window.confirm('¿Eliminar cotización de ' + row.customer_name + '?')) return;
+            delBtn.disabled = true;
+            try {
+              await PreventaQuotes.deleteQuote(row.id);
+              if (status) status.textContent = 'Cotización eliminada.';
+              refresh();
+            } catch (err) {
+              if (status) status.textContent = err.message || 'No se pudo eliminar.';
+              delBtn.disabled = false;
+            }
+          });
+        }
+      });
+    }
+
     async function refresh() {
       list.innerHTML = '<p class="desc">Cargando cotizaciones…</p>';
       if (status) status.textContent = '';
       try {
         var sort = sortEl && sortEl.value === 'oldest' ? 'oldest' : 'newest';
-        var rows = await PreventaQuotes.listQuotes({
+        cacheRows = await PreventaQuotes.listQuotes({
           query: search ? search.value : '',
           hideTests: !!(hideTests && hideTests.checked),
           sort: sort
         });
-        if (!rows.length) {
-          list.innerHTML = '<p class="desc">Sin cotizaciones. Se crean al descargar el PDF.</p>';
+        fillMonthOptions(cacheRows);
+        if (!cacheRows.length) {
+          list.innerHTML = '<p class="desc">Sin cotizaciones. Se crean automáticamente al descargar el PDF.</p>';
           return;
         }
-        var html = '';
-        var lastDay = null;
-        rows.forEach(function (r) {
-          var day = quoteDayKey(r.created_at);
-          if (day !== lastDay) {
-            lastDay = day;
-            html += '<div class="quote-crm-day">' + escapeHtml(quoteDayLabel(r.created_at)) + '</div>';
-          }
-          var when = r.created_at ? new Date(r.created_at).toLocaleString('es-ES') : '';
-          var title = String(r.customer_name || '').trim() || String(r.customer_email || '').trim() || 'Sin nombre';
-          var time = quoteTimeLabel(r.created_at);
-          var metaBits = [
-            r.customer_email || '',
-            r.customer_phone || '',
-            r.customer_country || '',
-            r.proyecto_label || '',
-            when
-          ].filter(Boolean).map(escapeHtml);
-          html += (
-            '<details class="quote-crm-row" data-quote-id="' + escapeHtml(r.id) + '">' +
-              '<summary class="quote-crm-row-summary">' +
-                '<span class="quote-crm-row-title">' + escapeHtml(title) + '</span>' +
-                (time ? '<span class="quote-crm-row-time">' + escapeHtml(time) + '</span>' : '') +
-                '<span class="quote-crm-row-chevron" aria-hidden="true"></span>' +
-              '</summary>' +
-              '<div class="quote-crm-row-body">' +
-                '<div class="quote-crm-row-meta">' +
-                  (r.is_test ? '<span class="quote-crm-test-tag">prueba</span>' : '') +
-                  '<small class="muted">' + metaBits.join(' · ') + '</small>' +
-                  '<b class="quote-crm-row-amount">' + moneyFromCents(r.total_cents) + '</b>' +
-                '</div>' +
-                '<div class="quote-crm-row-actions">' +
-                  '<button type="button" class="btn primary" data-quote-charge="deposit">Cobrar</button>' +
-                  '<button type="button" class="btn" data-quote-open="1"' + (r.last_checkout_url ? '' : ' disabled') + '>Link</button>' +
-                  '<button type="button" class="btn" data-quote-test="1">' + (r.is_test ? 'No prueba' : 'Prueba') + '</button>' +
-                  '<button type="button" class="btn" data-quote-delete="1">Borrar</button>' +
-                '</div>' +
-              '</div>' +
-            '</details>'
-          );
-        });
-        list.innerHTML = html;
-
-        if (hideTests && hideTests.checked && !rows.length) {
-          if (status) status.textContent = 'Solo hay pruebas. Desmarca el filtro o bórralas.';
-        }
-
-        list.querySelectorAll('.quote-crm-row').forEach(function (el) {
-          var id = el.getAttribute('data-quote-id');
-          var row = rows.find(function (x) { return x.id === id; });
-          if (!row) return;
-          var chargeBtn = el.querySelector('[data-quote-charge]');
-          var openBtn = el.querySelector('[data-quote-open]');
-          var testBtn = el.querySelector('[data-quote-test]');
-          var delBtn = el.querySelector('[data-quote-delete]');
-          if (chargeBtn) {
-            chargeBtn.addEventListener('click', async function () {
-              chargeBtn.disabled = true;
-              if (status) status.textContent = 'Generando checkout Paddle…';
-              try {
-                var out = await generateLinkForQuote(row, 'deposit');
-                if (status) status.textContent = 'Link listo. Copiado al portapapeles si el navegador lo permite.';
-                try { await navigator.clipboard.writeText(out.url); } catch (eClip) {}
-                var go = window.confirm('Link de cobro creado.\n\n' + out.url + '\n\n¿Abrir checkout ahora?');
-                if (go) window.location.assign(out.url);
-                else refresh();
-              } catch (err) {
-                if (status) status.textContent = err.message || 'No se pudo generar el link.';
-                chargeBtn.disabled = false;
-              }
-            });
-          }
-          if (openBtn) {
-            openBtn.addEventListener('click', function () {
-              if (row.last_checkout_url) window.open(row.last_checkout_url, '_blank', 'noopener');
-            });
-          }
-          if (testBtn) {
-            testBtn.addEventListener('click', async function () {
-              testBtn.disabled = true;
-              try {
-                await PreventaQuotes.setTestFlag(row.id, !row.is_test);
-                refresh();
-              } catch (err) {
-                if (status) status.textContent = err.message || 'No se pudo marcar.';
-                testBtn.disabled = false;
-              }
-            });
-          }
-          if (delBtn) {
-            delBtn.addEventListener('click', async function () {
-              if (!window.confirm('¿Eliminar cotización de ' + row.customer_name + '?')) return;
-              delBtn.disabled = true;
-              try {
-                await PreventaQuotes.deleteQuote(row.id);
-                if (status) status.textContent = 'Cotización eliminada.';
-                refresh();
-              } catch (err) {
-                if (status) status.textContent = err.message || 'No se pudo eliminar.';
-                delBtn.disabled = false;
-              }
-            });
-          }
-        });
+        paint();
       } catch (err) {
         list.innerHTML = '<div class="portal-note">No se pudieron cargar cotizaciones: ' + escapeHtml(err.message) + '</div>';
       }
@@ -604,6 +679,7 @@
     }
     if (hideTests) hideTests.addEventListener('change', refresh);
     if (sortEl) sortEl.addEventListener('change', refresh);
+    if (monthEl) monthEl.addEventListener('change', paint);
     if (purgeTests) {
       purgeTests.addEventListener('click', async function () {
         if (!window.confirm('¿Eliminar TODAS las cotizaciones marcadas como prueba?')) return;
@@ -722,27 +798,16 @@
   function renderPanel(root) {
     root.innerHTML =
       '<div class="panel-pay-stripe panel-pay-paddle">' +
-        '<section class="pay-books" data-pay-books>' +
-          '<div class="pay-books-head">' +
-            '<div>' +
-              '<div class="eyebrow">CONTABILIDAD</div>' +
-              '<p class="desc pay-books-lead">Ingresos reales del mes · solo cobros confirmados</p>' +
-            '</div>' +
-            '<div class="pay-books-controls">' +
-              '<label class="quote-crm-sort-label">Mes<select data-pay-month></select></label>' +
-              '<button type="button" class="btn" data-pay-export>Exportar CSV</button>' +
-            '</div>' +
-          '</div>' +
-          '<div class="pay-kpi-grid" data-pay-kpis></div>' +
-          '<div class="eyebrow pay-ledger-eyebrow">LIBRO DEL MES</div>' +
-          '<div class="pay-ledger" data-pay-ledger><p class="desc">Cargando…</p></div>' +
-          '<p class="desc pay-books-note" data-pay-note></p>' +
-        '</section>' +
+        '<div class="pay-tabs" role="tablist" aria-label="Secciones de Pagos">' +
+          '<button type="button" class="pay-tab is-active" role="tab" data-pay-tab="quotes" aria-selected="true">Cotizaciones</button>' +
+          '<button type="button" class="pay-tab" role="tab" data-pay-tab="books" aria-selected="false">Contabilidad</button>' +
+        '</div>' +
 
-        '<details class="quote-crm-activity pay-section-fold" open>' +
-          '<summary><h3>Cotizaciones</h3><span class="pay-fold-hint">pipeline comercial</span></summary>' +
-          '<div class="portal-form quote-crm-toolbar">' +
+        '<section class="pay-tab-panel" data-pay-panel="quotes">' +
+          '<p class="desc pay-books-lead">Fichas de clientes creadas al descargar el PDF. Aquí cobras y gestionas el pipeline.</p>' +
+          '<div class="portal-form quote-crm-toolbar pay-toolbar">' +
             '<label>Buscar<input type="search" data-quote-search placeholder="Nombre o email…" autocomplete="off"></label>' +
+            '<label class="quote-crm-sort-label">Mes<select data-quote-month></select></label>' +
             '<label class="quote-crm-sort-label">Ordenar' +
               '<select data-quote-sort>' +
                 '<option value="newest" selected>Más recientes</option>' +
@@ -757,24 +822,39 @@
           '</div>' +
           '<p class="desc" data-quote-status aria-live="polite"></p>' +
           '<div class="portal-list" data-quote-list></div>' +
-        '</details>' +
+        '</section>' +
 
-        '<details class="quote-crm-activity pay-section-fold">' +
-          '<summary><h3>Pedidos en curso</h3><span class="pay-fold-hint">anticipo / entrega</span></summary>' +
-          '<div data-pay-pedidos><p class="desc">Cargando…</p></div>' +
-        '</details>' +
+        '<section class="pay-tab-panel" data-pay-panel="books" hidden>' +
+          '<div class="pay-books" data-pay-books>' +
+            '<div class="pay-books-head">' +
+              '<div>' +
+                '<p class="desc pay-books-lead">Ingresos del mes. Los datos se rellenan solos cuando Paddle confirma el pago.</p>' +
+              '</div>' +
+              '<div class="pay-books-controls">' +
+                '<label>Buscar<input type="search" data-pay-search placeholder="Nombre o email…" autocomplete="off"></label>' +
+                '<label class="quote-crm-sort-label">Mes<select data-pay-month></select></label>' +
+                '<button type="button" class="btn" data-pay-export>Exportar CSV</button>' +
+              '</div>' +
+            '</div>' +
+            '<div class="pay-kpi-grid" data-pay-kpis></div>' +
+            '<div class="eyebrow pay-ledger-eyebrow">MOVIMIENTOS</div>' +
+            '<div class="pay-ledger" data-pay-ledger><p class="desc">Cargando…</p></div>' +
+            '<p class="desc pay-books-note" data-pay-note></p>' +
+          '</div>' +
+        '</section>' +
       '</div>';
+    bindPayTabs(root);
     bindQuotesPanel(root);
     bindAccountingPanel(root);
   }
 
   function bindAccountingPanel(root) {
     var monthEl = root.querySelector('[data-pay-month]');
+    var searchEl = root.querySelector('[data-pay-search]');
     var kpisEl = root.querySelector('[data-pay-kpis]');
     var ledgerEl = root.querySelector('[data-pay-ledger]');
     var noteEl = root.querySelector('[data-pay-note]');
     var exportBtn = root.querySelector('[data-pay-export]');
-    var pedidosEl = root.querySelector('[data-pay-pedidos]');
     if (!monthEl || !kpisEl || !ledgerEl) return;
 
     var cache = { cobros: [], pedidos: [], month: currentMonthKey() };
@@ -793,13 +873,26 @@
       return Object.keys(keys).sort().reverse();
     }
 
+    function needleOk(row, needle) {
+      if (!needle) return true;
+      var blob = [
+        row.customer_email,
+        row.customer_name,
+        row.proyecto_label,
+        row.concepto
+      ].join(' ').toLowerCase();
+      return blob.indexOf(needle) >= 0;
+    }
+
     function accountingRows(month) {
+      var needle = searchEl ? String(searchEl.value || '').trim().toLowerCase() : '';
       return (cache.cobros || []).filter(function (r) {
         if (looksLikeTestPay(r)) return false;
         if (!(r.provider === 'paddle' || r.paddle_transaction_id || r.provider === 'stripe' || !r.provider)) {
           return false;
         }
-        return monthKeyFromIso(cobroWhen(r)) === month;
+        if (monthKeyFromIso(cobroWhen(r)) !== month) return false;
+        return needleOk(r, needle);
       });
     }
 
@@ -813,7 +906,6 @@
       var neto = Math.max(0, bruto - fee);
       var pendiente = open.reduce(function (s, r) { return s + (Number(r.amount_cents) || 0); }, 0);
 
-      // Entregas aún no cobradas de pedidos ya en producción
       (cache.pedidos || []).forEach(function (p) {
         if (looksLikeTestPay(p)) return;
         if (p.status === 'en_produccion' || p.status === 'pendiente_entrega') {
@@ -836,7 +928,7 @@
       });
       if (!rows.length) {
         ledgerEl.innerHTML = '<p class="desc">Sin movimientos en ' + escapeHtml(monthLabel(month)) + '.</p>';
-        if (noteEl) noteEl.textContent = 'Cuando un checkout Paddle se confirme, aparecerá aquí automáticamente.';
+        if (noteEl) noteEl.textContent = 'Esto se llena solo: al pagar el cliente en Paddle, el webhook marca el cobro como Cobrado.';
         return;
       }
 
@@ -855,63 +947,32 @@
           var stage = stageLabel(r.payment_stage || (r.metadata && r.metadata.stage));
           var fee = estimateFeeCents(r.amount_cents);
           var stateClass = isPaidCobro(r) ? 'is-paid' : (isOpenCobro(r) ? 'is-open' : 'is-other');
-          return (
-            '<details class="quote-crm-row pay-ledger-row ' + stateClass + '">' +
-              '<summary class="quote-crm-row-summary">' +
-                '<span class="quote-crm-row-title">' + escapeHtml(r.customer_email || r.proyecto_label || 'Cobro') + '</span>' +
-                '<span class="quote-crm-row-time">' + escapeHtml(day) + '</span>' +
-                '<span class="pay-ledger-amount">' + moneyFromCents(r.amount_cents) + '</span>' +
-                '<span class="quote-crm-row-chevron" aria-hidden="true"></span>' +
-              '</summary>' +
-              '<div class="quote-crm-row-body">' +
-                '<div class="quote-crm-row-meta">' +
-                  '<small class="muted">' +
-                    escapeHtml(stage) + ' · ' + escapeHtml(statusLabel(r.status)) +
-                    (r.proyecto_label ? ' · ' + escapeHtml(r.proyecto_label) : '') +
-                    (r.concepto ? ' · ' + escapeHtml(r.concepto) : '') +
-                  '</small>' +
-                  '<small class="muted">Fee est. ' + moneyFromCents(fee) +
-                    ' · Neto est. ' + moneyFromCents(Math.max(0, (Number(r.amount_cents) || 0) - fee)) +
-                    ' · Hunter ' + moneyFromCents(estimateHunterCents(r.amount_cents)) +
-                  '</small>' +
-                  (r.paddle_transaction_id
-                    ? '<small class="muted">Txn ' + escapeHtml(r.paddle_transaction_id) + '</small>'
-                    : '') +
-                '</div>' +
-              '</div>' +
-            '</details>'
-          );
+          var title = String(r.customer_name || '').trim() || String(r.customer_email || '').trim() || 'Cobro';
+          var body =
+            '<div class="pay-meta-grid">' +
+              metaRow('Estado', escapeHtml(statusLabel(r.status))) +
+              metaRow('Tipo', escapeHtml(stage)) +
+              metaRow('Proyecto', escapeHtml(r.proyecto_label || '—')) +
+              metaRow('Importe', moneyFromCents(r.amount_cents)) +
+              metaRow('Fee estimado', moneyFromCents(fee)) +
+              metaRow('Neto estimado', moneyFromCents(Math.max(0, (Number(r.amount_cents) || 0) - fee))) +
+              metaRow('Hunter', moneyFromCents(estimateHunterCents(r.amount_cents))) +
+              (r.paddle_transaction_id ? metaRow('ID Paddle', escapeHtml(r.paddle_transaction_id)) : '') +
+            '</div>' +
+            '<p class="desc pay-auto-hint">Automático desde Paddle · no se edita a mano</p>';
+          return clientCardHtml({
+            title: title,
+            time: day,
+            amount: moneyFromCents(r.amount_cents),
+            extraClass: 'pay-ledger-row ' + stateClass,
+            bodyHtml: body
+          });
         }).join('') +
         '</div>';
 
       if (noteEl) {
-        noteEl.textContent = 'Fee e IVA son estimados hasta reconciliar con el payout de Paddle. Las pruebas no entran en contabilidad.';
+        noteEl.textContent = 'Pendiente = link creado, aún no pagado. Cobrado = pago confirmado por Paddle. Fee/Hunter son estimaciones.';
       }
-    }
-
-    function renderPedidos() {
-      if (!pedidosEl) return;
-      var rows = (cache.pedidos || []).filter(function (p) {
-        return !looksLikeTestPay(p);
-      });
-      if (!rows.length) {
-        pedidosEl.innerHTML = '<p class="desc">Sin pedidos todavía.</p>';
-        return;
-      }
-      pedidosEl.innerHTML =
-        '<div class="portal-list">' +
-        rows.map(function (p) {
-          return (
-            '<div class="portal-list-item quote-pay-pedido">' +
-              '<span><b>' + escapeHtml(p.proyecto_label || p.customer_name || 'Pedido') + '</b>' +
-              '<small class="muted">' + escapeHtml(p.customer_email || '') + ' · ' + statusLabel(p.status) + '</small></span>' +
-              '<span style="text-align:right"><b>' + moneyFromCents(p.quote_total_cents) + '</b>' +
-              '<small class="muted">Anticipo ' + moneyFromCents(p.deposit_cents) +
-                ' · Entrega ' + moneyFromCents(p.balance_cents) + '</small></span>' +
-            '</div>'
-          );
-        }).join('') +
-        '</div>';
     }
 
     function paint() {
@@ -919,7 +980,6 @@
       cache.month = month;
       renderKpis(month);
       renderLedger(month);
-      renderPedidos();
     }
 
     function fillMonthSelect(keys) {
@@ -943,11 +1003,17 @@
       } catch (err) {
         kpisEl.innerHTML = '';
         ledgerEl.innerHTML = '<div class="portal-note">No se pudo cargar contabilidad: ' + escapeHtml(err.message) + '</div>';
-        if (pedidosEl) pedidosEl.innerHTML = '<div class="portal-note">' + escapeHtml(err.message) + '</div>';
       }
     }
 
     monthEl.addEventListener('change', paint);
+    if (searchEl) {
+      var t = null;
+      searchEl.addEventListener('input', function () {
+        clearTimeout(t);
+        t = setTimeout(paint, 180);
+      });
+    }
     if (exportBtn) {
       exportBtn.addEventListener('click', function () {
         var month = monthEl.value || currentMonthKey();
