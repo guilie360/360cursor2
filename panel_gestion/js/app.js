@@ -739,7 +739,8 @@ $('downloadPdf').addEventListener('click',async()=>{
    $('confirmStatus').textContent='PDF generado y cotización guardada.';
   }catch(saveErr){
    console.warn('No se pudo guardar la cotización:',saveErr);
-   $('confirmStatus').textContent='PDF generado. No se pudo guardar en la base (revisa conexión).';
+   const detail=(saveErr&&(saveErr.message||saveErr.details))||'revisa conexión';
+   $('confirmStatus').textContent='PDF generado. No se pudo guardar: '+detail;
   }
  }catch(error){
   console.error('Error al generar el PDF:',error);

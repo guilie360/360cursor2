@@ -5,6 +5,26 @@
   var TABLE = 'panel_cotizaciones';
   var anonClient = null;
 
+  function supabaseUrl() {
+    return (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) ||
+      'https://emefdwzdfnqgjohbtvvn.supabase.co';
+  }
+
+  function supabaseAnonKey() {
+    return (typeof SUPABASE_ANON_KEY !== 'undefined' && SUPABASE_ANON_KEY) ||
+      'sb_publishable_GmJNU3DZQqPgNBi6QVa5bA_2h--bgKz';
+  }
+
+  function getAnonClient() {
+    if (anonClient) return anonClient;
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      anonClient = window.supabase.createClient(supabaseUrl(), supabaseAnonKey());
+      return anonClient;
+    }
+    return null;
+  }
+
+  /** Cliente con sesión de equipo (listar/borrar). */
   function getClient() {
     try {
       if (window.PlatformAuth && typeof window.PlatformAuth.getClient === 'function') {
@@ -12,16 +32,7 @@
         if (c) return c;
       }
     } catch (e) {}
-    if (anonClient) return anonClient;
-    var url = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) ||
-      'https://emefdwzdfnqgjohbtvvn.supabase.co';
-    var key = (typeof SUPABASE_ANON_KEY !== 'undefined' && SUPABASE_ANON_KEY) ||
-      'sb_publishable_GmJNU3DZQqPgNBi6QVa5bA_2h--bgKz';
-    if (window.supabase && typeof window.supabase.createClient === 'function') {
-      anonClient = window.supabase.createClient(url, key);
-      return anonClient;
-    }
-    return null;
+    return getAnonClient();
   }
 
   function normalizeEmail(email) {
@@ -34,7 +45,8 @@
 
   async function saveQuote(opts) {
     opts = opts || {};
-    var client = getClient();
+    // Insert siempre con anon: funciona en cotizador público/interno aunque no haya JWT de equipo.
+    var client = getAnonClient() || getClient();
     if (!client) throw new Error('Supabase no disponible para guardar la cotización.');
     var name = normalizeName(opts.customerName || opts.customer_name);
     var email = normalizeEmail(opts.customerEmail || opts.customer_email);
@@ -46,20 +58,32 @@
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Email inválido.');
     if (!Number.isFinite(totalCents) || totalCents < 100) throw new Error('Total inválido.');
 
+    var snapshot = opts.quoteSnapshot || opts.quote_snapshot || {};
+    try {
+      // Evitar fallos por estructuras no serializables del draft
+      snapshot = JSON.parse(JSON.stringify(snapshot));
+    } catch (eSnap) {
+      snapshot = { total: totalCents / 100 };
+    }
+
     var row = {
       customer_name: name,
       customer_email: email,
       proyecto_label: String(opts.proyectoLabel || opts.proyecto_label || 'Showroom 360Preventa').slice(0, 200),
       total_cents: totalCents,
       currency: 'eur',
-      quote_snapshot: opts.quoteSnapshot || opts.quote_snapshot || {},
+      quote_snapshot: snapshot,
       source: String(opts.source || 'cotizador').slice(0, 40),
       is_test: !!opts.isTest || !!opts.is_test
     };
 
-    var result = await client.from(TABLE).insert(row).select('id').single();
-    if (result.error) throw result.error;
-    return result.data;
+    // Sin .select(): anon puede INSERT pero no SELECT (RLS), y RETURNING fallaría.
+    var result = await client.from(TABLE).insert(row);
+    if (result.error) {
+      var msg = result.error.message || result.error.details || 'Error al guardar cotización';
+      throw new Error(msg);
+    }
+    return { ok: true, total_cents: totalCents };
   }
 
   async function listQuotes(opts) {
