@@ -185,7 +185,7 @@
     commissionBtn.classList.remove('portal-hidden');
   }
 
-  /* Cobrar: abre Panel → Pagos (cotizaciones + link Paddle) */
+  /* Cobrar: abre el modal de cobro Paddle aquí (no salir al panel) */
   if (modo === 'interno') {
     var chargeBtn = document.getElementById('internoChargeBtn');
     if (!chargeBtn) {
@@ -194,33 +194,50 @@
       chargeBtn.type = 'button';
       chargeBtn.className = 'quote-footer-charge mag';
       chargeBtn.textContent = 'Cobrar';
-      chargeBtn.title = 'Abrir Pagos: cotizaciones y link de cobro Paddle';
+      chargeBtn.title = 'Abrir cobro Paddle de esta cotización';
       chargeBtn.setAttribute('data-cursor', 'COBRAR');
       var footerInner = document.querySelector('.quote-goal-footer-inner');
       var priceBox = document.querySelector('.quote-footer-price');
       if (footerInner && priceBox) footerInner.insertBefore(chargeBtn, priceBox);
     }
     chargeBtn.addEventListener('click', function () {
-      try {
-        var priceEl = document.getElementById('stickyPrice');
-        var raw = (priceEl && priceEl.textContent) || '';
-        var num = Number(String(raw).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'));
-        sessionStorage.setItem('boxiesTeamSession', '1');
-        sessionStorage.setItem('boxiesPayPrefill', JSON.stringify({
-          amount: Number.isFinite(num) && num > 0 ? num : 0,
-          concepto: 'Cotización showroom 360Preventa',
-          t: Date.now()
-        }));
-      } catch (e) {}
-      var url = '/panel_gestion/?abrir=pagos';
-      try {
-        if (window.BoxiesFullscreen && typeof window.BoxiesFullscreen.navigate === 'function' &&
-          sessionStorage.getItem('boxiesKeepFullscreen') === '1') {
-          window.BoxiesFullscreen.navigate(url);
+      function visible(el) {
+        return !!(el && !el.classList.contains('hidden') && !el.classList.contains('portal-hidden'));
+      }
+      var pkgDetails = document.getElementById('packageDetails');
+      var pkgChooser = document.getElementById('packageChooser');
+      var manual = document.getElementById('manualConfigurator');
+      var orderModal = document.getElementById('orderModal');
+
+      // Ya hay resumen abierto → enfocar pagar anticipo
+      if (orderModal && !orderModal.classList.contains('hidden')) {
+        var dep = document.getElementById('orderPayDeposit');
+        if (dep) {
+          try { dep.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e0) {}
+          dep.focus();
+        }
+        return;
+      }
+
+      if (visible(pkgDetails) || (visible(pkgChooser) && document.getElementById('packageSelect'))) {
+        var pkgBtn = document.getElementById('packageSelect');
+        if (pkgBtn) {
+          pkgBtn.click();
           return;
         }
-      } catch (e2) {}
-      location.href = url;
+      }
+      if (visible(manual)) {
+        if (typeof openOrderModal === 'function') {
+          openOrderModal();
+          return;
+        }
+        var confirmBtn = document.getElementById('confirmOpen');
+        if (confirmBtn) {
+          confirmBtn.click();
+          return;
+        }
+      }
+      window.alert('Elige primero un paquete o configura el showroom personalizado, luego pulsa Cobrar.');
     });
   }
 
