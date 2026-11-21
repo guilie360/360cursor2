@@ -57,6 +57,8 @@
   }
 
   function finishPaymentsKeyCopy(code) {
+    // Copiar clave = ya vio Clave dinámica
+    markRead('clave');
     if (!state.awaitingPaymentsGate) return false;
     state.awaitingPaymentsGate = false;
     closeChatPopup();
@@ -168,30 +170,98 @@
     return result.data || [];
   }
 
+  function seenStorageKey(scope) {
+    return 'boxiesChatSeenAt:' + (scope === 'clave' ? 'clave' : 'team');
+  }
+
+  function getSeenAt(scope) {
+    var n = 0;
+    try { n = Number(localStorage.getItem(seenStorageKey(scope)) || 0); } catch (e) {}
+    // Migración suave del marcador único anterior
+    if (!n) {
+      try {
+        var legacy = Number(localStorage.getItem('boxiesChatSeenAt') || 0);
+        if (legacy) n = legacy;
+      } catch (e2) {}
+    }
+    return n || 0;
+  }
+
+  function setSeenAt(scope, ts) {
+    try { localStorage.setItem(seenStorageKey(scope), String(ts || Date.now())); } catch (e) {}
+  }
+
+  function countUnread(scope) {
+    var lastSeen = getSeenAt(scope);
+    return (state.messages || []).filter(function (m) {
+      if (isClearedForMe(m)) return false;
+      if (scopeForMessage(m) !== scope) return false;
+      if (m.sender_id === state.userId) return false;
+      return new Date(m.created_at).getTime() > lastSeen;
+    }).length;
+  }
+
   function updateBadge() {
     var badge = $('chatUnreadBadge');
     var team = $('teamChatUnread');
-    var lastSeen = 0;
-    try { lastSeen = Number(localStorage.getItem('boxiesChatSeenAt') || 0); } catch (e) {}
-    var unread = state.messages.filter(function (m) {
-      if (isClearedForMe(m)) return false;
-      return m.sender_id !== state.userId && new Date(m.created_at).getTime() > lastSeen;
-    }).length;
+    var teamN = countUnread('team');
+    var claveN = countUnread('clave');
+    var total = teamN + claveN;
+
     if (badge) {
-      badge.textContent = unread > 99 ? '99+' : String(unread);
-      badge.style.display = unread ? 'block' : 'none';
+      badge.textContent = total > 99 ? '99+' : String(total);
+      badge.style.display = total ? 'block' : 'none';
     }
+    // Equipo solo cuenta mensajes de Equipo (nunca Clave dinámica)
     if (team) {
-      team.textContent = String(unread);
-      team.style.display = unread ? 'inline-block' : 'none';
+      team.textContent = String(teamN);
+      team.style.display = teamN ? 'inline-block' : 'none';
+    }
+    // Badge en opción / botón de Clave dinámica
+    updateClaveBadges(claveN);
+  }
+
+  function updateClaveBadges(claveN) {
+    var n = typeof claveN === 'number' ? claveN : countUnread('clave');
+    var label = n > 99 ? '99+' : String(n);
+    var option = document.querySelector('#chatMemberList [data-chat-clave]');
+    if (option) {
+      var chip = option.querySelector('.chat-unread-inline');
+      if (!chip) {
+        chip = document.createElement('span');
+        chip.className = 'chat-unread-inline';
+        option.appendChild(chip);
+      }
+      chip.textContent = label;
+      chip.style.display = n ? 'inline-block' : 'none';
+    }
+    var btn = $('chatRequestPayKey');
+    if (btn) {
+      var btnChip = btn.querySelector('.chat-unread-inline');
+      if (!btnChip) {
+        btnChip = document.createElement('span');
+        btnChip.className = 'chat-unread-inline';
+        btn.appendChild(btnChip);
+      }
+      btnChip.textContent = label;
+      btnChip.style.display = n ? 'inline-block' : 'none';
     }
   }
 
-  function markRead() {
-    var last = state.messages.length
-      ? new Date(state.messages[state.messages.length - 1].created_at).getTime()
-      : Date.now();
-    try { localStorage.setItem('boxiesChatSeenAt', String(last)); } catch (e) {}
+  function markRead(scope) {
+    var sc = scope || (state.activeView === 'clave' ? 'clave' : 'team');
+    if (sc !== 'clave' && sc !== 'team') sc = 'team';
+    var msgs = (state.messages || []).filter(function (m) {
+      return scopeForMessage(m) === sc;
+    });
+    var last = Date.now();
+    if (msgs.length) {
+      last = msgs.reduce(function (max, m) {
+        var t = new Date(m.created_at).getTime();
+        return t > max ? t : max;
+      }, 0);
+    }
+    setSeenAt(sc, last || Date.now());
     updateBadge();
   }
 
@@ -334,7 +404,7 @@
     if (teamTab) teamTab.classList.remove('active');
     if (directTab) directTab.classList.remove('active');
     render();
-    markRead();
+    markRead('clave');
   }
 
   function openTeamView() {
@@ -347,6 +417,7 @@
     if (teamTab) teamTab.classList.add('active');
     if (directTab) directTab.classList.remove('active');
     render();
+    markRead('team');
   }
 
   function injectClaveInMemberList() {
@@ -486,7 +557,7 @@
         openChatPopup();
         openClaveView();
         await reload();
-        markRead();
+        markRead('clave');
         if (errEl) errEl.textContent = 'Ya tienes una clave vigente. Cópiala en Clave dinámica.';
         return;
       }
@@ -496,7 +567,7 @@
       openChatPopup();
       openClaveView();
       await reload();
-      markRead();
+      markRead('clave');
       if (errEl) {
         if (data.restored) {
           errEl.textContent = 'Solicitud restaurada en Clave dinámica. Espera la clave del admin.';
@@ -533,12 +604,17 @@
   }
 
   async function verifyOtp(code) {
-    if (isAdmin()) return true;
+    if (isAdmin()) {
+      markRead('clave');
+      return true;
+    }
     var client = getClient();
     if (!client) return false;
     var result = await client.rpc('panel_payments_verify_otp', { p_code: String(code || '').trim() });
     if (result.error) throw new Error(result.error.message || 'Clave inválida');
-    return !!result.data;
+    var ok = !!result.data;
+    if (ok) markRead('clave');
+    return ok;
   }
 
   function bindUi() {
@@ -609,7 +685,8 @@
       floatBtn.dataset.liveBound = '1';
       floatBtn.addEventListener('click', function () {
         setTimeout(function () {
-          markRead();
+          // Solo marca leído el hilo visible (Equipo al abrir; Clave si ya estaba ahí)
+          markRead(state.activeView === 'clave' ? 'clave' : 'team');
           reload();
         }, 50);
       });
@@ -686,7 +763,8 @@
     finishPaymentsKeyCopy: finishPaymentsKeyCopy,
     verifyOtp: verifyOtp,
     isAdmin: isAdmin,
-    markRead: markRead
+    markRead: markRead,
+    updateBadge: updateBadge
   };
 
   if (document.readyState === 'loading') {
