@@ -434,8 +434,38 @@
     return { data: data, url: url };
   }
 
+  function quoteDayKey(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function quoteDayLabel(iso) {
+    if (!iso) return 'Sin fecha';
+    var d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return 'Sin fecha';
+    var today = new Date();
+    var yday = new Date();
+    yday.setDate(today.getDate() - 1);
+    var sameDay = function (a, b) {
+      return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    };
+    if (sameDay(d, today)) return 'Hoy';
+    if (sameDay(d, yday)) return 'Ayer';
+    return d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function quoteTimeLabel(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  }
+
   function bindQuotesPanel(root) {
     var search = root.querySelector('[data-quote-search]');
+    var sortEl = root.querySelector('[data-quote-sort]');
     var list = root.querySelector('[data-quote-list]');
     var status = root.querySelector('[data-quote-status]');
     var hideTests = root.querySelector('[data-quote-hide-tests]');
@@ -446,17 +476,27 @@
       list.innerHTML = '<p class="desc">Cargando cotizaciones…</p>';
       if (status) status.textContent = '';
       try {
+        var sort = sortEl && sortEl.value === 'oldest' ? 'oldest' : 'newest';
         var rows = await PreventaQuotes.listQuotes({
           query: search ? search.value : '',
-          hideTests: !!(hideTests && hideTests.checked)
+          hideTests: !!(hideTests && hideTests.checked),
+          sort: sort
         });
         if (!rows.length) {
           list.innerHTML = '<p class="desc">Sin cotizaciones. Se crean al descargar el PDF.</p>';
           return;
         }
-        list.innerHTML = rows.map(function (r) {
+        var html = '';
+        var lastDay = null;
+        rows.forEach(function (r) {
+          var day = quoteDayKey(r.created_at);
+          if (day !== lastDay) {
+            lastDay = day;
+            html += '<div class="quote-crm-day">' + escapeHtml(quoteDayLabel(r.created_at)) + '</div>';
+          }
           var when = r.created_at ? new Date(r.created_at).toLocaleString('es-ES') : '';
           var title = String(r.customer_name || '').trim() || String(r.customer_email || '').trim() || 'Sin nombre';
+          var time = quoteTimeLabel(r.created_at);
           var metaBits = [
             r.customer_email || '',
             r.customer_phone || '',
@@ -464,10 +504,11 @@
             r.proyecto_label || '',
             when
           ].filter(Boolean).map(escapeHtml);
-          return (
+          html += (
             '<details class="quote-crm-row" data-quote-id="' + escapeHtml(r.id) + '">' +
               '<summary class="quote-crm-row-summary">' +
                 '<span class="quote-crm-row-title">' + escapeHtml(title) + '</span>' +
+                (time ? '<span class="quote-crm-row-time">' + escapeHtml(time) + '</span>' : '') +
                 '<span class="quote-crm-row-chevron" aria-hidden="true"></span>' +
               '</summary>' +
               '<div class="quote-crm-row-body">' +
@@ -485,7 +526,8 @@
               '</div>' +
             '</details>'
           );
-        }).join('');
+        });
+        list.innerHTML = html;
 
         if (hideTests && hideTests.checked && !rows.length) {
           if (status) status.textContent = 'Solo hay pruebas. Desmarca el filtro o bórralas.';
@@ -561,6 +603,7 @@
       });
     }
     if (hideTests) hideTests.addEventListener('change', refresh);
+    if (sortEl) sortEl.addEventListener('change', refresh);
     if (purgeTests) {
       purgeTests.addEventListener('click', async function () {
         if (!window.confirm('¿Eliminar TODAS las cotizaciones marcadas como prueba?')) return;
@@ -602,6 +645,12 @@
         '<div class="eyebrow">COTIZACIONES</div>' +
         '<div class="portal-form quote-crm-toolbar">' +
           '<label>Buscar<input type="search" data-quote-search placeholder="Nombre o email…" autocomplete="off"></label>' +
+          '<label class="quote-crm-sort-label">Ordenar' +
+            '<select data-quote-sort>' +
+              '<option value="newest" selected>Más recientes</option>' +
+              '<option value="oldest">Más antiguas</option>' +
+            '</select>' +
+          '</label>' +
           '<div class="quote-crm-toolbar-actions">' +
             '<label class="quote-crm-check"><input type="checkbox" data-quote-hide-tests> Ocultar pruebas</label>' +
             '<button type="button" class="btn" data-quote-purge-tests>Borrar pruebas</button>' +

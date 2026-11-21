@@ -110,8 +110,9 @@
     var q = String(opts.query || '').trim();
     var onlyTests = opts.onlyTests === true;
     var hideTests = opts.hideTests === true;
+    var ascending = opts.sort === 'oldest' || opts.ascending === true;
 
-    var req = client.from(TABLE).select('*').order('created_at', { ascending: false }).limit(200);
+    var req = client.from(TABLE).select('*').order('created_at', { ascending: ascending }).limit(200);
     if (onlyTests) req = req.eq('is_test', true);
     if (hideTests) req = req.eq('is_test', false);
     var result = await req;

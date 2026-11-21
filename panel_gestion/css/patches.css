@@ -1742,6 +1742,7 @@ html.has-cur .btn{
 }
 .quote-crm-toolbar input[type="search"],
 .quote-crm-toolbar input[type="text"],
+.quote-crm-toolbar select,
 .panel-pay-form .field input{
   width:100%;
   padding:12px 14px;
@@ -1752,12 +1753,29 @@ html.has-cur .btn{
   font:500 15px/1.3 Manrope,Arial,sans-serif;
   text-transform:none;
   letter-spacing:0;
+  color-scheme:dark;
 }
 .quote-crm-toolbar input[type="search"]:focus,
-.quote-crm-toolbar input[type="text"]:focus{
+.quote-crm-toolbar input[type="text"]:focus,
+.quote-crm-toolbar select:focus{
   outline:none;
   border-color:rgba(255,255,255,.28)!important;
   box-shadow:0 0 0 3px rgba(255,255,255,.06);
+}
+.quote-crm-sort-label{display:grid;gap:6px;max-width:220px}
+.quote-crm-day{
+  margin:10px 2px 2px;
+  color:rgba(255,255,255,.42);
+  font:600 11px/1.2 Manrope,Arial,sans-serif;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.quote-crm-day:first-child{margin-top:2px}
+.panel-pay-paddle .quote-crm-row-time{
+  flex:none;
+  color:rgba(255,255,255,.38);
+  font:500 12px/1 Manrope,Arial,sans-serif;
+  letter-spacing:.02em;
 }
 .panel-pay-form{display:grid;gap:12px;margin-top:14px}
 .panel-pay-form .field{
