@@ -1,53 +1,95 @@
 /**
- * Conversor EUR → COP en vivo (referencia de mercado ≈ Google Finance).
- * Fuentes: currency-api (CDN) → fallback open.er-api. Enlace a Google EUR TO COP.
+ * Conversor EUR → COP — tasa primaria desde Google Finance
+ * (edge function eur-cop-rate). Fallback: currency-api / open.er-api.
  */
 (function () {
+  var GOOGLE_FINANCE_URL = 'https://www.google.com/finance/quote/EUR-COP';
+  var REFRESH_MS = 2 * 60 * 1000;
+  var STORAGE_KEY = 'preventa_eur_cop_fx_v3';
+
+  function supabaseBase() {
+    return (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) ||
+      'https://emefdwzdfnqgjohbtvvn.supabase.co';
+  }
+  function supabaseAnon() {
+    return (typeof SUPABASE_ANON_KEY !== 'undefined' && SUPABASE_ANON_KEY) ||
+      'sb_publishable_GmJNU3DZQqPgNBi6QVa5bA_2h--bgKz';
+  }
+
   var SOURCES = [
     {
-      name: 'currency-api',
-      url: 'https://latest.currency-api.pages.dev/v1/currencies/eur.json',
-      parse: function (data) {
-        var rate = data && data.eur ? Number(data.eur.cop) : NaN;
-        var updatedAt = data && data.date
-          ? new Date(data.date + 'T12:00:00Z').toISOString()
-          : new Date().toISOString();
-        return { rate: rate, updatedAt: updatedAt };
+      name: 'google-finance',
+      fetch: async function (force) {
+        var url = supabaseBase().replace(/\/$/, '') +
+          '/functions/v1/eur-cop-rate' +
+          (force ? ('?t=' + Date.now()) : '');
+        var res = await fetch(url, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: {
+            apikey: supabaseAnon(),
+            Authorization: 'Bearer ' + supabaseAnon()
+          }
+        });
+        if (!res.ok) throw new Error('google-finance HTTP ' + res.status);
+        var data = await res.json();
+        if (!data || !data.ok) throw new Error((data && data.error) || 'google-finance fail');
+        var rate = Number(data.rate);
+        if (!Number.isFinite(rate) || rate <= 0) throw new Error('google-finance sin COP');
+        return {
+          rate: rate,
+          updatedAt: data.fetched_at || new Date().toISOString(),
+          source: 'google-finance'
+        };
       }
     },
     {
-      name: 'currency-api-jsdelivr',
-      url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.json',
-      parse: function (data) {
+      name: 'currency-api',
+      fetch: async function (force) {
+        var res = await fetch(
+          'https://latest.currency-api.pages.dev/v1/currencies/eur.json',
+          { cache: force ? 'no-store' : 'no-cache', mode: 'cors' }
+        );
+        if (!res.ok) throw new Error('currency-api HTTP ' + res.status);
+        var data = await res.json();
         var rate = data && data.eur ? Number(data.eur.cop) : NaN;
-        var updatedAt = data && data.date
-          ? new Date(data.date + 'T12:00:00Z').toISOString()
-          : new Date().toISOString();
-        return { rate: rate, updatedAt: updatedAt };
+        if (!Number.isFinite(rate) || rate <= 0) throw new Error('currency-api sin COP');
+        return {
+          rate: rate,
+          updatedAt: data.date
+            ? new Date(data.date + 'T12:00:00Z').toISOString()
+            : new Date().toISOString(),
+          source: 'currency-api'
+        };
       }
     },
     {
       name: 'open-er-api',
-      url: 'https://open.er-api.com/v6/latest/EUR',
-      parse: function (data) {
+      fetch: async function (force) {
+        var res = await fetch('https://open.er-api.com/v6/latest/EUR', {
+          cache: force ? 'no-store' : 'no-cache',
+          mode: 'cors'
+        });
+        if (!res.ok) throw new Error('open-er-api HTTP ' + res.status);
+        var data = await res.json();
         var rate = data && data.rates ? Number(data.rates.COP) : NaN;
+        if (!Number.isFinite(rate) || rate <= 0) throw new Error('open-er-api sin COP');
         return {
           rate: rate,
-          updatedAt: data.time_last_update_utc || new Date().toISOString()
+          updatedAt: data.time_last_update_utc || new Date().toISOString(),
+          source: 'open-er-api'
         };
       }
     }
   ];
-  var GOOGLE_URL = 'https://www.google.com/search?q=EUR+TO+COP';
-  var REFRESH_MS = 2 * 60 * 1000;
-  var STORAGE_KEY = 'preventa_eur_cop_fx_v2';
 
   var state = {
     rate: null,
     updatedAt: null,
     source: '',
     loading: false,
-    error: ''
+    error: '',
+    fetchGen: 0
   };
 
   var copFmt = new Intl.NumberFormat('es-CO', {
@@ -91,40 +133,24 @@
   function applyCache() {
     var cached = readCache();
     if (!cached) return;
-    // Cache vieja (>30 min) no se usa como visible; solo arranque en red lenta
     if (cached.savedAt && (Date.now() - Number(cached.savedAt)) > 30 * 60 * 1000) return;
     state.rate = Number(cached.rate);
     state.updatedAt = cached.updatedAt || null;
     state.source = cached.source || '';
   }
 
-  async function fetchFromSource(source, force) {
-    var res = await fetch(source.url, {
-      cache: force ? 'no-store' : 'no-cache',
-      mode: 'cors'
-    });
-    if (!res.ok) throw new Error(source.name + ' HTTP ' + res.status);
-    var data = await res.json();
-    var parsed = source.parse(data) || {};
-    var rate = Number(parsed.rate);
-    if (!Number.isFinite(rate) || rate <= 0) throw new Error(source.name + ' sin COP');
-    return {
-      rate: rate,
-      updatedAt: parsed.updatedAt || new Date().toISOString(),
-      source: source.name
-    };
-  }
-
   async function fetchRate(force) {
-    if (state.loading) return state.rate;
+    var gen = ++state.fetchGen;
     state.loading = true;
     state.error = '';
     paint();
     var lastErr = null;
     try {
       for (var i = 0; i < SOURCES.length; i++) {
+        if (gen !== state.fetchGen) return state.rate;
         try {
-          var got = await fetchFromSource(SOURCES[i], !!force);
+          var got = await SOURCES[i].fetch(!!force);
+          if (gen !== state.fetchGen) return state.rate;
           state.rate = got.rate;
           state.updatedAt = got.updatedAt;
           state.source = got.source;
@@ -139,8 +165,10 @@
       else if (lastErr) state.error = 'Usando última tasa conocida';
       return state.rate;
     } finally {
-      state.loading = false;
-      paint();
+      if (gen === state.fetchGen) {
+        state.loading = false;
+        paint();
+      }
     }
   }
 
@@ -188,9 +216,9 @@
         '</label>' +
         '<div class="eur-cop-fx-actions">' +
           '<button type="button" class="btn" data-fx-refresh>Actualizar</button>' +
-          '<a class="btn" data-fx-google href="' + GOOGLE_URL + '" target="_blank" rel="noopener">Ver en Google</a>' +
+          '<a class="btn" data-fx-google href="' + GOOGLE_FINANCE_URL + '" target="_blank" rel="noopener">Ver en Google</a>' +
         '</div>' +
-        '<p class="eur-cop-fx-note">Tasa mid-market en vivo (se actualiza sola). “Ver en Google” compara con Google Finance.</p>' +
+        '<p class="eur-cop-fx-note">Tasa de Google Finance (misma fuente que el conversor público). Se actualiza sola cada 2 min.</p>' +
       '</div>';
     document.body.appendChild(panel);
 
@@ -220,8 +248,12 @@
     copInput.addEventListener('input', fromCop);
     panel.querySelector('[data-fx-close]').addEventListener('click', close);
     panel.querySelector('[data-fx-refresh]').addEventListener('click', function () {
+      var btn = panel.querySelector('[data-fx-refresh]');
+      if (btn) btn.disabled = true;
       fetchRate(true).then(function () {
         if (eurInput.value) fromEur();
+      }).finally(function () {
+        if (btn) btn.disabled = false;
       });
     });
     panel.addEventListener('click', function (e) {
@@ -238,6 +270,7 @@
       });
       fromEur();
     };
+    panel._fromEur = fromEur;
   }
 
   function paint() {
@@ -246,12 +279,14 @@
     var hint = document.getElementById('eurCopFxRateHint');
     var rateEl = document.querySelector('[data-fx-rate]');
     var updatedEl = document.querySelector('[data-fx-updated]');
+    var refreshBtn = document.querySelector('[data-fx-refresh]');
     if (hint) {
       hint.textContent = state.rate
         ? ('1€ ≈ ' + rateFmt.format(state.rate))
         : (state.loading ? '…' : '€/COP');
     }
     if (btn) btn.classList.toggle('is-loading', !!state.loading);
+    if (refreshBtn) refreshBtn.classList.toggle('is-loading', !!state.loading);
     if (rateEl) {
       if (state.rate) {
         rateEl.textContent = '1 EUR = ' + rateFmt.format(state.rate) + ' COP';
@@ -263,8 +298,9 @@
     }
     if (updatedEl) {
       if (state.updatedAt) {
+        var srcLabel = state.source === 'google-finance' ? 'Google Finance' : state.source;
         updatedEl.textContent = 'Actualizado: ' + new Date(state.updatedAt).toLocaleString('es-ES') +
-          (state.source ? (' · ' + state.source) : '');
+          (srcLabel ? (' · ' + srcLabel) : '');
       } else {
         updatedEl.textContent = '';
       }
