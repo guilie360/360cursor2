@@ -1,9 +1,15 @@
 /**
- * Chat de equipo en vivo (Supabase) + solicitud/aprobación de clave Pagos.
+ * Chat de equipo en vivo (Supabase) + canal "Clave dinámica" (OTP Pagos).
  */
 (function () {
-  var THREAD = 'team';
+  var DB_THREAD = 'team';
   var POLL_MS = 8000;
+  var KEY_KINDS = {
+    payments_key_request: 1,
+    payments_key_info: 1,
+    payments_key: 1
+  };
+
   var state = {
     messages: [],
     ready: false,
@@ -11,7 +17,8 @@
     pollTimer: null,
     userId: null,
     userName: '',
-    userRol: ''
+    userRol: '',
+    activeView: 'team' // team | clave
   };
 
   function getClient() {
@@ -44,6 +51,17 @@
 
   function $(id) { return document.getElementById(id); }
 
+  function isKeyKind(kind) {
+    return !!KEY_KINDS[kind];
+  }
+
+  function visibleMessages() {
+    return (state.messages || []).filter(function (m) {
+      var key = isKeyKind(m.kind);
+      return state.activeView === 'clave' ? key : !key;
+    });
+  }
+
   async function refreshIdentity() {
     var client = getClient();
     if (!client) return false;
@@ -68,7 +86,7 @@
     var result = await client
       .from('panel_team_messages')
       .select('*')
-      .eq('thread', THREAD)
+      .eq('thread', DB_THREAD)
       .order('created_at', { ascending: true })
       .limit(200);
     if (result.error) throw new Error(result.error.message || 'No se pudo cargar el chat');
@@ -124,15 +142,12 @@
       }
     }
 
-    if (m.kind === 'payments_key_info') {
-      cls += ' is-pay-key-info';
-    }
+    if (m.kind === 'payments_key_info') cls += ' is-pay-key-info';
 
     if (m.kind === 'payments_key') {
       cls += ' is-pay-key';
       var otp = String(meta.otp || m.body || '').replace(/\D/g, '');
-      bodyHtml =
-        '<div class="chat-otp-code" data-otp-value="' + escapeHtml(otp) + '">' + escapeHtml(otp) + '</div>';
+      bodyHtml = '<div class="chat-otp-code" data-otp-value="' + escapeHtml(otp) + '">' + escapeHtml(otp) + '</div>';
       actions =
         '<div class="chat-msg-actions">' +
           '<button type="button" class="btn" data-copy-otp="' + escapeHtml(otp) + '">Copiar código</button>' +
@@ -151,36 +166,127 @@
     );
   }
 
+  function setChrome() {
+    var title = $('chatPopupTitle');
+    var input = $('teamChatInput');
+    var teamTab = $('chatTeamTab');
+    var directTab = $('chatDirectTab');
+    var panel = $('chatRecipientPanel');
+    var onClave = state.activeView === 'clave';
+
+    if (title) title.textContent = onClave ? 'Clave dinámica' : 'Equipo';
+    if (input) {
+      input.placeholder = onClave
+        ? 'Mensajes de Clave dinámica…'
+        : 'Escribe un mensaje…';
+      input.disabled = false;
+    }
+    if (teamTab) teamTab.classList.toggle('active', !onClave && (!panel || panel.classList.contains('portal-hidden')));
+    if (directTab) directTab.classList.toggle('active', !!(panel && !panel.classList.contains('portal-hidden')));
+    ensureRequestButton();
+  }
+
   function render() {
+    // Los DM locales los pinta app.js; no pisar esa vista.
+    if (state.activeView === 'dm') {
+      ensureRequestButton();
+      return;
+    }
     var box = $('teamChatMessages');
     if (!box) return;
-    if (!state.messages.length) {
-      box.innerHTML = '<p class="desc">Todavía no hay mensajes en el equipo.</p>';
+    var list = visibleMessages();
+    if (!list.length) {
+      box.innerHTML = state.activeView === 'clave'
+        ? '<p class="desc">Todavía no hay solicitudes de Clave dinámica.</p>'
+        : '<p class="desc">Todavía no hay mensajes en el equipo.</p>';
     } else {
-      box.innerHTML = state.messages.map(renderMessage).join('');
+      box.innerHTML = list.map(renderMessage).join('');
       box.scrollTop = box.scrollHeight;
     }
-    var title = $('chatPopupTitle');
-    if (title) title.textContent = 'Equipo';
-    ensureRequestButton();
+    setChrome();
     updateBadge();
+  }
+
+  function openDmMode() {
+    state.activeView = 'dm';
+    ensureRequestButton();
   }
 
   function ensureRequestButton() {
     var form = $('teamChatForm');
-    if (!form || $('chatRequestPayKey')) return;
+    if (!form) return;
+    var btn = $('chatRequestPayKey');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'chatRequestPayKey';
+      btn.className = 'btn chat-request-pay-btn';
+      form.appendChild(btn);
+      btn.addEventListener('click', function () {
+        openClaveView();
+        if (!isAdmin()) requestPaymentsKey();
+      });
+    }
+    btn.textContent = 'Clave dinámica';
+    btn.disabled = false;
+    btn.title = isAdmin()
+      ? 'Abrir el chat de Clave dinámica'
+      : 'Abrir Clave dinámica y solicitar acceso';
+    btn.style.display = '';
+  }
+
+  function syncAppThread(thread) {
+    try {
+      if (typeof window.setActiveChatThread === 'function') {
+        window.setActiveChatThread(thread);
+      }
+    } catch (e) {}
+    var title = $('chatPopupTitle');
+    if (title) {
+      if (thread === 'clave') title.textContent = 'Clave dinámica';
+      else if (thread === 'team') title.textContent = 'Equipo';
+    }
+  }
+
+  function openClaveView() {
+    state.activeView = 'clave';
+    syncAppThread('clave');
+    var panel = $('chatRecipientPanel');
+    if (panel) panel.classList.add('portal-hidden');
+    var teamTab = $('chatTeamTab');
+    var directTab = $('chatDirectTab');
+    if (teamTab) teamTab.classList.remove('active');
+    if (directTab) directTab.classList.remove('active');
+    render();
+    markRead();
+  }
+
+  function openTeamView() {
+    state.activeView = 'team';
+    syncAppThread('team');
+    var panel = $('chatRecipientPanel');
+    if (panel) panel.classList.add('portal-hidden');
+    var teamTab = $('chatTeamTab');
+    var directTab = $('chatDirectTab');
+    if (teamTab) teamTab.classList.add('active');
+    if (directTab) directTab.classList.remove('active');
+    render();
+  }
+
+  function injectClaveInMemberList() {
+    var list = $('chatMemberList');
+    if (!list) return;
+    if (list.querySelector('[data-chat-clave]')) return;
     var btn = document.createElement('button');
     btn.type = 'button';
-    btn.id = 'chatRequestPayKey';
-    btn.className = 'btn chat-request-pay-btn';
-    btn.textContent = isAdmin() ? 'Acceso Pagos OK' : 'Solicitar clave Pagos';
-    if (isAdmin()) {
-      btn.disabled = true;
-      btn.title = 'Los administradores entran a Pagos sin clave';
-    }
-    form.appendChild(btn);
+    btn.className = 'chat-member-option';
+    btn.setAttribute('data-chat-clave', '1');
+    btn.textContent = 'Clave dinámica';
+    list.insertBefore(btn, list.firstChild);
     btn.addEventListener('click', function () {
-      requestPaymentsKey();
+      var panel = $('chatRecipientPanel');
+      if (panel) panel.classList.add('portal-hidden');
+      openClaveView();
     });
   }
 
@@ -189,6 +295,7 @@
       state.messages = await fetchMessages();
       state.ready = true;
       render();
+      injectClaveInMemberList();
     } catch (err) {
       var box = $('teamChatMessages');
       if (box) box.innerHTML = '<p class="desc">No se pudo sincronizar el chat: ' + escapeHtml(err.message) + '</p>';
@@ -222,18 +329,19 @@
     if (!client) throw new Error('Sin sesión');
     var result = await client.rpc('panel_chat_post', {
       p_body: text,
-      p_thread: THREAD,
+      p_thread: DB_THREAD,
       p_kind: 'text',
       p_meta: {}
     });
     if (result.error) throw new Error(result.error.message || 'No se pudo enviar');
+    state.activeView = 'team';
     await reload();
   }
 
   async function requestPaymentsKey() {
     if (isAdmin()) {
       window.boxiesPaymentsUnlocked = true;
-      alert('Como admin ya tienes acceso a Pagos.');
+      openClaveView();
       return;
     }
     var client = getClient();
@@ -247,12 +355,13 @@
       if (result.error) throw result.error;
       var popup = $('teamChatPopup');
       if (popup) popup.classList.remove('portal-hidden');
+      openClaveView();
       await reload();
       markRead();
       if (errEl) {
         errEl.textContent = result.data && result.data.reused
-          ? 'Ya hay una solicitud pendiente. El admin la verá en el chat.'
-          : 'Solicitud enviada al chat del equipo. El admin debe aceptarla.';
+          ? 'Ya hay una solicitud pendiente en Clave dinámica.'
+          : 'Solicitud enviada. El admin la verá en Clave dinámica.';
       }
     } catch (err) {
       if (errEl) errEl.textContent = err.message || 'No se pudo solicitar la clave.';
@@ -265,6 +374,7 @@
     if (!client || !requestId) return;
     var result = await client.rpc('panel_payments_approve_access', { p_request_id: requestId });
     if (result.error) throw new Error(result.error.message || 'No se pudo aprobar');
+    openClaveView();
     await reload();
   }
 
@@ -273,6 +383,7 @@
     if (!client || !requestId) return;
     var result = await client.rpc('panel_payments_reject_access', { p_request_id: requestId });
     if (result.error) throw new Error(result.error.message || 'No se pudo rechazar');
+    openClaveView();
     await reload();
   }
 
@@ -356,6 +467,22 @@
         }, 50);
       });
     }
+
+    var teamTab = $('chatTeamTab');
+    if (teamTab && !teamTab.dataset.liveBound) {
+      teamTab.dataset.liveBound = '1';
+      teamTab.addEventListener('click', function () {
+        openTeamView();
+      }, true);
+    }
+
+    var directTab = $('chatDirectTab');
+    if (directTab && !directTab.dataset.liveBound) {
+      directTab.dataset.liveBound = '1';
+      directTab.addEventListener('click', function () {
+        setTimeout(injectClaveInMemberList, 30);
+      });
+    }
   }
 
   async function start() {
@@ -370,6 +497,9 @@
     start: start,
     reload: reload,
     requestPaymentsKey: requestPaymentsKey,
+    openClaveView: openClaveView,
+    openTeamView: openTeamView,
+    openDmMode: openDmMode,
     verifyOtp: verifyOtp,
     isAdmin: isAdmin,
     markRead: markRead
