@@ -241,14 +241,6 @@
             '</label>' +
           '</div>' +
         '</div>' +
-        '<div class="eur-cop-fx-pager">' +
-          '<button type="button" class="btn eur-cop-fx-nav" data-fx-prev disabled>Anterior</button>' +
-          '<div class="eur-cop-fx-dots" aria-hidden="true">' +
-            '<span class="eur-cop-fx-dot is-active" data-fx-dot="0"></span>' +
-            '<span class="eur-cop-fx-dot" data-fx-dot="1"></span>' +
-          '</div>' +
-          '<button type="button" class="btn eur-cop-fx-nav" data-fx-next>Siguiente</button>' +
-        '</div>' +
         '<div class="eur-cop-fx-actions">' +
           '<button type="button" class="btn" data-fx-refresh>Actualizar</button>' +
           '<a class="btn" data-fx-google href="' + GOOGLE_FINANCE_URL + '" target="_blank" rel="noopener">Ver en Google</a>' +
@@ -291,12 +283,6 @@
         if (btn) btn.disabled = false;
       });
     });
-    panel.querySelector('[data-fx-prev]').addEventListener('click', function () {
-      setPage(state.pageIndex - 1);
-    });
-    panel.querySelector('[data-fx-next]').addEventListener('click', function () {
-      setPage(state.pageIndex + 1);
-    });
     panel.querySelectorAll('[data-fx-page]').forEach(function (tab) {
       tab.addEventListener('click', function () {
         setPage(Number(tab.getAttribute('data-fx-page')));
@@ -331,26 +317,13 @@
     var title = panel.querySelector('[data-fx-title]');
     var eurLabel = panel.querySelector('[data-fx-eur-label]');
     var note = panel.querySelector('[data-fx-note]');
-    var prev = panel.querySelector('[data-fx-prev]');
-    var next = panel.querySelector('[data-fx-next]');
     var sheet = panel.querySelector('[data-fx-sheet]');
     if (eyebrow) eyebrow.textContent = page.eyebrow;
     if (title) title.textContent = page.title;
     if (eurLabel) eurLabel.textContent = page.fieldLabel;
     if (note) note.textContent = page.note;
-    if (prev) {
-      prev.disabled = state.pageIndex <= 0;
-      prev.textContent = '← Comisión';
-    }
-    if (next) {
-      next.disabled = state.pageIndex >= PAGES.length - 1;
-      next.textContent = 'Showroom →';
-    }
     panel.querySelectorAll('[data-fx-page]').forEach(function (tab) {
       tab.classList.toggle('is-active', Number(tab.getAttribute('data-fx-page')) === state.pageIndex);
-    });
-    panel.querySelectorAll('[data-fx-dot]').forEach(function (dot) {
-      dot.classList.toggle('is-active', Number(dot.getAttribute('data-fx-dot')) === state.pageIndex);
     });
     if (sheet) {
       sheet.classList.remove('is-flip');
