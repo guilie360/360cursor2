@@ -1463,10 +1463,16 @@ function portalOpenPage(key){
   return;
  }
  if(key==='payments' && !window.boxiesPaymentsUnlocked){
-  $('paymentsGateBackdrop').classList.remove('portal-hidden');
-  $('paymentsDynamicKey').value='';$('paymentsGateError').textContent='';
-  setTimeout(()=>$('paymentsDynamicKey').focus(),30);
-  return;
+  // Admins entran sin clave; hunters necesitan OTP del chat.
+  const rol=(document.body.dataset.panelRole||sessionStorage.getItem('boxiesPanelRole')||'').toLowerCase();
+  if(rol==='admin'||rol==='super_admin'||window.BoxiesTeamChat?.isAdmin?.()){
+    window.boxiesPaymentsUnlocked=true;
+  }else{
+    $('paymentsGateBackdrop').classList.remove('portal-hidden');
+    $('paymentsDynamicKey').value='';$('paymentsGateError').textContent='';
+    setTimeout(()=>$('paymentsDynamicKey').focus(),30);
+    return;
+  }
  }
  if(key==='quote'){
   // Cotizador privado: con FS activo va por shell iframe (no location.href).
@@ -1520,21 +1526,45 @@ function portalOpenPage(key){
 document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>portalOpenPage(b.dataset.page)));
 renderHunterGoalFooter();
 window.addEventListener('storage',e=>{if(e.key==='boxiesHunterGoal'||e.key==='boxiesClosedSales')renderHunterGoalFooter();});
-document.getElementById('paymentsGateForm').addEventListener('submit',e=>{
+document.getElementById('paymentsGateForm').addEventListener('submit',async e=>{
  e.preventDefault();
- const key=document.getElementById('paymentsDynamicKey').value.trim();
- if(key==='777'){
+ const keyEl=document.getElementById('paymentsDynamicKey');
+ const errEl=document.getElementById('paymentsGateError');
+ const key=(keyEl?.value||'').trim();
+ const submitBtn=e.target.querySelector('button[type="submit"]');
+ if(!key){if(errEl)errEl.textContent='Introduce la clave dinámica.';return;}
+ try{
+  if(submitBtn)submitBtn.disabled=true;
+  if(errEl)errEl.textContent='Verificando…';
+  let ok=false;
+  if(window.BoxiesTeamChat&&typeof window.BoxiesTeamChat.verifyOtp==='function'){
+   ok=await window.BoxiesTeamChat.verifyOtp(key);
+  }
+  if(!ok){
+   if(errEl)errEl.textContent='Clave incorrecta o caducada. Pide una nueva en el chat.';
+   keyEl?.select?.();
+   return;
+  }
   window.boxiesPaymentsUnlocked=true;
+  try{sessionStorage.setItem('boxiesPaymentsUnlocked','1');}catch(err){}
   document.getElementById('paymentsGateBackdrop').classList.add('portal-hidden');
   portalOpenPage('payments');
- }else{
-  document.getElementById('paymentsGateError').textContent='Clave incorrecta. Solicita autorización al administrador.';
-  document.getElementById('paymentsDynamicKey').select();
+ }catch(err){
+  if(errEl)errEl.textContent=err.message||'No se pudo verificar la clave.';
+ }finally{
+  if(submitBtn)submitBtn.disabled=false;
  }
 });
-document.getElementById('requestPaymentsKey').addEventListener('click',()=>{
- document.getElementById('paymentsGateError').textContent='La solicitud al buzón del administrador se activará al conectar el sistema de mensajes. Clave temporal de prueba: 777.';
+document.getElementById('requestPaymentsKey').addEventListener('click',async ()=>{
+ const errEl=document.getElementById('paymentsGateError');
+ if(window.BoxiesTeamChat&&typeof window.BoxiesTeamChat.requestPaymentsKey==='function'){
+  if(errEl)errEl.textContent='Enviando solicitud al chat…';
+  await window.BoxiesTeamChat.requestPaymentsKey();
+  return;
+ }
+ if(errEl)errEl.textContent='El chat aún no está listo. Recarga e inténtalo de nuevo.';
 });
+try{if(sessionStorage.getItem('boxiesPaymentsUnlocked')==='1')window.boxiesPaymentsUnlocked=true;}catch(e){}
 
 // Exportación de resúmenes de Pagos por año, mes, proyecto o todos los movimientos.
 function paymentsExportRows(){
@@ -1759,6 +1789,8 @@ function leaveWorkspaceUi(){
   delete document.body.dataset.panelRole;
   sessionStorage.removeItem('boxiesPanelRole');
   sessionStorage.removeItem('boxiesTeamSession');
+  sessionStorage.removeItem('boxiesPaymentsUnlocked');
+  window.boxiesPaymentsUnlocked=false;
  }catch(e){}
  $('teamChatPopup')?.classList.add('portal-hidden');
  $('portalBack')?.classList.add('portal-hidden');
