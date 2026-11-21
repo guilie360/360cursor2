@@ -1,11 +1,28 @@
 /**
  * Conversor EUR → COP — tasa primaria desde Google Finance
- * (edge function eur-cop-rate). Fallback: currency-api / open.er-api.
+ * (edge function eur-cop-rate). Dos páginas: Comisión → Showroom.
  */
 (function () {
   var GOOGLE_FINANCE_URL = 'https://www.google.com/finance/quote/EUR-COP';
   var REFRESH_MS = 2 * 60 * 1000;
   var STORAGE_KEY = 'preventa_eur_cop_fx_v3';
+
+  var PAGES = [
+    {
+      id: 'comision',
+      title: 'Comisión',
+      eyebrow: 'HUNTER',
+      fieldLabel: 'Comisión (EUR)',
+      note: 'Comisión Hunter estimada convertida a pesos (Google Finance).'
+    },
+    {
+      id: 'showroom',
+      title: 'Showroom',
+      eyebrow: 'COTIZACIÓN',
+      fieldLabel: 'Showroom (EUR)',
+      note: 'Precio del showroom convertido a pesos (Google Finance).'
+    }
+  ];
 
   function supabaseBase() {
     return (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) ||
@@ -89,19 +106,10 @@
     source: '',
     loading: false,
     error: '',
-    fetchGen: 0
+    fetchGen: 0,
+    pageIndex: 0
   };
 
-  var copFmt = new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    maximumFractionDigits: 0
-  });
-  var eurFmt = new Intl.NumberFormat('es-ES', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 2
-  });
   var rateFmt = new Intl.NumberFormat('es-ES', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
@@ -190,6 +198,17 @@
     return parseMoney(el.textContent);
   }
 
+  function commissionEurAmount() {
+    var el = document.getElementById('internoCommission') ||
+      document.getElementById('hunterLiveCommission');
+    if (!el) return 0;
+    return parseMoney(el.textContent);
+  }
+
+  function pageEurAmount(index) {
+    return index === 0 ? commissionEurAmount() : stickyEurAmount();
+  }
+
   function ensureUi() {
     if (document.getElementById('eurCopFxPanel')) return;
     var panel = document.createElement('div');
@@ -201,24 +220,40 @@
       '<div class="eur-cop-fx-card">' +
         '<div class="eur-cop-fx-head">' +
           '<div>' +
-            '<div class="eyebrow">REFERENCIA</div>' +
-            '<strong class="eur-cop-fx-title">EUR → COP</strong>' +
+            '<div class="eyebrow" data-fx-eyebrow>HUNTER</div>' +
+            '<strong class="eur-cop-fx-title" data-fx-title>Comisión</strong>' +
           '</div>' +
           '<button type="button" class="eur-cop-fx-close" data-fx-close aria-label="Cerrar">×</button>' +
         '</div>' +
-        '<p class="eur-cop-fx-rate" data-fx-rate>Cargando tasa…</p>' +
-        '<p class="eur-cop-fx-updated" data-fx-updated></p>' +
-        '<label class="eur-cop-fx-field">Euros (EUR)' +
-          '<input type="text" inputmode="decimal" data-fx-eur placeholder="0,00" autocomplete="off">' +
-        '</label>' +
-        '<label class="eur-cop-fx-field">Pesos (COP)' +
-          '<input type="text" inputmode="decimal" data-fx-cop placeholder="0" autocomplete="off">' +
-        '</label>' +
+        '<nav class="eur-cop-fx-pages" aria-label="Páginas del conversor">' +
+          '<button type="button" class="eur-cop-fx-page-btn is-active" data-fx-page="0">Comisión</button>' +
+          '<button type="button" class="eur-cop-fx-page-btn" data-fx-page="1">Showroom</button>' +
+        '</nav>' +
+        '<div class="eur-cop-fx-stage" data-fx-stage>' +
+          '<div class="eur-cop-fx-sheet" data-fx-sheet>' +
+            '<p class="eur-cop-fx-rate" data-fx-rate>Cargando tasa…</p>' +
+            '<p class="eur-cop-fx-updated" data-fx-updated></p>' +
+            '<label class="eur-cop-fx-field"><span data-fx-eur-label>Comisión (EUR)</span>' +
+              '<input type="text" inputmode="decimal" data-fx-eur placeholder="0,00" autocomplete="off">' +
+            '</label>' +
+            '<label class="eur-cop-fx-field">Pesos (COP)' +
+              '<input type="text" inputmode="decimal" data-fx-cop placeholder="0" autocomplete="off">' +
+            '</label>' +
+          '</div>' +
+        '</div>' +
+        '<div class="eur-cop-fx-pager">' +
+          '<button type="button" class="btn eur-cop-fx-nav" data-fx-prev disabled>Anterior</button>' +
+          '<div class="eur-cop-fx-dots" aria-hidden="true">' +
+            '<span class="eur-cop-fx-dot is-active" data-fx-dot="0"></span>' +
+            '<span class="eur-cop-fx-dot" data-fx-dot="1"></span>' +
+          '</div>' +
+          '<button type="button" class="btn eur-cop-fx-nav" data-fx-next>Siguiente</button>' +
+        '</div>' +
         '<div class="eur-cop-fx-actions">' +
           '<button type="button" class="btn" data-fx-refresh>Actualizar</button>' +
           '<a class="btn" data-fx-google href="' + GOOGLE_FINANCE_URL + '" target="_blank" rel="noopener">Ver en Google</a>' +
         '</div>' +
-        '<p class="eur-cop-fx-note">Tasa de Google Finance (misma fuente que el conversor público). Se actualiza sola cada 2 min.</p>' +
+        '<p class="eur-cop-fx-note" data-fx-note>Comisión Hunter estimada convertida a pesos (Google Finance).</p>' +
       '</div>';
     document.body.appendChild(panel);
 
@@ -256,11 +291,25 @@
         if (btn) btn.disabled = false;
       });
     });
+    panel.querySelector('[data-fx-prev]').addEventListener('click', function () {
+      setPage(state.pageIndex - 1);
+    });
+    panel.querySelector('[data-fx-next]').addEventListener('click', function () {
+      setPage(state.pageIndex + 1);
+    });
+    panel.querySelectorAll('[data-fx-page]').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        setPage(Number(tab.getAttribute('data-fx-page')));
+      });
+    });
     panel.addEventListener('click', function (e) {
       if (e.target === panel) close();
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !panel.classList.contains('hidden')) close();
+      if (panel.classList.contains('hidden')) return;
+      if (e.key === 'Escape') close();
+      if (e.key === 'ArrowRight') setPage(state.pageIndex + 1);
+      if (e.key === 'ArrowLeft') setPage(state.pageIndex - 1);
     });
 
     panel._setEur = function (amount) {
@@ -271,6 +320,58 @@
       fromEur();
     };
     panel._fromEur = fromEur;
+    panel._applyPageChrome = applyPageChrome;
+  }
+
+  function applyPageChrome() {
+    var page = PAGES[state.pageIndex] || PAGES[0];
+    var panel = document.getElementById('eurCopFxPanel');
+    if (!panel) return;
+    var eyebrow = panel.querySelector('[data-fx-eyebrow]');
+    var title = panel.querySelector('[data-fx-title]');
+    var eurLabel = panel.querySelector('[data-fx-eur-label]');
+    var note = panel.querySelector('[data-fx-note]');
+    var prev = panel.querySelector('[data-fx-prev]');
+    var next = panel.querySelector('[data-fx-next]');
+    var sheet = panel.querySelector('[data-fx-sheet]');
+    if (eyebrow) eyebrow.textContent = page.eyebrow;
+    if (title) title.textContent = page.title;
+    if (eurLabel) eurLabel.textContent = page.fieldLabel;
+    if (note) note.textContent = page.note;
+    if (prev) {
+      prev.disabled = state.pageIndex <= 0;
+      prev.textContent = '← Comisión';
+    }
+    if (next) {
+      next.disabled = state.pageIndex >= PAGES.length - 1;
+      next.textContent = 'Showroom →';
+    }
+    panel.querySelectorAll('[data-fx-page]').forEach(function (tab) {
+      tab.classList.toggle('is-active', Number(tab.getAttribute('data-fx-page')) === state.pageIndex);
+    });
+    panel.querySelectorAll('[data-fx-dot]').forEach(function (dot) {
+      dot.classList.toggle('is-active', Number(dot.getAttribute('data-fx-dot')) === state.pageIndex);
+    });
+    if (sheet) {
+      sheet.classList.remove('is-flip');
+      void sheet.offsetWidth;
+      sheet.classList.add('is-flip');
+    }
+  }
+
+  function setPage(index) {
+    var next = Math.max(0, Math.min(PAGES.length - 1, Number(index) || 0));
+    if (next === state.pageIndex && document.getElementById('eurCopFxPanel')) {
+      applyPageChrome();
+      var panel = document.getElementById('eurCopFxPanel');
+      if (panel && panel._setEur) panel._setEur(pageEurAmount(next));
+      return;
+    }
+    state.pageIndex = next;
+    ensureUi();
+    applyPageChrome();
+    var panel = document.getElementById('eurCopFxPanel');
+    if (panel && panel._setEur) panel._setEur(pageEurAmount(next));
   }
 
   function paint() {
@@ -311,11 +412,13 @@
     ensureUi();
     var panel = document.getElementById('eurCopFxPanel');
     var btn = document.getElementById('eurCopFxBtn');
+    state.pageIndex = 0;
     panel.classList.remove('hidden');
     if (btn) btn.setAttribute('aria-expanded', 'true');
-    if (panel._setEur) panel._setEur(stickyEurAmount());
+    applyPageChrome();
+    if (panel._setEur) panel._setEur(pageEurAmount(0));
     fetchRate(true).then(function () {
-      if (panel._setEur) panel._setEur(stickyEurAmount());
+      if (panel._setEur) panel._setEur(pageEurAmount(state.pageIndex));
     });
   }
 
@@ -356,6 +459,7 @@
     refresh: function () { return fetchRate(true); },
     getRate: function () { return state.rate; },
     open: open,
-    close: close
+    close: close,
+    setPage: setPage
   };
 })();
