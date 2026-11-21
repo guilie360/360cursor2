@@ -4,7 +4,11 @@
 - En el modal de cotización: total **sin IVA**, anticipo 50%, entrega 50%, nota IVA.
 - Vista Hunter (sesión equipo): comisión 8% partida 50/50.
 - Botones **Pagar anticipo** / **Pagar entrega** abren overlay Paddle en **theme dark**.
-- El layout del checkout lo controla Paddle (MoR); se puede theme light/dark, color primario overlay y estilos inline, no un rediseño total.
+- Retorno de pago: `/pagos/?pago=ok` (default payment link + `successUrl`).
+- Estilos:
+  - **Overlay** (lo que usamos): solo `theme` + un `primary_checkout_color`. No rediseño total.
+  - **Inline/hosted**: tipografía, bordes, colores light/dark (más control; hay que embeber el form).
+  - No usar blanco puro como primario en overlay oscuro (texto del CTA queda invisible).
 - Módulo **Pagos**: lista `panel_pedidos` + cobros Paddle.
 
 ## Secrets (Supabase → Edge Functions)

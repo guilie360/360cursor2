@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pago · 360Preventa</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/css/variables.css">
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --fg: #f4f4f5;
+      --muted: rgba(255,255,255,.62);
+      --line: rgba(255,255,255,.1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 32px 20px;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+    .card {
+      width: min(440px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 36px;
+      background: rgba(255,255,255,.03);
+    }
+    .eyebrow {
+      margin: 0 0 12px;
+      font-family: system-ui, sans-serif;
+      font-size: 11px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(1.6rem, 4vw, 2rem);
+      font-weight: 500;
+      line-height: 1.15;
+    }
+    p {
+      margin: 0 0 28px;
+      color: var(--muted);
+      font-family: system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    a.btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 18px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-family: system-ui, sans-serif;
+      font-size: 14px;
+      border: 1px solid var(--line);
+      color: var(--fg);
+      background: transparent;
+    }
+    a.btn.primary {
+      background: #fff;
+      color: #111;
+      border-color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <p class="eyebrow">360Preventa · Pagos</p>
+    <h1 id="title">Procesando pago…</h1>
+    <p id="copy">Si acabas de pagar, confirma el estado en unos segundos. Si no, vuelve al cotizador.</p>
+    <div class="actions">
+      <a class="btn primary" href="/cotizar">Volver al cotizador</a>
+      <a class="btn" href="/">Inicio</a>
+    </div>
+  </main>
+  <script>
+    (function () {
+      var ok = /[?&]pago=ok(?:&|$)/i.test(location.search) || /_ptxn=/i.test(location.search);
+      var title = document.getElementById('title');
+      var copy = document.getElementById('copy');
+      if (ok) {
+        title.textContent = 'Pago recibido';
+        copy.textContent = 'Gracias. El anticipo o la entrega ya quedó registrado. Te contactaremos para continuar con el showroom.';
+      } else {
+        title.textContent = 'Pagos 360Preventa';
+        copy.textContent = 'Los cobros de anticipo y entrega se abren desde tu cotización. Esta página confirma el retorno desde Paddle.';
+      }
+    })();
+  </script>
+</body>
+</html>
