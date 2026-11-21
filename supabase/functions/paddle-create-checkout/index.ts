@@ -181,7 +181,8 @@ Deno.serve(async (req) => {
             amount: String(amountCents),
             currency_code: "EUR",
           },
-          tax_mode: "account_setting",
+          // exclusive: unit_price is sin IVA; Paddle adds tax on top if applicable
+          tax_mode: "external",
         },
       },
     ],

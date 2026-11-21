@@ -23,6 +23,6 @@ El `endpoint_secret_key` del notification setting queda en el dashboard Paddle (
 `test_fa33546d73a21e0df2fe1760317` — ya embebido en `payments-paddle.js` para sandbox.
 
 ## Settings actuales (sandbox)
-- Tax mode: `location` (Paddle calcula IVA)
+- Tax mode: `external` / account `exclusive` (precio sin IVA; Paddle suma IVA si aplica)
 - Métodos: card, Apple Pay, PayPal, Bancontact
 - Balance primary: USD (los precios pueden ser EUR)
