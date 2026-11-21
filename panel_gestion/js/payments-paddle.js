@@ -414,7 +414,8 @@
       proyecto_label: row.proyecto_label || 'Showroom 360Preventa',
       source: 'panel_pagos',
       quote_snapshot: row.quote_snapshot || undefined,
-      pedido_id: row.pedido_id || undefined
+      pedido_id: row.pedido_id || undefined,
+      is_test: !!row.is_test
     });
     var url = checkoutShareUrl(data.transaction_id, row.customer_email);
     if (window.PreventaQuotes && row.id) {
@@ -769,15 +770,49 @@
   }
 
   function looksLikeTestPay(row) {
-    var meta = row && row.metadata;
+    if (!row) return false;
+    if (row.is_test === true || row.is_test === 'true' || row.is_test === 1) return true;
+    var meta = row.metadata;
     if (meta && (meta.is_test === true || meta.is_test === 'true')) return true;
+    if (meta && String(meta.paddle_env || '') === 'sandbox') return true;
     var blob = [
-      row && row.customer_email,
-      row && row.customer_name,
-      row && row.concepto,
-      row && row.proyecto_label
+      row.customer_email,
+      row.customer_name,
+      row.concepto,
+      row.proyecto_label
     ].join(' ').toLowerCase();
     return /\b(test|prueba|testing|demo|asdf|testeo)\b/i.test(blob);
+  }
+
+  async function deleteTestPays() {
+    var client = getClient();
+    if (!client) throw new Error('Sin sesión de equipo');
+    var result = await client.rpc('panel_pagos_delete_tests');
+    if (result.error) throw new Error(result.error.message || 'No se pudieron borrar las pruebas');
+    var data = result.data || {};
+    return {
+      cobros: Number(data.cobros) || 0,
+      pedidos: Number(data.pedidos) || 0
+    };
+  }
+
+  async function deleteCobro(id) {
+    var client = getClient();
+    if (!client) throw new Error('Sin sesión de equipo');
+    var result = await client.rpc('panel_cobros_delete', { p_id: id });
+    if (result.error) throw new Error(result.error.message || 'No se pudo eliminar el cobro');
+    return true;
+  }
+
+  async function setCobroTestFlag(id, isTest) {
+    var client = getClient();
+    if (!client) throw new Error('Sin sesión de equipo');
+    var result = await client.rpc('panel_cobros_set_test', {
+      p_id: id,
+      p_is_test: !!isTest
+    });
+    if (result.error) throw new Error(result.error.message || 'No se pudo marcar como prueba');
+    return true;
   }
 
   function cobroWhen(r) {
@@ -875,9 +910,12 @@
               '<label>Buscar<input type="search" data-pay-search placeholder="Nombre o email…" autocomplete="off"></label>' +
               '<label class="quote-crm-sort-label">Mes<select data-pay-month></select></label>' +
               '<div class="quote-crm-toolbar-actions">' +
+                '<label class="quote-crm-check"><input type="checkbox" data-pay-hide-tests checked> Ocultar pruebas</label>' +
+                '<button type="button" class="btn" data-pay-purge-tests>Borrar pruebas</button>' +
                 '<button type="button" class="btn" data-pay-export>Exportar CSV</button>' +
               '</div>' +
             '</div>' +
+            '<p class="desc" data-pay-status aria-live="polite"></p>' +
             '<div class="pay-kpi-grid" data-pay-kpis></div>' +
             '<div class="eyebrow pay-ledger-eyebrow">MOVIMIENTOS</div>' +
             '<div class="pay-ledger" data-pay-ledger><p class="desc">Cargando…</p></div>' +
@@ -893,6 +931,9 @@
   function bindAccountingPanel(root) {
     var monthEl = root.querySelector('[data-pay-month]');
     var searchEl = root.querySelector('[data-pay-search]');
+    var hideTestsEl = root.querySelector('[data-pay-hide-tests]');
+    var purgeTestsBtn = root.querySelector('[data-pay-purge-tests]');
+    var statusEl = root.querySelector('[data-pay-status]');
     var kpisEl = root.querySelector('[data-pay-kpis]');
     var ledgerEl = root.querySelector('[data-pay-ledger]');
     var noteEl = root.querySelector('[data-pay-note]');
@@ -926,10 +967,15 @@
       return blob.indexOf(needle) >= 0;
     }
 
+    function hideTestsOn() {
+      return !!(hideTestsEl && hideTestsEl.checked);
+    }
+
     function accountingRows(month) {
       var needle = searchEl ? String(searchEl.value || '').trim().toLowerCase() : '';
+      var hideTests = hideTestsOn();
       return (cache.cobros || []).filter(function (r) {
-        if (looksLikeTestPay(r)) return false;
+        if (hideTests && looksLikeTestPay(r)) return false;
         if (!(r.provider === 'paddle' || r.paddle_transaction_id || r.provider === 'stripe' || !r.provider)) {
           return false;
         }
@@ -949,7 +995,7 @@
       var pendiente = open.reduce(function (s, r) { return s + (Number(r.amount_cents) || 0); }, 0);
 
       (cache.pedidos || []).forEach(function (p) {
-        if (looksLikeTestPay(p)) return;
+        if (hideTestsOn() && looksLikeTestPay(p)) return;
         if (p.status === 'en_produccion' || p.status === 'pendiente_entrega') {
           pendiente += Number(p.balance_cents) || 0;
         } else if (p.status === 'pendiente_anticipo') {
@@ -995,7 +1041,9 @@
             var ped = cache.pedidos.find(function (p) { return p.id === r.pedido_id; });
             if (ped) dots = payStageFromPedidoStatus(ped.status);
           }
+          var isTest = looksLikeTestPay(r);
           var body =
+            (isTest ? '<div class="quote-crm-test-tag">prueba</div>' : '') +
             '<div class="pay-meta-grid">' +
               metaRow('Estado', escapeHtml(statusLabel(r.status))) +
               metaRow('Tipo', escapeHtml(stageName)) +
@@ -1007,20 +1055,26 @@
               metaRow('Hunter', moneyFromCents(estimateHunterCents(r.amount_cents))) +
               (r.paddle_transaction_id ? metaRow('ID Paddle', escapeHtml(r.paddle_transaction_id)) : '') +
             '</div>' +
-            '<p class="desc pay-auto-hint">Automático desde Paddle · no se edita a mano</p>';
+            '<div class="quote-crm-row-actions">' +
+              '<button type="button" class="btn" data-pay-test="' + escapeHtml(r.id) + '">' +
+                (isTest ? 'No prueba' : 'Prueba') +
+              '</button>' +
+              '<button type="button" class="btn" data-pay-delete="' + escapeHtml(r.id) + '">Borrar</button>' +
+            '</div>' +
+            '<p class="desc pay-auto-hint">Paddle confirma el cobro. Puedes marcar/borrar pruebas para limpiar sandbox.</p>';
           return clientCardHtml({
             title: title,
             time: day,
             amount: moneyFromCents(r.amount_cents),
             stageHtml: payStageDotsHtml(dots),
-            extraClass: 'pay-ledger-row ' + stateClass,
+            extraClass: 'pay-ledger-row ' + stateClass + (isTest ? ' is-test' : ''),
             bodyHtml: body
           });
         }).join('') +
         '</div>';
 
       if (noteEl) {
-        noteEl.textContent = 'Pendiente = link creado, aún no pagado. Cobrado = pago confirmado por Paddle. Fee/Hunter son estimaciones.';
+        noteEl.textContent = 'Pendiente = link creado, aún no pagado. Cobrado = pago confirmado por Paddle. Desmarca “Ocultar pruebas” para ver sandbox y borrarlas.';
       }
     }
 
@@ -1056,11 +1110,60 @@
     }
 
     monthEl.addEventListener('change', paint);
+    if (hideTestsEl) hideTestsEl.addEventListener('change', paint);
     if (searchEl) {
       var t = null;
       searchEl.addEventListener('input', function () {
         clearTimeout(t);
         t = setTimeout(paint, 180);
+      });
+    }
+    if (purgeTestsBtn) {
+      purgeTestsBtn.addEventListener('click', async function () {
+        if (!window.confirm('¿Eliminar TODOS los cobros y pedidos marcados como prueba (incl. sandbox)?')) return;
+        purgeTestsBtn.disabled = true;
+        if (statusEl) statusEl.textContent = 'Borrando pruebas…';
+        try {
+          var out = await deleteTestPays();
+          if (statusEl) {
+            statusEl.textContent = 'Eliminados: ' + out.cobros + ' cobros · ' + out.pedidos + ' pedidos';
+          }
+          await refresh();
+        } catch (err) {
+          if (statusEl) statusEl.textContent = err.message || 'No se pudieron borrar las pruebas.';
+        } finally {
+          purgeTestsBtn.disabled = false;
+        }
+      });
+    }
+    if (ledgerEl) {
+      ledgerEl.addEventListener('click', async function (e) {
+        var delBtn = e.target.closest('[data-pay-delete]');
+        var testBtn = e.target.closest('[data-pay-test]');
+        if (!delBtn && !testBtn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var id = (delBtn || testBtn).getAttribute(delBtn ? 'data-pay-delete' : 'data-pay-test');
+        if (!id) return;
+        var row = (cache.cobros || []).find(function (r) { return r.id === id; });
+        try {
+          if (delBtn) {
+            if (!window.confirm('¿Eliminar este cobro de Contabilidad?')) return;
+            delBtn.disabled = true;
+            await deleteCobro(id);
+            if (statusEl) statusEl.textContent = 'Cobro eliminado.';
+          } else {
+            testBtn.disabled = true;
+            var next = !(row && looksLikeTestPay(row));
+            await setCobroTestFlag(id, next);
+            if (statusEl) statusEl.textContent = next ? 'Marcado como prueba.' : 'Ya no es prueba.';
+          }
+          await refresh();
+        } catch (err) {
+          if (statusEl) statusEl.textContent = err.message || 'No se pudo actualizar.';
+          if (delBtn) delBtn.disabled = false;
+          if (testBtn) testBtn.disabled = false;
+        }
       });
     }
     if (exportBtn) {
@@ -1070,7 +1173,7 @@
           return new Date(cobroWhen(b)) - new Date(cobroWhen(a));
         });
         var lines = [[
-          'fecha', 'email', 'concepto', 'etapa', 'estado', 'bruto_eur', 'fee_est_eur', 'neto_est_eur', 'hunter_eur', 'txn'
+          'fecha', 'email', 'concepto', 'etapa', 'estado', 'prueba', 'bruto_eur', 'fee_est_eur', 'neto_est_eur', 'hunter_eur', 'txn'
         ]];
         rows.forEach(function (r) {
           var amount = Number(r.amount_cents) || 0;
@@ -1081,6 +1184,7 @@
             r.concepto || r.proyecto_label || '',
             stageLabel(r.payment_stage || (r.metadata && r.metadata.stage)),
             r.status || '',
+            looksLikeTestPay(r) ? 'si' : 'no',
             (amount / 100).toFixed(2),
             (fee / 100).toFixed(2),
             (Math.max(0, amount - fee) / 100).toFixed(2),

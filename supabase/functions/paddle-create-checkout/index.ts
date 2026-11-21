@@ -126,6 +126,8 @@ Deno.serve(async (req) => {
     }
     const parts = splitCents(totalCents);
     const hunter = hunterSplit(totalCents);
+    const isTest = body.is_test === true || body.is_test === "true" ||
+      paddleEnv === "sandbox";
     const { data, error } = await adminDb
       .from("panel_pedidos")
       .insert({
@@ -139,7 +141,12 @@ Deno.serve(async (req) => {
         hunter_commission_cents: hunter.full,
         status: "pendiente_anticipo",
         quote_snapshot: body.quote_snapshot || {},
-        metadata: { source: body.source || "cotizador" },
+        is_test: isTest,
+        metadata: {
+          source: body.source || "cotizador",
+          is_test: isTest,
+          paddle_env: paddleEnv,
+        },
       })
       .select("*")
       .single();
@@ -259,6 +266,9 @@ Deno.serve(async (req) => {
   const checkoutUrl = txn?.checkout?.url as string | undefined;
 
   const concepto = label;
+  const cobroIsTest = !!(pedido && (pedido as { is_test?: boolean }).is_test) ||
+    body.is_test === true || body.is_test === "true" ||
+    paddleEnv === "sandbox";
   await adminDb.from("panel_cobros").insert({
     created_by: userId,
     pedido_id: pedidoId,
@@ -272,7 +282,8 @@ Deno.serve(async (req) => {
     status: "pending",
     paddle_transaction_id: txnId,
     checkout_url: checkoutUrl || null,
-    metadata: { paddle_env: paddleEnv, stage },
+    is_test: cobroIsTest,
+    metadata: { paddle_env: paddleEnv, stage, is_test: cobroIsTest },
   });
 
   const txnField = stage === "deposit" ? "paddle_txn_deposit" : "paddle_txn_balance";
