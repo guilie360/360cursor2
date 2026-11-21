@@ -391,9 +391,13 @@
 
   async function clearCurrentChat() {
     var label = currentChatLabel();
+    var onClave = state.activeView === 'clave';
     var ok = window.confirm(
       '¿Seguro que quieres borrar el chat “' + label + '”?\n\n' +
-      'Se eliminarán todos los mensajes y no se podrán recuperar.'
+      (onClave
+        ? 'Se borrarán las solicitudes y claves de este chat. Podrás pedir una nueva Clave dinámica después.'
+        : 'Se eliminarán los mensajes de Equipo. Clave dinámica no se toca.') +
+      '\n\nNo se podrán recuperar.'
     );
     if (!ok) return;
 
@@ -410,9 +414,10 @@
       alert('Entra con tu cuenta de equipo para borrar el chat.');
       return;
     }
-    var scope = state.activeView === 'clave' ? 'clave' : 'team';
+    var scope = onClave ? 'clave' : 'team';
     var result = await client.rpc('panel_chat_clear', { p_scope: scope });
     if (result.error) throw new Error(result.error.message || 'No se pudo borrar el chat');
+    state.messages = [];
     await reload();
   }
 
@@ -441,9 +446,13 @@
       await reload();
       markRead();
       if (errEl) {
-        errEl.textContent = result.data && result.data.reused
-          ? 'Ya hay una solicitud pendiente. Cuando te den la clave, cópiala aquí.'
-          : 'Solicitud enviada. Cuando te den la clave, cópiala para volver al acceso.';
+        if (result.data && result.data.restored) {
+          errEl.textContent = 'Solicitud restaurada en Clave dinámica. Espera la clave del admin.';
+        } else if (result.data && result.data.reused) {
+          errEl.textContent = 'Ya hay una solicitud pendiente. Cuando te den la clave, cópiala aquí.';
+        } else {
+          errEl.textContent = 'Solicitud enviada. Cuando te den la clave, cópiala para volver al acceso.';
+        }
       }
     } catch (err) {
       if (fromGate) state.awaitingPaymentsGate = false;
