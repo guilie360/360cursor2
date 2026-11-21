@@ -24,6 +24,13 @@
     if (window.BoxiesGlobalNav && typeof window.BoxiesGlobalNav.refresh === 'function') {
       window.BoxiesGlobalNav.refresh();
     }
+    var testWrap = document.getElementById('quoteIsTestWrap');
+    var testEl = document.getElementById('quoteIsTest');
+    if (testWrap) {
+      testWrap.hidden = false;
+      testWrap.style.display = 'flex';
+    }
+    if (testEl) testEl.checked = true;
   }
 
   function startQuote() {

@@ -693,6 +693,32 @@ $('sharePdf').addEventListener('click',()=>shareQuoteFile('pdf'));
 $('shareImage').addEventListener('click',()=>shareQuoteFile('image'));
 
 
+function activeQuotePayload(){
+ const ctx=window.__paddleOrderPayCtx||{};
+ let total=Number(ctx.totalEuros);
+ if(!Number.isFinite(total)||total<=0){
+  const raw=String($('orderTotal')?.textContent||'').replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',','.');
+  total=Number(raw)||0;
+ }
+ const label=ctx.proyectoLabel||$('orderTitle')?.textContent||'Showroom 360Preventa';
+ const snapshot=ctx.quoteSnapshot||{total,draft:typeof collectQuoteDraft==='function'?collectQuoteDraft():null};
+ const testEl=$('quoteIsTest');
+ return{
+  customerName:$('customerName')?.value.trim()||'',
+  customerEmail:$('customerEmail')?.value.trim()||'',
+  totalEuros:total,
+  proyectoLabel:label,
+  quoteSnapshot:snapshot,
+  source:location.pathname.indexOf('cotizador')>=0||location.pathname.indexOf('cotizar')>=0?'cotizador':'panel',
+  isTest:!!(testEl&&testEl.checked)
+ };
+}
+async function persistDownloadedQuote(){
+ if(!window.PreventaQuotes||typeof PreventaQuotes.saveQuote!=='function')return null;
+ const payload=activeQuotePayload();
+ if(!payload.customerName||!payload.customerEmail||!(payload.totalEuros>0))return null;
+ return PreventaQuotes.saveQuote(payload);
+}
 $('downloadPdf').addEventListener('click',async()=>{
  const name=$('customerName').value.trim();
  const email=$('customerEmail').value.trim();
@@ -708,13 +734,19 @@ $('downloadPdf').addEventListener('click',async()=>{
   const jpeg=canvas.toDataURL('image/jpeg',0.96);
   const pdf=createSinglePagePdf(jpeg,canvas);
   downloadBlob(pdf,`Showroom_Cotizacion_${safeFileName()}.pdf`);
-  $('confirmStatus').textContent='PDF generado correctamente.';
+  try{
+   await persistDownloadedQuote();
+   $('confirmStatus').textContent='PDF generado y cotización guardada.';
+  }catch(saveErr){
+   console.warn('No se pudo guardar la cotización:',saveErr);
+   $('confirmStatus').textContent='PDF generado. No se pudo guardar en la base (revisa conexión).';
+  }
  }catch(error){
   console.error('Error al generar el PDF:',error);
   $('confirmStatus').textContent='No se pudo generar el PDF. Inténtalo de nuevo.';
  }finally{
   $('downloadPdf').disabled=false;
-  $('downloadPdf').textContent='DESCARGAR COTIZACIÓN';
+  $('downloadPdf').textContent=$('downloadPdf').classList.contains('final-quote-download')?'DESCARGAR PDF':'DESCARGAR COTIZACIÓN';
  }
 });
 
@@ -1159,7 +1191,7 @@ function saveTasksState(){try{localStorage.setItem('boxiesTasksState',JSON.strin
 const demoMoney=n=>'€ '+Number(n).toLocaleString('es-ES');
 const projectRows=()=>demoProjects.map(p=>`<tr><td><button class="project-open" data-project="${p.id}">${p.name}</button></td><td>${p.client}</td><td>${p.owner}</td><td><span class="status-pill">${p.status}</span></td><td>${demoMoney(p.amount)}</td><td><div class="progress-track"><span style="width:${p.progress}%"></span></div><small>${p.progress}%</small></td></tr>`).join('');
 const portalPages={
- payments:{title:'Pagos',intro:'Pedidos con anticipo 50% + entrega 50% vía Paddle (EUR sin IVA; el impuesto se calcula en el checkout).',body:`<div id="panelPaymentsRoot" class="panel-payments" data-payments-root="1"><div class="portal-note">Cargando pagos…</div></div>`},
+ payments:{title:'Pagos',intro:'Cotizaciones guardadas, link de cobro Paddle y pedidos 50/50 (EUR sin IVA; IVA en checkout).',body:`<div id="panelPaymentsRoot" class="panel-payments" data-payments-root="1"><div class="portal-note">Cargando pagos…</div></div>`},
  contracts:{title:'Contratos',intro:'Prepara contratos desde los datos del proyecto para evitar introducir la información dos veces.',body:`<div class="portal-note">Flujo previsto: seleccionar proyecto → completar datos fiscales faltantes → generar documento desde plantilla → revisión → firma.</div><div class="portal-form"><label>Proyecto<select><option>Seleccionar proyecto…</option><option>Miralago</option><option>Apartamento Centro</option><option>Co-living Norte</option></select></label><label>Plantilla<select><option>Contrato de servicios</option><option>Acuerdo de confidencialidad</option></select></label><label>Razón social<input placeholder="Se completará desde el proyecto"></label><label>Documento fiscal<input placeholder="NIF / CIF / NIT"></label></div><button class="btn primary" data-demo="contracts">Preparar contrato</button><p class="desc">La generación automática requiere cargar la plantilla contractual aprobada.</p>`},
  database:{title:'Base de datos',intro:'Un espacio central para consultar y organizar los archivos compartidos de 360Preventa. Conecta Google Drive una sola vez y accede a cada categoría.',body:`
 <div class="database-toolbar">

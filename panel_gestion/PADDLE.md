@@ -5,6 +5,7 @@
 - Vista Hunter (sesión equipo): comisión 8% partida 50/50.
 - Botones **Pagar anticipo** / **Pagar entrega** abren overlay Paddle en **theme dark**.
 - Retorno de pago: `/pagos/?pago=ok` (default payment link + `successUrl`).
+- Cotizaciones CRM: tabla `panel_cotizaciones` (se guarda al descargar PDF). Panel → Pagos busca por nombre/email, genera link `/pagos/?txn=…`, elimina pruebas.
 - Estilos:
   - **Overlay** (lo que usamos): solo `theme` + un `primary_checkout_color`. No rediseño total.
   - **Inline/hosted**: tipografía, bordes, colores light/dark (más control; hay que embeber el form).

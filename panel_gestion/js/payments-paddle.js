@@ -385,8 +385,150 @@
     });
   }
 
+  function checkoutShareUrl(transactionId, email) {
+    var q = new URLSearchParams();
+    q.set('txn', String(transactionId || ''));
+    if (email) q.set('email', String(email));
+    return window.location.origin + '/pagos/?' + q.toString();
+  }
+
+  async function generateLinkForQuote(row, stage) {
+    stage = stage || 'deposit';
+    var totalEuros = (Number(row.total_cents) || 0) / 100;
+    var data = await createCheckout({
+      stage: stage,
+      quote_total_euros: totalEuros,
+      customer_name: row.customer_name,
+      customer_email: row.customer_email,
+      proyecto_label: row.proyecto_label || 'Showroom 360Preventa',
+      source: 'panel_pagos',
+      quote_snapshot: row.quote_snapshot || undefined,
+      pedido_id: row.pedido_id || undefined
+    });
+    var url = checkoutShareUrl(data.transaction_id, row.customer_email);
+    if (window.PreventaQuotes && row.id) {
+      try {
+        await PreventaQuotes.markPedido(row.id, data.pedido_id, url);
+      } catch (e) {}
+    }
+    return { data: data, url: url };
+  }
+
+  function bindQuotesPanel(root) {
+    var search = root.querySelector('[data-quote-search]');
+    var list = root.querySelector('[data-quote-list]');
+    var status = root.querySelector('[data-quote-status]');
+    var hideTests = root.querySelector('[data-quote-hide-tests]');
+    var purgeTests = root.querySelector('[data-quote-purge-tests]');
+    if (!list || !window.PreventaQuotes) return;
+
+    async function refresh() {
+      list.innerHTML = '<p class="desc">Cargando cotizaciones…</p>';
+      if (status) status.textContent = '';
+      try {
+        var rows = await PreventaQuotes.listQuotes({
+          query: search ? search.value : '',
+          hideTests: !!(hideTests && hideTests.checked)
+        });
+        if (!rows.length) {
+          list.innerHTML = '<p class="desc">No hay cotizaciones guardadas. Se crean al descargar el PDF desde el cotizador.</p>';
+          return;
+        }
+        list.innerHTML = rows.map(function (r) {
+          var when = r.created_at ? new Date(r.created_at).toLocaleString('es-ES') : '';
+          var badge = r.is_test ? ' · <em>prueba</em>' : '';
+          return (
+            '<div class="portal-list-item quote-crm-row" data-quote-id="' + escapeHtml(r.id) + '">' +
+              '<span><b>' + escapeHtml(r.customer_name) + '</b>' +
+              '<small class="muted">' + escapeHtml(r.customer_email) + badge + '<br>' +
+              escapeHtml(r.proyecto_label || '') + ' · ' + when + '</small></span>' +
+              '<span style="text-align:right;display:flex;flex-direction:column;gap:8px;align-items:flex-end">' +
+                '<b>' + moneyFromCents(r.total_cents) + '</b>' +
+                '<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' +
+                  '<button type="button" class="btn primary" data-quote-charge="deposit">Generar link cobro</button>' +
+                  '<button type="button" class="btn" data-quote-open="1"' + (r.last_checkout_url ? '' : ' disabled') + '>Abrir link</button>' +
+                  '<button type="button" class="btn" data-quote-delete="1">Eliminar</button>' +
+                '</span>' +
+              '</span>' +
+            '</div>'
+          );
+        }).join('');
+
+        list.querySelectorAll('.quote-crm-row').forEach(function (el) {
+          var id = el.getAttribute('data-quote-id');
+          var row = rows.find(function (x) { return x.id === id; });
+          if (!row) return;
+          var chargeBtn = el.querySelector('[data-quote-charge]');
+          var openBtn = el.querySelector('[data-quote-open]');
+          var delBtn = el.querySelector('[data-quote-delete]');
+          if (chargeBtn) {
+            chargeBtn.addEventListener('click', async function () {
+              chargeBtn.disabled = true;
+              if (status) status.textContent = 'Generando checkout Paddle…';
+              try {
+                var out = await generateLinkForQuote(row, 'deposit');
+                if (status) status.textContent = 'Link listo. Copiado al portapapeles si el navegador lo permite.';
+                try { await navigator.clipboard.writeText(out.url); } catch (eClip) {}
+                var go = window.confirm('Link de cobro creado.\n\n' + out.url + '\n\n¿Abrir checkout ahora?');
+                if (go) window.location.assign(out.url);
+                else refresh();
+              } catch (err) {
+                if (status) status.textContent = err.message || 'No se pudo generar el link.';
+                chargeBtn.disabled = false;
+              }
+            });
+          }
+          if (openBtn) {
+            openBtn.addEventListener('click', function () {
+              if (row.last_checkout_url) window.open(row.last_checkout_url, '_blank', 'noopener');
+            });
+          }
+          if (delBtn) {
+            delBtn.addEventListener('click', async function () {
+              if (!window.confirm('¿Eliminar cotización de ' + row.customer_name + '?')) return;
+              delBtn.disabled = true;
+              try {
+                await PreventaQuotes.deleteQuote(row.id);
+                refresh();
+              } catch (err) {
+                if (status) status.textContent = err.message || 'No se pudo eliminar.';
+                delBtn.disabled = false;
+              }
+            });
+          }
+        });
+      } catch (err) {
+        list.innerHTML = '<div class="portal-note">No se pudieron cargar cotizaciones: ' + escapeHtml(err.message) + '</div>';
+      }
+    }
+
+    var searchTimer = null;
+    if (search) {
+      search.addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(refresh, 220);
+      });
+    }
+    if (hideTests) hideTests.addEventListener('change', refresh);
+    if (purgeTests) {
+      purgeTests.addEventListener('click', async function () {
+        if (!window.confirm('¿Eliminar TODAS las cotizaciones marcadas como prueba?')) return;
+        purgeTests.disabled = true;
+        try {
+          await PreventaQuotes.deleteTestQuotes();
+          refresh();
+        } catch (err) {
+          if (status) status.textContent = err.message || 'No se pudieron borrar las pruebas.';
+        } finally {
+          purgeTests.disabled = false;
+        }
+      });
+    }
+    refresh();
+  }
+
   function renderPanel(root) {
-    root.innerHTML = '<div class="portal-note">Cargando pedidos y cobros Paddle…</div>';
+    root.innerHTML = '<div class="portal-note">Cargando pagos…</div>';
     Promise.all([fetchPedidos(), fetchCobros()]).then(function (pair) {
       var pedidos = pair[0];
       var cobros = pair[1].filter(function (r) { return r.provider === 'paddle' || r.paddle_transaction_id; });
@@ -401,7 +543,7 @@
               '</div>'
             );
           }).join('')
-        : '<p class="desc">Aún no hay pedidos 50/50. Se crean al pagar el anticipo desde la cotización.</p>';
+        : '<p class="desc">Aún no hay pedidos 50/50. Se crean al pagar el anticipo o al generar un link desde cotizaciones.</p>';
 
       var cobrosHtml = cobros.length
         ? '<table class="panel-pay-table"><thead><tr><th>Concepto</th><th>Estado</th><th>Importe</th></tr></thead><tbody>' +
@@ -413,12 +555,22 @@
       root.innerHTML =
         '<div class="panel-pay-stripe panel-pay-paddle">' +
           '<div class="eyebrow">PADDLE · SANDBOX</div>' +
-          '<h3>Pedidos con anticipo y entrega</h3>' +
-          '<p class="desc">Totales sin IVA. El impuesto lo calcula Paddle en el checkout (location). Comisión Hunter 8% en dos mitades.</p>' +
+          '<h3>Cotizaciones guardadas</h3>' +
+          '<p class="desc">Busca por nombre o email, genera el link de cobro (anticipo 50%) y ábrelo en <code>/pagos</code>. Puedes eliminar pruebas.</p>' +
+          '<div class="portal-form" style="margin-bottom:14px">' +
+            '<label>Buscar cliente<input type="search" data-quote-search placeholder="Nombre o correo…" autocomplete="off"></label>' +
+            '<label style="display:flex;align-items:center;gap:8px;margin-top:8px"><input type="checkbox" data-quote-hide-tests> Ocultar pruebas</label>' +
+            '<button type="button" class="btn" data-quote-purge-tests style="margin-top:8px">Borrar todas las pruebas</button>' +
+          '</div>' +
+          '<p class="desc" data-quote-status aria-live="polite"></p>' +
+          '<div class="portal-list" data-quote-list></div>' +
+          '<h3 style="margin-top:28px">Pedidos con anticipo y entrega</h3>' +
+          '<p class="desc">Totales sin IVA. El impuesto lo calcula Paddle en el checkout.</p>' +
           '<div class="portal-list">' + pedidosHtml + '</div>' +
           '<h3 style="margin-top:22px">Cobros</h3>' +
           cobrosHtml +
         '</div>';
+      bindQuotesPanel(root);
     }).catch(function (err) {
       root.innerHTML = '<div class="portal-note">No se pudieron cargar los pagos: ' + escapeHtml(err.message) + '</div>';
     });

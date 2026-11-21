@@ -395,6 +395,10 @@
   <p class="desc">Ingresa tu nombre para identificar esta cotización.</p>
   <div class="field name-field"><label for="customerName">Nombre de la persona</label><input id="customerName" type="text" placeholder="Escribe tu nombre" autocomplete="name" required></div>
   <div class="field email-field"><label for="customerEmail">Correo electrónico</label><input id="customerEmail" type="email" placeholder="tu@correo.com" autocomplete="email" required></div>
+  <label class="field quote-test-flag" for="quoteIsTest" id="quoteIsTestWrap" hidden style="display:none;align-items:center;gap:10px;margin:10px 0 0">
+   <input id="quoteIsTest" type="checkbox">
+   <span>Marcar como prueba (borrar fácil en Pagos)</span>
+  </label>
   <div id="exportCustomerName" class="export-customer-name"></div>
   <div id="orderSummary" class="order-details"></div>
   <div class="price-line total-line"><span>Total estimado · sin IVA</span><strong id="orderTotal">—</strong></div>
@@ -495,14 +499,15 @@
 <script src="/shared/js/fullscreen-persist.js?v=9"></script>
 <script src="/shared/js/nav-no-status.js?v=2"></script>
 <script src="/shared/js/global-nav.js?v=19"></script>
-<script src="/panel_gestion/js/payments-paddle.js?v=6"></script>
-<script src="/panel_gestion/js/app.js?v=fs23"></script>
+<script src="/panel_gestion/js/quotes-store.js?v=1"></script>
+<script src="/panel_gestion/js/payments-paddle.js?v=7"></script>
+<script src="/panel_gestion/js/app.js?v=fs24"></script>
 <script src="/shared/js/cursor-layer.js?v=2"></script>
 <script src="/panel_gestion/js/visual-layer.js"></script>
 <script src="/panel_gestion/js/lightbox.js"></script>
 <script src="/panel_gestion/js/path-chooser-flip.js"></script>
 <script src="/panel_gestion/js/accordion-tones.js"></script>
 <script src="/panel_gestion/js/path-chooser-actions.js"></script>
-<script src="/cotizador/js/boot.js?v=11"></script>
+<script src="/cotizador/js/boot.js?v=12"></script>
 </body>
 </html>
