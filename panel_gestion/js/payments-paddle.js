@@ -229,28 +229,19 @@
     var balBtn = document.getElementById('orderPayBalance');
     var status = meta.status || 'pendiente_anticipo';
     var depositDone = status === 'en_produccion' || status === 'pendiente_entrega' || status === 'pagado';
-    var balanceDone = status === 'pagado';
     if (depBtn) {
       depBtn.disabled = !!depositDone;
       depBtn.style.display = depositDone ? 'none' : '';
       if (!depositDone) {
-        depBtn.textContent = 'Contratar · anticipo ' + moneyFromCents(parts.deposit);
-      } else if (!balanceDone && balBtn) {
-        // Entrega solo cuando el anticipo ya está pagado
-        balBtn.hidden = false;
-        balBtn.style.display = '';
-        balBtn.disabled = false;
-        balBtn.textContent = 'Pagar entrega ' + moneyFromCents(parts.balance);
+        depBtn.textContent = 'Contratar · anticipo 50% · ' + moneyFromCents(parts.deposit);
       }
     }
-    if (balBtn && !depositDone) {
+    // Pagar entrega no vive en este modal: se genera después (panel / enlace)
+    if (balBtn) {
       balBtn.hidden = true;
       balBtn.style.display = 'none';
       balBtn.disabled = true;
-    }
-    if (balBtn && balanceDone) {
-      balBtn.disabled = true;
-      balBtn.style.display = 'none';
+      balBtn.setAttribute('aria-hidden', 'true');
     }
     var statusEl = document.getElementById('orderPayStatus');
     if (statusEl) statusEl.textContent = '';

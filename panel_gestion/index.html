@@ -12,8 +12,8 @@
   <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
   <link rel="stylesheet" href="/shared/css/site-chrome.css?v=9">
   <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
-  <link rel="stylesheet" href="css/base.css?v=panel55">
-  <link rel="stylesheet" href="css/patches.css?v=panel55">
+  <link rel="stylesheet" href="css/base.css?v=panel56">
+  <link rel="stylesheet" href="css/patches.css?v=panel56">
 </head>
 <body class="portal-mode">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat del equipo">
@@ -549,6 +549,10 @@
    <small class="price-vat-note">+ IVA si aplica en el pago</small>
   </div>
 
+  <p class="quote-pay-terms" id="orderPayTerms">
+   Forma de pago: <strong>50% anticipo</strong> · <strong>50% post entrega</strong>
+  </p>
+
   <details class="order-fold order-summary-fold">
    <summary>Ver resumen</summary>
    <div id="orderSummary" class="order-details"></div>
@@ -556,7 +560,7 @@
     <div class="quote-pay-grid">
      <div class="quote-pay-card"><small>Total</small><strong id="orderPayTotal">—</strong></div>
      <div class="quote-pay-card"><small>Anticipo 50%</small><strong id="orderPayDepositAmt">—</strong></div>
-     <div class="quote-pay-card"><small>Entrega 50%</small><strong id="orderPayBalanceAmt">—</strong></div>
+     <div class="quote-pay-card"><small>Post entrega 50%</small><strong id="orderPayBalanceAmt">—</strong></div>
     </div>
     <div class="quote-pay-hunter" id="orderPayHunter" hidden>
      <small>Hunter 8%</small>
@@ -568,8 +572,8 @@
 
   <p class="quote-pay-status muted" id="orderPayStatus" aria-live="polite"></p>
   <div class="actions summary-actions">
-   <button class="btn primary" id="orderPayDeposit" type="button">Contratar · pagar anticipo</button>
-   <button class="btn" id="orderPayBalance" type="button" hidden disabled style="display:none">Pagar entrega</button>
+   <button class="btn" id="orderPayDeposit" type="button">Contratar · anticipo 50%</button>
+   <button class="btn" id="orderPayBalance" type="button" hidden disabled aria-hidden="true" tabindex="-1">Pagar entrega</button>
    <button class="btn final-quote-download" id="downloadPdf" type="button">Descargar PDF</button>
    <button type="button" class="btn final-quote-whatsapp" data-href="https://wa.me/573226834084" data-external="1" aria-label="Chatear con asesor">WhatsApp</button>
   </div>
@@ -593,7 +597,7 @@
 <script src="/shared/js/nav-no-status.js?v=2"></script>
 <script src="/shared/js/global-nav.js?v=19"></script>
 <script src="js/quotes-store.js?v=5"></script>
-<script src="js/payments-paddle.js?v=18"></script>
+<script src="js/payments-paddle.js?v=19"></script>
 <script src="js/paddle-countries.js?v=2"></script>
 <script src="js/app.js?v=fs29"></script>
 <script src="js/panel-auth.js?v=6"></script>

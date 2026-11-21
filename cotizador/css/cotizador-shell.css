@@ -492,32 +492,62 @@ body.cotizador-app #orderModal .total-line strong{
   font:400 var(--t-lg)/1 var(--font-display)!important;
   color:#f3f3f1!important;
 }
-body.cotizador-app #orderModal .summary-actions{
-  display:flex!important;
-  justify-content:center!important;
-  gap:12px!important;
-  flex-wrap:wrap!important;
+body.cotizador-app #orderModal .quote-pay-terms{
+  margin:12px 0 0;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:13px;
+  background:rgba(255,255,255,.03);
+  color:rgba(255,255,255,.62);
+  font:500 12px/1.45 Manrope,Arial,sans-serif;
 }
+body.cotizador-app #orderModal .quote-pay-terms strong{color:#f3f3f1;font-weight:650}
 body.cotizador-app #orderModal .quote-pay-schedule{margin-top:14px}
-body.cotizador-app #orderModal .summary-actions #orderPayDeposit,
-body.cotizador-app #orderModal .summary-actions #orderPayBalance,
+body.cotizador-app #orderModal .summary-actions{
+  display:grid!important;
+  grid-template-columns:1fr 1fr;
+  gap:10px!important;
+  width:100%;
+  margin-top:14px!important;
+}
+body.cotizador-app #orderModal .summary-actions #orderPayDeposit{
+  grid-column:1 / -1;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  min-height:52px!important;
+  padding:14px 18px!important;
+  border-radius:13px!important;
+  background:#0a0a0a!important;
+  color:#fff!important;
+  border:1px solid #fff!important;
+  box-shadow:none!important;
+  text-decoration:none!important;
+  text-align:center!important;
+}
+body.cotizador-app #orderModal .summary-actions #orderPayDeposit:hover{
+  background:#3b3b3b!important;
+  border-color:#fff!important;
+  color:#fff!important;
+}
+body.cotizador-app #orderModal .summary-actions #orderPayBalance{
+  display:none!important;
+}
 body.cotizador-app #orderModal .summary-actions #downloadPdf,
 body.cotizador-app #orderModal .summary-actions .final-quote-whatsapp{
   display:inline-flex!important;
   align-items:center!important;
   justify-content:center!important;
-  min-height:52px!important;
-  padding:14px 18px!important;
-  border-radius:15px!important;
+  width:100%!important;
+  min-height:48px!important;
+  padding:12px 14px!important;
+  border-radius:13px!important;
+  background:#0a0a0a!important;
+  color:#eee!important;
+  border:1px solid rgba(255,255,255,.16)!important;
   text-decoration:none!important;
   text-align:center!important;
-}
-@media(max-width:620px){
-  body.cotizador-app #orderModal .summary-actions{flex-direction:column!important;align-items:stretch!important}
-  body.cotizador-app #orderModal .summary-actions #orderPayDeposit,
-  body.cotizador-app #orderModal .summary-actions #orderPayBalance,
-  body.cotizador-app #orderModal .summary-actions #downloadPdf,
-  body.cotizador-app #orderModal .summary-actions .final-quote-whatsapp{width:100%!important}
 }
 
 body.cotizador-app main{

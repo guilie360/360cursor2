@@ -1543,14 +1543,14 @@ body.hunter-mode main {
 /* ===== patch ===== */
 
 #downloadImage,#shareQuote,#quoteToProject,#shareFormats,#sharePdf,#shareImage {display:none!important}
-.summary-actions{display:flex!important;justify-content:center!important;gap:12px!important;flex-wrap:wrap!important;margin-top:18px!important}
+.summary-actions{display:grid!important;grid-template-columns:1fr 1fr;gap:10px!important;margin-top:18px!important;width:100%}
 .summary-actions #downloadPdf,
 .summary-actions .final-quote-whatsapp{
  display:inline-flex!important;align-items:center!important;justify-content:center!important;
- min-height:52px!important;padding:14px 18px!important;border-radius:15px!important;
+ min-height:48px!important;padding:12px 14px!important;border-radius:13px!important;
  text-decoration:none!important;text-align:center!important;line-height:1.2!important;
+ width:100%!important;
 }
-.summary-actions .final-quote-whatsapp{color:#e5d0aa!important;border:1px solid rgba(255,255,255,.22)!important;background:rgba(0,0,0,.25)!important}
 #orderModal .order-dialog{border:1px solid rgba(255,255,255,.14)!important;background:linear-gradient(180deg,#171717 0%,#101010 100%)!important;box-shadow:0 30px 70px -28px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.05)!important}
 #orderModal .order-dialog--compact{max-width:560px;width:min(560px,94vw);padding:26px 26px 22px}
 #orderModal .order-dialog-lead{margin:0 0 12px;color:rgba(255,255,255,.55)!important}
@@ -1618,7 +1618,7 @@ body.hunter-mode main {
 #orderModal .total-line{border-top-color:rgba(255,255,255,.16)!important}
 #orderModal .total-line strong{font-family:'Italiana',Georgia,serif!important;color:#f3f3f1!important}
 @media(max-width:620px){
- .summary-actions{flex-direction:column!important;align-items:stretch!important}
+ .summary-actions{grid-template-columns:1fr 1fr!important}
  .summary-actions #downloadPdf,.summary-actions .final-quote-whatsapp{width:100%!important}
 }
 
@@ -2102,14 +2102,50 @@ html.has-cur .btn{
 .quote-pay-hunter-row strong{color:#f3f3f1;font-weight:650}
 .quote-pay-actions{display:flex;flex-wrap:wrap;gap:10px}
 .quote-pay-status{min-height:1.2em;margin:0}
+.quote-pay-terms{
+  margin:12px 0 0;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:13px;
+  background:rgba(255,255,255,.03);
+  color:rgba(255,255,255,.62);
+  font:500 12px/1.45 Manrope,Arial,sans-serif;
+}
+.quote-pay-terms strong{color:#f3f3f1;font-weight:650}
 #orderModal .summary-actions{
-  display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;
+  display:grid!important;
+  grid-template-columns:1fr 1fr;
+  gap:10px!important;
+  margin-top:14px!important;
+  width:100%;
 }
 #orderModal .summary-actions #orderPayDeposit{
-  background:#fff!important;color:#111!important;border-color:#fff!important;
+  grid-column:1 / -1;
+  width:100%!important;
+  min-height:52px;
+  border-radius:13px!important;
+  background:#0a0a0a!important;
+  color:#fff!important;
+  border:1px solid #fff!important;
+  box-shadow:none!important;
 }
-#orderModal .summary-actions #downloadPdf{
-  opacity:.92;
+#orderModal .summary-actions #orderPayDeposit:hover{
+  background:#3b3b3b!important;
+  border-color:#fff!important;
+  color:#fff!important;
+}
+#orderModal .summary-actions #orderPayBalance{
+  display:none!important;
+}
+#orderModal .summary-actions #downloadPdf,
+#orderModal .summary-actions .final-quote-whatsapp{
+  width:100%!important;
+  min-height:48px;
+  border-radius:13px!important;
+  background:#0a0a0a!important;
+  color:#eee!important;
+  border:1px solid rgba(255,255,255,.16)!important;
+  opacity:1;
 }
 .quote-pay-pedido{align-items:flex-start}
 @media (max-width:720px){
