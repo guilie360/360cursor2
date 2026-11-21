@@ -299,15 +299,15 @@
       btn.className = 'btn chat-request-pay-btn';
       form.appendChild(btn);
       btn.addEventListener('click', function () {
+        // Solo abre el hilo. La solicitud se crea desde Verificar acceso
+        // (o con "Solicitar" dentro de Clave dinámica), nunca en cada clic.
+        openChatPopup();
         openClaveView();
-        if (!isAdmin()) requestPaymentsKey();
       });
     }
     btn.textContent = 'Clave dinámica';
     btn.disabled = false;
-    btn.title = isAdmin()
-      ? 'Abrir el chat de Clave dinámica'
-      : 'Abrir Clave dinámica y solicitar acceso';
+    btn.title = 'Abrir el chat de Clave dinámica';
     btn.style.display = '';
   }
 
@@ -462,6 +462,11 @@
       hidePaymentsGate();
       return;
     }
+    // Ya desbloqueó Pagos en esta sesión: no generar otra solicitud
+    if (window.boxiesPaymentsUnlocked) {
+      hidePaymentsGate();
+      return;
+    }
     var client = getClient();
     if (!client) {
       alert('Entra con tu cuenta de equipo para solicitar la clave.');
@@ -473,6 +478,18 @@
     try {
       var result = await client.rpc('panel_payments_request_access');
       if (result.error) throw result.error;
+      var data = result.data || {};
+      // Clave ya aprobada vigente: solo abrir chat, sin nueva petición
+      if (data.already_approved) {
+        state.awaitingPaymentsGate = fromGate || state.awaitingPaymentsGate;
+        hidePaymentsGate();
+        openChatPopup();
+        openClaveView();
+        await reload();
+        markRead();
+        if (errEl) errEl.textContent = 'Ya tienes una clave vigente. Cópiala en Clave dinámica.';
+        return;
+      }
       // Desde Verificar acceso: cierra el popup y abre Clave dinámica a la espera
       state.awaitingPaymentsGate = fromGate || state.awaitingPaymentsGate;
       hidePaymentsGate();
@@ -481,9 +498,9 @@
       await reload();
       markRead();
       if (errEl) {
-        if (result.data && result.data.restored) {
+        if (data.restored) {
           errEl.textContent = 'Solicitud restaurada en Clave dinámica. Espera la clave del admin.';
-        } else if (result.data && result.data.reused) {
+        } else if (data.reused) {
           errEl.textContent = 'Ya hay una solicitud pendiente. Cuando te den la clave, cópiala aquí.';
         } else {
           errEl.textContent = 'Solicitud enviada. Cuando te den la clave, cópiala para volver al acceso.';
