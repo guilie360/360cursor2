@@ -456,25 +456,34 @@
         }
         list.innerHTML = rows.map(function (r) {
           var when = r.created_at ? new Date(r.created_at).toLocaleString('es-ES') : '';
-          var badge = r.is_test ? ' · <em>prueba</em>' : '';
+          var title = String(r.customer_name || '').trim() || String(r.customer_email || '').trim() || 'Sin nombre';
+          var metaBits = [
+            r.customer_email || '',
+            r.customer_phone || '',
+            r.customer_country || '',
+            r.proyecto_label || '',
+            when
+          ].filter(Boolean).map(escapeHtml);
           return (
-            '<div class="portal-list-item quote-crm-row" data-quote-id="' + escapeHtml(r.id) + '">' +
-              '<span><b>' + escapeHtml(r.customer_name) + '</b>' +
-              '<small class="muted">' + escapeHtml(r.customer_email) +
-              (r.customer_phone ? ' · ' + escapeHtml(r.customer_phone) : '') +
-              (r.customer_country ? ' · ' + escapeHtml(r.customer_country) : '') +
-              badge + '<br>' +
-              escapeHtml(r.proyecto_label || '') + ' · ' + when + '</small></span>' +
-              '<span style="text-align:right;display:flex;flex-direction:column;gap:8px;align-items:flex-end">' +
-                '<b>' + moneyFromCents(r.total_cents) + '</b>' +
-                '<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' +
+            '<details class="quote-crm-row" data-quote-id="' + escapeHtml(r.id) + '">' +
+              '<summary class="quote-crm-row-summary">' +
+                '<span class="quote-crm-row-title">' + escapeHtml(title) + '</span>' +
+                '<span class="quote-crm-row-chevron" aria-hidden="true"></span>' +
+              '</summary>' +
+              '<div class="quote-crm-row-body">' +
+                '<div class="quote-crm-row-meta">' +
+                  (r.is_test ? '<span class="quote-crm-test-tag">prueba</span>' : '') +
+                  '<small class="muted">' + metaBits.join(' · ') + '</small>' +
+                  '<b class="quote-crm-row-amount">' + moneyFromCents(r.total_cents) + '</b>' +
+                '</div>' +
+                '<div class="quote-crm-row-actions">' +
                   '<button type="button" class="btn primary" data-quote-charge="deposit">Cobrar</button>' +
                   '<button type="button" class="btn" data-quote-open="1"' + (r.last_checkout_url ? '' : ' disabled') + '>Link</button>' +
                   '<button type="button" class="btn" data-quote-test="1">' + (r.is_test ? 'No prueba' : 'Prueba') + '</button>' +
                   '<button type="button" class="btn" data-quote-delete="1">Borrar</button>' +
-                '</span>' +
-              '</span>' +
-            '</div>'
+                '</div>' +
+              '</div>' +
+            '</details>'
           );
         }).join('');
 

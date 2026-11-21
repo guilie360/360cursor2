@@ -1774,9 +1774,8 @@ html.has-cur .btn{
   font:500 13px/1.4 Manrope,Arial,sans-serif;
 }
 .panel-pay-status a{color:#fff;text-decoration:underline}
-.panel-pay-paddle .portal-list{display:grid;gap:10px;margin-top:8px}
-.panel-pay-paddle .portal-list-item,
-.panel-pay-paddle .quote-crm-row{
+.panel-pay-paddle .portal-list{display:grid;gap:8px;margin-top:8px}
+.panel-pay-paddle .portal-list-item{
   display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
   padding:16px 16px;
   border:1px solid rgba(255,255,255,.1);
@@ -1784,8 +1783,79 @@ html.has-cur .btn{
   background:linear-gradient(180deg,#161616 0%,#101010 100%);
   box-shadow:0 1px 0 rgba(255,255,255,.04) inset;
 }
-.panel-pay-paddle .portal-list-item b,
-.panel-pay-paddle .quote-crm-row b{
+.panel-pay-paddle .quote-crm-row{
+  margin:0;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;
+  background:linear-gradient(180deg,#161616 0%,#101010 100%);
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset;
+  overflow:hidden;
+}
+.panel-pay-paddle .quote-crm-row-summary{
+  list-style:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 16px;
+  cursor:pointer;
+  user-select:none;
+}
+.panel-pay-paddle .quote-crm-row-summary::-webkit-details-marker{display:none}
+.panel-pay-paddle .quote-crm-row-title{
+  min-width:0;
+  color:#f4f4f5;
+  font:20px/1.2 Italiana,Georgia,serif;
+  font-weight:400;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.panel-pay-paddle .quote-crm-row-chevron{
+  flex:none;
+  width:18px;height:18px;
+  position:relative;
+  opacity:.55;
+}
+.panel-pay-paddle .quote-crm-row-chevron:before{
+  content:'';
+  position:absolute;inset:4px;
+  border-right:1.5px solid #fff;
+  border-bottom:1.5px solid #fff;
+  transform:rotate(45deg);
+  transition:transform .18s ease;
+}
+.panel-pay-paddle .quote-crm-row[open] .quote-crm-row-chevron:before{
+  transform:rotate(225deg);
+  inset:6px 4px 2px;
+}
+.panel-pay-paddle .quote-crm-row-body{
+  display:grid;gap:14px;
+  padding:0 16px 16px;
+  border-top:1px solid rgba(255,255,255,.06);
+}
+.panel-pay-paddle .quote-crm-row-meta{
+  display:grid;gap:8px;padding-top:12px;
+}
+.panel-pay-paddle .quote-crm-row-amount{
+  color:#f4f4f5;
+  font:26px/1 Italiana,Georgia,serif;
+  font-weight:400;
+}
+.panel-pay-paddle .quote-crm-row-actions{
+  display:flex;flex-wrap:wrap;gap:8px;
+}
+.panel-pay-paddle .quote-crm-test-tag{
+  width:max-content;
+  font:500 10px/1 Manrope,Arial,sans-serif;
+  letter-spacing:.04em;
+  text-transform:lowercase;
+  color:rgba(255,255,255,.38);
+  border:0;
+  padding:0;
+  background:none;
+}
+.panel-pay-paddle .portal-list-item b{
   color:#f4f4f5;
   font:20px/1.15 Italiana,Georgia,serif;
   font-weight:400;
@@ -1793,16 +1863,6 @@ html.has-cur .btn{
 .panel-pay-paddle .portal-list-item small,
 .panel-pay-paddle .quote-crm-row small{
   color:rgba(255,255,255,.5)!important;
-}
-.panel-pay-paddle .quote-crm-row em{
-  font-style:normal;
-  color:rgba(255,255,255,.78);
-  border:1px solid rgba(255,255,255,.16);
-  border-radius:999px;
-  padding:1px 8px;
-  font-size:10px;
-  letter-spacing:.06em;
-  text-transform:uppercase;
 }
 .panel-pay-paddle .panel-pay-table{
   width:100%;
