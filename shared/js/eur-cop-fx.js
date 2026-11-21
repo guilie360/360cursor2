@@ -409,6 +409,8 @@
   }
 
   function mount() {
+    // Solo cotizador interno (equipo). Público no muestra ni consulta la tasa.
+    if (!document.body || !document.body.classList.contains('modo-interno')) return;
     var btn = document.getElementById('eurCopFxBtn');
     if (!btn || btn.dataset.fxBound === '1') return;
     btn.dataset.fxBound = '1';

@@ -71,6 +71,8 @@ body.cotizador-app #fullscreenToggle{
 }
 
 /* Público: sin comisión de equipo */
+body.cotizador-app.modo-publico .quote-footer-fx,
+body.cotizador-app.modo-publico #eurCopFxPanel,
 body.cotizador-app.modo-publico .quote-footer-commission,
 body.cotizador-app.modo-publico .interno-commission-card{
   display:none!important;
