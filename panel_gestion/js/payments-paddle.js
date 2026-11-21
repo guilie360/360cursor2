@@ -567,22 +567,22 @@
     // Panel centrado en cotizaciones guardadas (PDF). Pedidos/cobros solo si hay actividad real.
     root.innerHTML =
       '<div class="panel-pay-stripe panel-pay-paddle">' +
-        '<div class="eyebrow">CLIENTES · COTIZACIONES</div>' +
+        '<div class="eyebrow">360PREVENTA · PAGOS</div>' +
         '<h3>Cotizaciones guardadas</h3>' +
-        '<p class="desc">Cada descarga de PDF registra nombre, email y total. Aquí buscas al cliente, generas el link de cobro (anticipo 50%) y lo abres en <code>/pagos</code>.</p>' +
-        '<div class="portal-form quote-crm-toolbar" style="margin-bottom:14px;display:grid;gap:12px">' +
+        '<p class="desc">Cada descarga de PDF registra nombre, email y total. Busca al cliente, genera el link de cobro (anticipo 50%) y ábrelo en <code>/pagos</code>.</p>' +
+        '<div class="portal-form quote-crm-toolbar">' +
           '<label>Buscar cliente<input type="search" data-quote-search placeholder="Nombre o correo…" autocomplete="off"></label>' +
-          '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">' +
-            '<label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" data-quote-hide-tests> Ocultar pruebas</label>' +
+          '<div class="quote-crm-toolbar-actions">' +
+            '<label class="quote-crm-check"><input type="checkbox" data-quote-hide-tests> Ocultar pruebas</label>' +
             '<button type="button" class="btn" data-quote-purge-tests>Borrar pruebas</button>' +
             '<button type="button" class="btn" data-quote-purge-all>Vaciar todas</button>' +
           '</div>' +
         '</div>' +
         '<p class="desc" data-quote-status aria-live="polite"></p>' +
         '<div class="portal-list" data-quote-list></div>' +
-        '<details class="quote-crm-activity" style="margin-top:28px">' +
-          '<summary style="cursor:pointer;list-style:none"><h3 style="display:inline;margin:0">Actividad de cobro</h3> <small class="muted">Pedidos y cobros Paddle (solo con pago iniciado)</small></summary>' +
-          '<div data-pay-activity style="margin-top:14px"><p class="desc">Cargando…</p></div>' +
+        '<details class="quote-crm-activity">' +
+          '<summary><h3>Actividad de cobro</h3><small class="muted">Solo pagos confirmados</small></summary>' +
+          '<div data-pay-activity><p class="desc">Cargando…</p></div>' +
         '</details>' +
       '</div>';
     bindQuotesPanel(root);

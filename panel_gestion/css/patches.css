@@ -1599,21 +1599,190 @@ html.has-cur .btn{
   cursor:none!important;
 }
 
-/* ===== Pagos Stripe ===== */
-.panel-payments{display:grid;gap:22px}
-.panel-pay-stripe{
-  padding:22px 20px;border:1px solid rgba(255,255,255,.1);
-  border-radius:18px;background:rgba(255,255,255,.03)
+/* ===== Pagos (dark chrome · sin dorado) ===== */
+#portalSubpage:has(#panelPaymentsRoot),
+#portalSubpage[data-module="payments"]{
+  background:linear-gradient(180deg,#121212 0%,#0c0c0c 100%);
+  border-color:rgba(255,255,255,.1);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.05) inset,
+    0 22px 48px -24px rgba(0,0,0,.9);
+}
+#portalSubpage:has(#panelPaymentsRoot) h2,
+#portalSubpage[data-module="payments"] h2{
+  color:#f4f4f5;
+}
+#portalSubpage:has(#panelPaymentsRoot) .portal-sub,
+#portalSubpage:has(#panelPaymentsRoot) .desc,
+#portalSubpage:has(#panelPaymentsRoot) .muted,
+#portalSubpage:has(#panelPaymentsRoot) .eyebrow,
+#portalSubpage[data-module="payments"] .portal-sub,
+#portalSubpage[data-module="payments"] .desc,
+#portalSubpage[data-module="payments"] .muted,
+#portalSubpage[data-module="payments"] .eyebrow{
+  color:rgba(255,255,255,.55)!important;
+}
+.panel-payments{display:grid;gap:18px}
+.panel-pay-stripe,
+.panel-pay-paddle{
+  padding:24px 22px;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:16px;
+  background:linear-gradient(180deg,#1a1a1a 0%,#101010 100%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.05) inset,
+    0 18px 40px -22px rgba(0,0,0,.95);
+}
+.panel-pay-paddle .eyebrow{
+  color:rgba(255,255,255,.42)!important;
+  letter-spacing:.16em;
+}
+.panel-pay-paddle h3,
+.panel-pay-paddle h4{
+  margin:0 0 8px;
+  font:28px/1.15 Italiana,Georgia,serif;
+  font-weight:400;
+  color:#f4f4f5!important;
+}
+.panel-pay-paddle .desc{
+  color:rgba(255,255,255,.58)!important;
+}
+.panel-pay-paddle .desc code{
+  font-size:12px;
+  padding:1px 6px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.35);
+  color:#eee;
+}
+.panel-pay-paddle .btn{
+  border-color:rgba(255,255,255,.16)!important;
+  background:transparent!important;
+  color:#eee!important;
+}
+.panel-pay-paddle .btn:hover{
+  border-color:rgba(255,255,255,.32)!important;
+  background:rgba(255,255,255,.06)!important;
+  color:#fff!important;
+}
+.panel-pay-paddle .btn.primary{
+  background:#fff!important;
+  color:#111!important;
+  border-color:#fff!important;
+}
+.panel-pay-paddle .btn.primary:hover{
+  background:#e8e8e8!important;
+  border-color:#e8e8e8!important;
+  color:#111!important;
+}
+.quote-crm-toolbar label{
+  color:rgba(255,255,255,.62)!important;
+  font:600 11px/1.2 Manrope,Arial,sans-serif;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.quote-crm-toolbar input[type="search"],
+.quote-crm-toolbar input[type="text"],
+.panel-pay-form .field input{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12)!important;
+  background:#0a0a0a!important;
+  color:#f2f2f2!important;
+  font:500 15px/1.3 Manrope,Arial,sans-serif;
+  text-transform:none;
+  letter-spacing:0;
+}
+.quote-crm-toolbar input[type="search"]:focus,
+.quote-crm-toolbar input[type="text"]:focus{
+  outline:none;
+  border-color:rgba(255,255,255,.28)!important;
+  box-shadow:0 0 0 3px rgba(255,255,255,.06);
 }
 .panel-pay-form{display:grid;gap:12px;margin-top:14px}
-.panel-pay-form .field{display:grid;gap:6px;font:600 11px/1.2 var(--font-ui,Manrope,sans-serif);letter-spacing:.08em;text-transform:uppercase;color:#9a948c}
-.panel-pay-form .field input{
-  width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.16);
-  background:#121212;color:#efeae3;font:500 15px/1.3 var(--font-ui,Manrope,sans-serif);text-transform:none;letter-spacing:0
+.panel-pay-form .field{
+  display:grid;gap:6px;
+  font:600 11px/1.2 Manrope,Arial,sans-serif;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(255,255,255,.5);
 }
 .panel-pay-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
-.panel-pay-status{min-height:1.2em;margin:4px 0 0;color:#cfc9bd;font:500 13px/1.4 var(--font-ui,Manrope,sans-serif)}
+.panel-pay-status,
+.panel-pay-paddle [data-quote-status]{
+  min-height:1.2em;margin:4px 0 0;
+  color:rgba(255,255,255,.62)!important;
+  font:500 13px/1.4 Manrope,Arial,sans-serif;
+}
 .panel-pay-status a{color:#fff;text-decoration:underline}
+.panel-pay-paddle .portal-list{display:grid;gap:10px;margin-top:8px}
+.panel-pay-paddle .portal-list-item,
+.panel-pay-paddle .quote-crm-row{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+  padding:16px 16px;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;
+  background:linear-gradient(180deg,#161616 0%,#101010 100%);
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset;
+}
+.panel-pay-paddle .portal-list-item b,
+.panel-pay-paddle .quote-crm-row b{
+  color:#f4f4f5;
+  font:20px/1.15 Italiana,Georgia,serif;
+  font-weight:400;
+}
+.panel-pay-paddle .portal-list-item small,
+.panel-pay-paddle .quote-crm-row small{
+  color:rgba(255,255,255,.5)!important;
+}
+.panel-pay-paddle .quote-crm-row em{
+  font-style:normal;
+  color:rgba(255,255,255,.78);
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:999px;
+  padding:1px 8px;
+  font-size:10px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.panel-pay-paddle .panel-pay-table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:8px;
+}
+.panel-pay-paddle .panel-pay-table th{
+  color:rgba(255,255,255,.45);
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+.panel-pay-paddle .panel-pay-table td{
+  color:rgba(255,255,255,.78);
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.quote-crm-activity{
+  margin-top:22px;
+  padding-top:18px;
+  border-top:1px solid rgba(255,255,255,.08);
+}
+.quote-crm-activity summary{
+  cursor:pointer;
+  list-style:none;
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.quote-crm-activity summary::-webkit-details-marker{display:none}
+.quote-crm-activity summary h3{margin:0;color:#f4f4f5!important}
+.quote-crm-toolbar{display:grid;gap:14px;margin:16px 0 10px}
+.quote-crm-toolbar-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.quote-crm-check{
+  display:inline-flex!important;align-items:center;gap:8px;margin:0!important;
+  text-transform:none!important;letter-spacing:0!important;
+  font:500 13px/1.3 Manrope,Arial,sans-serif!important;
+  color:rgba(255,255,255,.7)!important;
+  cursor:pointer;
+}
+.quote-crm-check input{accent-color:#fff}
 
 /* Pedido 50/50 + Paddle */
 .order-pay-schedule,
@@ -1658,7 +1827,6 @@ html.has-cur .btn{
 #orderModal .summary-actions #downloadPdf{
   opacity:.92;
 }
-.panel-pay-paddle h3{margin:0 0 8px;font:28px/1.15 'Italiana',Georgia,serif;font-weight:400;color:#f3f3f1}
 .quote-pay-pedido{align-items:flex-start}
 @media (max-width:720px){
   .quote-pay-grid{grid-template-columns:1fr}

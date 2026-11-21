@@ -1474,6 +1474,7 @@ function portalOpenPage(key){
  }
  const p=portalPages[key];if(!p)return;
  $('portalHome').classList.add('portal-hidden');$('portalSubpage').classList.remove('portal-hidden');$('portalBack').classList.remove('portal-hidden');
+ $('portalSubpage').dataset.module=key;
  $('portalSubpage').innerHTML=`<div class="eyebrow">360PREVENTA · MÓDULO</div><h2>${p.title}</h2><p class="portal-sub">${p.intro}</p>${p.body}`;
  if(key==='tasks')renderTasks();
  if(key==='payments'){
