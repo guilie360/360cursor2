@@ -19,7 +19,8 @@
     userName: '',
     userRol: '',
     activeView: 'team', // team | clave | dm
-    awaitingPaymentsGate: false
+    awaitingPaymentsGate: false,
+    clearedAt: { team: 0, clave: 0 } // per-account watermarks (ms)
   };
 
   function hidePaymentsGate() {
@@ -97,11 +98,43 @@
     return !!KEY_KINDS[kind];
   }
 
+  function scopeForMessage(m) {
+    return isKeyKind(m.kind) ? 'clave' : 'team';
+  }
+
+  function isClearedForMe(m) {
+    var scope = scopeForMessage(m);
+    var cut = Number((state.clearedAt && state.clearedAt[scope]) || 0);
+    if (!cut) return false;
+    return new Date(m.created_at).getTime() <= cut;
+  }
+
   function visibleMessages() {
     return (state.messages || []).filter(function (m) {
+      if (isClearedForMe(m)) return false;
       var key = isKeyKind(m.kind);
       return state.activeView === 'clave' ? key : !key;
     });
+  }
+
+  async function loadClears() {
+    var client = getClient();
+    if (!client || !state.userId) return;
+    try {
+      var result = await client
+        .from('panel_chat_clears')
+        .select('scope,cleared_at')
+        .eq('user_id', state.userId);
+      var next = { team: 0, clave: 0 };
+      (result.data || []).forEach(function (row) {
+        if (row.scope === 'team' || row.scope === 'clave') {
+          next[row.scope] = new Date(row.cleared_at).getTime() || 0;
+        }
+      });
+      state.clearedAt = next;
+    } catch (e) {
+      console.warn('[TeamChat] clears', e);
+    }
   }
 
   async function refreshIdentity() {
@@ -141,6 +174,7 @@
     var lastSeen = 0;
     try { lastSeen = Number(localStorage.getItem('boxiesChatSeenAt') || 0); } catch (e) {}
     var unread = state.messages.filter(function (m) {
+      if (isClearedForMe(m)) return false;
       return m.sender_id !== state.userId && new Date(m.created_at).getTime() > lastSeen;
     }).length;
     if (badge) {
@@ -334,6 +368,7 @@
 
   async function reload() {
     try {
+      await loadClears();
       state.messages = await fetchMessages();
       state.ready = true;
       render();
@@ -393,11 +428,9 @@
     var label = currentChatLabel();
     var onClave = state.activeView === 'clave';
     var ok = window.confirm(
-      '¿Seguro que quieres borrar el chat “' + label + '”?\n\n' +
-      (onClave
-        ? 'Se borrarán las solicitudes y claves de este chat. Podrás pedir una nueva Clave dinámica después.'
-        : 'Se eliminarán los mensajes de Equipo. Clave dinámica no se toca.') +
-      '\n\nNo se podrán recuperar.'
+      '¿Borrar el chat “' + label + '” solo en tu cuenta?\n\n' +
+      'Los mensajes desaparecen para ti. El resto del equipo sigue viéndolos.\n' +
+      'Los mensajes nuevos sí te llegarán.'
     );
     if (!ok) return;
 
@@ -415,10 +448,12 @@
       return;
     }
     var scope = onClave ? 'clave' : 'team';
-    var result = await client.rpc('panel_chat_clear', { p_scope: scope });
+    var result = await client.rpc('panel_chat_mark_cleared', { p_scope: scope });
     if (result.error) throw new Error(result.error.message || 'No se pudo borrar el chat');
-    state.messages = [];
-    await reload();
+    var at = result.data ? new Date(result.data).getTime() : Date.now();
+    state.clearedAt = state.clearedAt || { team: 0, clave: 0 };
+    state.clearedAt[scope] = at || Date.now();
+    render();
   }
 
   async function requestPaymentsKey() {
