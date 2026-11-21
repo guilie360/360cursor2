@@ -156,6 +156,84 @@ body.cotizador-app .quote-footer-commission:hover{
 body.cotizador-app .quote-footer-commission:hover small{color:#a39c93}
 body.cotizador-app .quote-footer-commission:hover strong{color:#d6d0c8}
 
+/* Conversor EUR → COP */
+body.cotizador-app .quote-footer-fx{
+  flex:0 0 auto;
+  display:inline-flex;align-items:center;gap:7px;
+  margin:0 8px 0 0;padding:7px 10px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:12px;
+  background:rgba(255,255,255,.04);
+  color:#d6d0c8;
+  cursor:pointer;
+  max-width:min(46vw,210px);
+}
+body.cotizador-app .quote-footer-fx svg{
+  width:16px;height:16px;flex:none;
+  stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;
+}
+body.cotizador-app .quote-footer-fx small{
+  font:600 10px/1.1 var(--font-ui);
+  letter-spacing:.04em;
+  color:rgba(255,255,255,.72);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+body.cotizador-app .quote-footer-fx:hover,
+body.cotizador-app .quote-footer-fx[aria-expanded="true"]{
+  border-color:#fff;color:#fff;background:rgba(255,255,255,.07);
+}
+body.cotizador-app .quote-footer-fx:hover small,
+body.cotizador-app .quote-footer-fx[aria-expanded="true"] small{color:#fff}
+body.cotizador-app .quote-footer-fx.is-loading{opacity:.7}
+.eur-cop-fx-panel{
+  position:fixed;inset:0;z-index:120000;
+  display:grid;place-items:end center;
+  padding:16px 16px calc(88px + env(safe-area-inset-bottom,0px));
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(4px);
+}
+.eur-cop-fx-panel.hidden{display:none!important}
+.eur-cop-fx-card{
+  width:min(420px,100%);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:16px;
+  background:linear-gradient(180deg,#171717 0%,#101010 100%);
+  box-shadow:0 24px 60px rgba(0,0,0,.55);
+  padding:18px 18px 16px;
+  display:grid;gap:10px;
+}
+.eur-cop-fx-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.eur-cop-fx-title{display:block;margin-top:4px;font:28px/1 Italiana,Georgia,serif;color:#f4f4f5;font-weight:400}
+.eur-cop-fx-close{
+  border:0;background:transparent;color:#9a9a9a;font-size:22px;line-height:1;
+  padding:4px 6px;cursor:pointer;
+}
+.eur-cop-fx-close:hover{color:#fff}
+.eur-cop-fx-rate{margin:0;color:#fff;font:600 15px/1.3 Manrope,Arial,sans-serif}
+.eur-cop-fx-updated{margin:0;color:rgba(255,255,255,.42);font:12px/1.3 Manrope,Arial,sans-serif}
+.eur-cop-fx-field{
+  display:grid;gap:6px;
+  color:rgba(255,255,255,.55);
+  font:600 10px/1.2 Manrope,Arial,sans-serif;
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.eur-cop-fx-field input{
+  width:100%;padding:11px 12px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.14);
+  background:#0a0a0a;color:#f2f2f2;
+  font:500 15px/1.3 Manrope,Arial,sans-serif;
+  text-transform:none;letter-spacing:0;
+}
+.eur-cop-fx-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.eur-cop-fx-actions .btn{
+  text-decoration:none;display:inline-flex;align-items:center;justify-content:center;
+}
+.eur-cop-fx-note{margin:2px 0 0;color:rgba(255,255,255,.38);font:11px/1.4 Manrope,Arial,sans-serif}
+@media (max-width:560px){
+  body.cotizador-app .quote-footer-fx{padding:7px 8px;margin-right:6px}
+  body.cotizador-app .quote-footer-fx small{max-width:72px}
+}
+
 /* Precio cliente: protagonista */
 body.cotizador-app .quote-footer-price{
   display:flex!important;flex-direction:column;align-items:flex-end;justify-content:center;

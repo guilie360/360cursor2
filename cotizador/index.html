@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
 <link rel="stylesheet" href="/shared/css/site-chrome.css?v=9">
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
-<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=64">
+<link rel="stylesheet" href="/cotizador/css/cotizador-shell.css?v=65">
 </head>
 <body data-app="cotizador" class="cotizador-app">
 <header class="topbar"><div class="topinner">
@@ -33,6 +33,10 @@
    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
   </button>
   <div class="quote-footer-spacer" aria-hidden="true"></div>
+  <button class="quote-footer-fx mag" id="eurCopFxBtn" type="button" aria-expanded="false" aria-controls="eurCopFxPanel" title="Convertir EUR a COP" data-cursor="EUR/COP">
+   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10h11M7 10l2.2-2.2M7 10l2.2 2.2M17 14H6M17 14l-2.2-2.2M17 14l-2.2 2.2"/><circle cx="12" cy="12" r="9" fill="none"/></svg>
+   <small id="eurCopFxRateHint">€/COP</small>
+  </button>
   <button class="quote-footer-commission portal-hidden" id="internoCommissionBtn" type="button" aria-expanded="false" aria-controls="internoCommissionCard" title="Comisión Hunter estimada">
    <small>Comisión</small>
    <strong id="internoCommission">0 €</strong>
@@ -533,5 +537,6 @@
 <script src="/panel_gestion/js/accordion-tones.js"></script>
 <script src="/panel_gestion/js/path-chooser-actions.js"></script>
 <script src="/cotizador/js/boot.js?v=14"></script>
+<script src="/shared/js/eur-cop-fx.js?v=1"></script>
 </body>
 </html>
