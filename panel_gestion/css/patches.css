@@ -52,16 +52,18 @@ body:not(.workspace-authenticated) #teamChatFloat,body:not(.workspace-authentica
 #hunterGoalFooter #teamChatFloat{
  overflow:visible!important;
 }
-#teamChatFloat .chat-unread-badge{
+#teamChatFloat .chat-unread-badge,
+#hunterGoalFooter #teamChatFloat .chat-unread-badge{
  position:absolute!important;
- right:-4px!important;top:-6px!important;
+ right:-3px!important;top:-3px!important;
  left:auto!important;bottom:auto!important;
  min-width:18px;height:18px;padding:0 5px;border-radius:20px;
  background:#c33;color:#fff;
  font:700 10px/18px Manrope,Arial,sans-serif;text-align:center;
- border:2px solid #0a0a0a;display:none;z-index:6;
+ border:2px solid #0a0a0a;display:none;z-index:8;
  box-shadow:0 2px 8px rgba(0,0,0,.45);
  pointer-events:none;
+ transform:none!important;
 }
 /* Gris = yo · Negro = otros */
 .team-chat-message{
@@ -908,9 +910,11 @@ body.workspace-authenticated #hunterGoalFooter #portalBack:not(.portal-hidden){
 }
 #hunterGoalFooter #teamChatFloat.footer-chat-btn,
 #hunterGoalFooter #teamChatFloat{
- position:static!important;inset:auto!important;
+ /* relative: el badge debe anclarse al icono, no al footer completo */
+ position:relative!important;inset:auto!important;
  bottom:auto!important;right:auto!important;left:auto!important;top:auto!important;
  flex:0 0 40px;width:40px;height:40px;margin:0;z-index:1;
+ overflow:visible!important;
 }
 @media(max-width:600px){
  .portal-wrap{padding-bottom:68px!important}
