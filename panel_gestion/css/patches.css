@@ -2026,6 +2026,28 @@ html.has-cur .btn{
   color:#f4f4f5;
   font:18px/1 Italiana,Georgia,serif;
 }
+.pay-stage-dots{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  flex:none;
+  margin-left:2px;
+}
+.pay-stage-dot{
+  width:8px;height:8px;border-radius:50%;
+  box-sizing:border-box;
+  border:1.5px solid rgba(255,255,255,.28);
+  background:transparent;
+  display:inline-block;
+}
+.pay-stage-dot.is-on{
+  border-color:#7dcea0;
+  background:#7dcea0;
+  box-shadow:0 0 0 3px rgba(125,206,160,.12);
+}
+.panel-pay-paddle .quote-crm-row-summary{
+  gap:10px;
+}
 .pay-ledger-row.is-open .pay-ledger-amount{color:rgba(255,255,255,.55)}
 .pay-ledger-row.is-paid .pay-ledger-amount{color:#fff}
 .pay-books-note{margin-top:10px!important;font-size:12px!important;color:rgba(255,255,255,.42)!important}

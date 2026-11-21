@@ -468,6 +468,45 @@
     return '<div class="pay-meta-row"><span>' + escapeHtml(label) + '</span><strong>' + value + '</strong></div>';
   }
 
+  /** Dos puntos: Anticipo · Entrega (apagado / verde). Patrón tipo Stripe step dots. */
+  function payStageFromPedidoStatus(status) {
+    if (status === 'pagado') {
+      return { deposit: true, balance: true, label: 'Anticipo y entrega pagados' };
+    }
+    if (status === 'en_produccion' || status === 'pendiente_entrega') {
+      return { deposit: true, balance: false, label: 'Anticipo pagado · entrega pendiente' };
+    }
+    return { deposit: false, balance: false, label: 'Solo cotizado · sin pagos' };
+  }
+
+  function payStageFromCobro(row) {
+    var paid = isPaidCobro(row);
+    var stage = row && (row.payment_stage || (row.metadata && row.metadata.stage));
+    if (stage === 'balance' || stage === 'entrega') {
+      return {
+        deposit: true,
+        balance: !!paid,
+        label: paid ? 'Anticipo y entrega pagados' : 'Anticipo ok · entrega pendiente'
+      };
+    }
+    return {
+      deposit: !!paid,
+      balance: false,
+      label: paid ? 'Anticipo pagado · entrega pendiente' : 'Pago pendiente'
+    };
+  }
+
+  function payStageDotsHtml(stage) {
+    stage = stage || { deposit: false, balance: false, label: 'Sin pagos' };
+    var tip = stage.label || 'Estado de pago';
+    return (
+      '<span class="pay-stage-dots" title="' + escapeHtml(tip) + '" aria-label="' + escapeHtml(tip) + '">' +
+        '<i class="pay-stage-dot' + (stage.deposit ? ' is-on' : '') + '" data-stage="deposit"></i>' +
+        '<i class="pay-stage-dot' + (stage.balance ? ' is-on' : '') + '" data-stage="balance"></i>' +
+      '</span>'
+    );
+  }
+
   function clientCardHtml(opts) {
     opts = opts || {};
     return (
@@ -477,6 +516,7 @@
           '<span class="quote-crm-row-title">' + escapeHtml(opts.title || 'Sin nombre') + '</span>' +
           (opts.time ? '<span class="quote-crm-row-time">' + escapeHtml(opts.time) + '</span>' : '') +
           '<span class="pay-ledger-amount">' + escapeHtml(opts.amount || '—') + '</span>' +
+          (opts.stageHtml || '') +
           '<span class="quote-crm-row-chevron" aria-hidden="true"></span>' +
         '</summary>' +
         '<div class="quote-crm-row-body">' +
@@ -522,6 +562,7 @@
     if (!list || !window.PreventaQuotes) return;
 
     var cacheRows = [];
+    var pedidoById = {};
 
     function fillMonthOptions(rows) {
       if (!monthEl) return;
@@ -563,6 +604,8 @@
         var time = r.created_at ? new Date(r.created_at).toLocaleString('es-ES', {
           day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
         }) : '';
+        var pedido = r.pedido_id ? pedidoById[r.pedido_id] : null;
+        var stage = payStageFromPedidoStatus(pedido && pedido.status);
         var body =
           '<div class="pay-meta-grid">' +
             (r.is_test ? '<div class="quote-crm-test-tag">prueba</div>' : '') +
@@ -570,6 +613,7 @@
             metaRow('Teléfono', escapeHtml(r.customer_phone || '—')) +
             metaRow('País', escapeHtml(r.customer_country || '—')) +
             metaRow('Proyecto', escapeHtml(r.proyecto_label || '—')) +
+            metaRow('Pago', escapeHtml(stage.label)) +
             metaRow('Creada', escapeHtml(r.created_at ? new Date(r.created_at).toLocaleString('es-ES') : '—')) +
             metaRow('Total cotización', moneyFromCents(r.total_cents)) +
           '</div>' +
@@ -584,6 +628,7 @@
           title: title,
           time: time,
           amount: moneyFromCents(r.total_cents),
+          stageHtml: payStageDotsHtml(stage),
           bodyHtml: body,
           attrs: ' data-quote-id="' + escapeHtml(r.id) + '"'
         });
@@ -654,10 +699,18 @@
       if (status) status.textContent = '';
       try {
         var sort = sortEl && sortEl.value === 'oldest' ? 'oldest' : 'newest';
-        cacheRows = await PreventaQuotes.listQuotes({
-          query: search ? search.value : '',
-          hideTests: !!(hideTests && hideTests.checked),
-          sort: sort
+        var pair = await Promise.all([
+          PreventaQuotes.listQuotes({
+            query: search ? search.value : '',
+            hideTests: !!(hideTests && hideTests.checked),
+            sort: sort
+          }),
+          fetchPedidos().catch(function () { return []; })
+        ]);
+        cacheRows = pair[0] || [];
+        pedidoById = {};
+        (pair[1] || []).forEach(function (p) {
+          if (p && p.id) pedidoById[p.id] = p;
         });
         fillMonthOptions(cacheRows);
         if (!cacheRows.length) {
@@ -942,14 +995,20 @@
           var day = when ? new Date(when).toLocaleString('es-ES', {
             day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
           }) : '—';
-          var stage = stageLabel(r.payment_stage || (r.metadata && r.metadata.stage));
+          var stageName = stageLabel(r.payment_stage || (r.metadata && r.metadata.stage));
           var fee = estimateFeeCents(r.amount_cents);
           var stateClass = isPaidCobro(r) ? 'is-paid' : (isOpenCobro(r) ? 'is-open' : 'is-other');
           var title = String(r.customer_name || '').trim() || String(r.customer_email || '').trim() || 'Cobro';
+          var dots = payStageFromCobro(r);
+          if (r.pedido_id && cache.pedidos) {
+            var ped = cache.pedidos.find(function (p) { return p.id === r.pedido_id; });
+            if (ped) dots = payStageFromPedidoStatus(ped.status);
+          }
           var body =
             '<div class="pay-meta-grid">' +
               metaRow('Estado', escapeHtml(statusLabel(r.status))) +
-              metaRow('Tipo', escapeHtml(stage)) +
+              metaRow('Tipo', escapeHtml(stageName)) +
+              metaRow('Pago', escapeHtml(dots.label)) +
               metaRow('Proyecto', escapeHtml(r.proyecto_label || '—')) +
               metaRow('Importe', moneyFromCents(r.amount_cents)) +
               metaRow('Fee estimado', moneyFromCents(fee)) +
@@ -962,6 +1021,7 @@
             title: title,
             time: day,
             amount: moneyFromCents(r.amount_cents),
+            stageHtml: payStageDotsHtml(dots),
             extraClass: 'pay-ledger-row ' + stateClass,
             bodyHtml: body
           });
