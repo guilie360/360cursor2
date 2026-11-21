@@ -1,16 +1,51 @@
 /**
- * Conversor EUR → COP en vivo (referencia de mercado).
- * Fuente: open.er-api.com (actualización continua). Enlace a Google EUR TO COP.
+ * Conversor EUR → COP en vivo (referencia de mercado ≈ Google Finance).
+ * Fuentes: currency-api (CDN) → fallback open.er-api. Enlace a Google EUR TO COP.
  */
 (function () {
-  var API_URL = 'https://open.er-api.com/v6/latest/EUR';
+  var SOURCES = [
+    {
+      name: 'currency-api',
+      url: 'https://latest.currency-api.pages.dev/v1/currencies/eur.json',
+      parse: function (data) {
+        var rate = data && data.eur ? Number(data.eur.cop) : NaN;
+        var updatedAt = data && data.date
+          ? new Date(data.date + 'T12:00:00Z').toISOString()
+          : new Date().toISOString();
+        return { rate: rate, updatedAt: updatedAt };
+      }
+    },
+    {
+      name: 'currency-api-jsdelivr',
+      url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.json',
+      parse: function (data) {
+        var rate = data && data.eur ? Number(data.eur.cop) : NaN;
+        var updatedAt = data && data.date
+          ? new Date(data.date + 'T12:00:00Z').toISOString()
+          : new Date().toISOString();
+        return { rate: rate, updatedAt: updatedAt };
+      }
+    },
+    {
+      name: 'open-er-api',
+      url: 'https://open.er-api.com/v6/latest/EUR',
+      parse: function (data) {
+        var rate = data && data.rates ? Number(data.rates.COP) : NaN;
+        return {
+          rate: rate,
+          updatedAt: data.time_last_update_utc || new Date().toISOString()
+        };
+      }
+    }
+  ];
   var GOOGLE_URL = 'https://www.google.com/search?q=EUR+TO+COP';
-  var REFRESH_MS = 5 * 60 * 1000;
-  var STORAGE_KEY = 'preventa_eur_cop_fx_v1';
+  var REFRESH_MS = 2 * 60 * 1000;
+  var STORAGE_KEY = 'preventa_eur_cop_fx_v2';
 
   var state = {
     rate: null,
     updatedAt: null,
+    source: '',
     loading: false,
     error: ''
   };
@@ -47,6 +82,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         rate: state.rate,
         updatedAt: state.updatedAt,
+        source: state.source,
         savedAt: Date.now()
       }));
     } catch (e) {}
@@ -55,8 +91,28 @@
   function applyCache() {
     var cached = readCache();
     if (!cached) return;
+    // Cache vieja (>30 min) no se usa como visible; solo arranque en red lenta
+    if (cached.savedAt && (Date.now() - Number(cached.savedAt)) > 30 * 60 * 1000) return;
     state.rate = Number(cached.rate);
     state.updatedAt = cached.updatedAt || null;
+    state.source = cached.source || '';
+  }
+
+  async function fetchFromSource(source, force) {
+    var res = await fetch(source.url, {
+      cache: force ? 'no-store' : 'no-cache',
+      mode: 'cors'
+    });
+    if (!res.ok) throw new Error(source.name + ' HTTP ' + res.status);
+    var data = await res.json();
+    var parsed = source.parse(data) || {};
+    var rate = Number(parsed.rate);
+    if (!Number.isFinite(rate) || rate <= 0) throw new Error(source.name + ' sin COP');
+    return {
+      rate: rate,
+      updatedAt: parsed.updatedAt || new Date().toISOString(),
+      source: source.name
+    };
   }
 
   async function fetchRate(force) {
@@ -64,18 +120,23 @@
     state.loading = true;
     state.error = '';
     paint();
+    var lastErr = null;
     try {
-      var res = await fetch(API_URL, { cache: force ? 'no-store' : 'default' });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      var data = await res.json();
-      var rate = data && data.rates ? Number(data.rates.COP) : NaN;
-      if (!Number.isFinite(rate) || rate <= 0) throw new Error('Sin COP');
-      state.rate = rate;
-      state.updatedAt = data.time_last_update_utc || new Date().toISOString();
-      writeCache();
-      return rate;
-    } catch (err) {
+      for (var i = 0; i < SOURCES.length; i++) {
+        try {
+          var got = await fetchFromSource(SOURCES[i], !!force);
+          state.rate = got.rate;
+          state.updatedAt = got.updatedAt;
+          state.source = got.source;
+          state.error = '';
+          writeCache();
+          return state.rate;
+        } catch (err) {
+          lastErr = err;
+        }
+      }
       if (!state.rate) state.error = 'No se pudo actualizar la tasa';
+      else if (lastErr) state.error = 'Usando última tasa conocida';
       return state.rate;
     } finally {
       state.loading = false;
@@ -129,7 +190,7 @@
           '<button type="button" class="btn" data-fx-refresh>Actualizar</button>' +
           '<a class="btn" data-fx-google href="' + GOOGLE_URL + '" target="_blank" rel="noopener">Ver en Google</a>' +
         '</div>' +
-        '<p class="eur-cop-fx-note">Tasa de mercado en vivo. Google se abre como referencia comparativa.</p>' +
+        '<p class="eur-cop-fx-note">Tasa mid-market en vivo (se actualiza sola). “Ver en Google” compara con Google Finance.</p>' +
       '</div>';
     document.body.appendChild(panel);
 
@@ -201,9 +262,12 @@
       }
     }
     if (updatedEl) {
-      updatedEl.textContent = state.updatedAt
-        ? ('Actualizado: ' + new Date(state.updatedAt).toLocaleString('es-ES'))
-        : '';
+      if (state.updatedAt) {
+        updatedEl.textContent = 'Actualizado: ' + new Date(state.updatedAt).toLocaleString('es-ES') +
+          (state.source ? (' · ' + state.source) : '');
+      } else {
+        updatedEl.textContent = '';
+      }
     }
   }
 
@@ -214,8 +278,9 @@
     panel.classList.remove('hidden');
     if (btn) btn.setAttribute('aria-expanded', 'true');
     if (panel._setEur) panel._setEur(stickyEurAmount());
-    if (!state.rate) fetchRate(true);
-    else paint();
+    fetchRate(true).then(function () {
+      if (panel._setEur) panel._setEur(stickyEurAmount());
+    });
   }
 
   function close() {
