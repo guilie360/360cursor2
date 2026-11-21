@@ -18,8 +18,50 @@
     userId: null,
     userName: '',
     userRol: '',
-    activeView: 'team' // team | clave
+    activeView: 'team', // team | clave | dm
+    awaitingPaymentsGate: false
   };
+
+  function hidePaymentsGate() {
+    var gate = $('paymentsGateBackdrop');
+    if (gate) gate.classList.add('portal-hidden');
+  }
+
+  function openPaymentsGateWithCode(code) {
+    var gate = $('paymentsGateBackdrop');
+    var input = $('paymentsDynamicKey');
+    var errEl = $('paymentsGateError');
+    if (gate) gate.classList.remove('portal-hidden');
+    if (input) {
+      input.value = String(code || '').replace(/\D/g, '');
+      setTimeout(function () {
+        try { input.focus(); input.select(); } catch (e) {}
+      }, 40);
+    }
+    if (errEl) {
+      errEl.textContent = code
+        ? 'Clave copiada. Confirma para entrar a Pagos.'
+        : '';
+    }
+  }
+
+  function closeChatPopup() {
+    var popup = $('teamChatPopup');
+    if (popup) popup.classList.add('portal-hidden');
+  }
+
+  function openChatPopup() {
+    var popup = $('teamChatPopup');
+    if (popup) popup.classList.remove('portal-hidden');
+  }
+
+  function finishPaymentsKeyCopy(code) {
+    if (!state.awaitingPaymentsGate) return false;
+    state.awaitingPaymentsGate = false;
+    closeChatPopup();
+    openPaymentsGateWithCode(code);
+    return true;
+  }
 
   function getClient() {
     try {
@@ -377,7 +419,7 @@
   async function requestPaymentsKey() {
     if (isAdmin()) {
       window.boxiesPaymentsUnlocked = true;
-      openClaveView();
+      hidePaymentsGate();
       return;
     }
     var client = getClient();
@@ -386,22 +428,28 @@
       return;
     }
     var errEl = $('paymentsGateError');
+    var gate = $('paymentsGateBackdrop');
+    var fromGate = !!(gate && !gate.classList.contains('portal-hidden'));
     try {
       var result = await client.rpc('panel_payments_request_access');
       if (result.error) throw result.error;
-      var popup = $('teamChatPopup');
-      if (popup) popup.classList.remove('portal-hidden');
+      // Desde Verificar acceso: cierra el popup y abre Clave dinámica a la espera
+      state.awaitingPaymentsGate = fromGate || state.awaitingPaymentsGate;
+      hidePaymentsGate();
+      openChatPopup();
       openClaveView();
       await reload();
       markRead();
       if (errEl) {
         errEl.textContent = result.data && result.data.reused
-          ? 'Ya hay una solicitud pendiente en Clave dinámica.'
-          : 'Solicitud enviada. El admin la verá en Clave dinámica.';
+          ? 'Ya hay una solicitud pendiente. Cuando te den la clave, cópiala aquí.'
+          : 'Solicitud enviada. Cuando te den la clave, cópiala para volver al acceso.';
       }
     } catch (err) {
+      if (fromGate) state.awaitingPaymentsGate = false;
       if (errEl) errEl.textContent = err.message || 'No se pudo solicitar la clave.';
       else alert(err.message || 'No se pudo solicitar la clave.');
+      if (fromGate) openPaymentsGateWithCode('');
     }
   }
 
@@ -474,6 +522,8 @@
               ta.remove();
             }
             copyBtn.textContent = 'Copiado';
+            // Desde el flujo de Pagos: cierra chat y reabre Verificar acceso con la clave
+            if (finishPaymentsKeyCopy(code)) return;
             setTimeout(function () { copyBtn.textContent = 'Copiar código'; }, 1400);
           } catch (err) {
             alert('No se pudo copiar. Código: ' + code);
@@ -503,6 +553,26 @@
         }, 50);
       });
     }
+
+    var closeBtn = $('teamChatPopupClose');
+    if (closeBtn && !closeBtn.dataset.liveBound) {
+      closeBtn.dataset.liveBound = '1';
+      closeBtn.addEventListener('click', function () {
+        // Si venía del gate de Pagos y cierra sin copiar, recupera Verificar acceso
+        if (state.awaitingPaymentsGate) {
+          state.awaitingPaymentsGate = false;
+          openPaymentsGateWithCode('');
+        }
+      });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || !state.awaitingPaymentsGate) return;
+      var popup = $('teamChatPopup');
+      if (!popup || popup.classList.contains('portal-hidden')) return;
+      state.awaitingPaymentsGate = false;
+      openPaymentsGateWithCode('');
+    });
 
     var teamTab = $('chatTeamTab');
     if (teamTab && !teamTab.dataset.liveBound) {
@@ -552,6 +622,7 @@
     openTeamView: openTeamView,
     openDmMode: openDmMode,
     clearCurrentChat: clearCurrentChat,
+    finishPaymentsKeyCopy: finishPaymentsKeyCopy,
     verifyOtp: verifyOtp,
     isAdmin: isAdmin,
     markRead: markRead
