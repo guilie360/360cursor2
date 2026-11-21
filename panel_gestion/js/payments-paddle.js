@@ -123,6 +123,7 @@
         settings: {
           displayMode: 'overlay',
           variant: 'one-page',
+          theme: 'dark',
           successUrl: window.location.origin + window.location.pathname + '?pago=ok'
         },
         customer: email ? { email: email } : undefined
