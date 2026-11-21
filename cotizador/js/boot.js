@@ -245,9 +245,7 @@
     var text = (live && live.textContent) ? live.textContent.trim() : '0 €';
     if (!text) text = '0 €';
     if (commissionLabel) commissionLabel.textContent = text;
-    if (commissionCardValue) {
-      commissionCardValue.innerHTML = text + ' <small>por este presupuesto</small>';
-    }
+    if (commissionCardValue) commissionCardValue.textContent = text;
   }
 
   if (live && typeof MutationObserver !== 'undefined') {
@@ -280,6 +278,14 @@
       else closeCommissionCard();
     });
     if (commissionClose) commissionClose.addEventListener('click', closeCommissionCard);
+    var commissionGo = document.getElementById('internoCommissionGo');
+    if (commissionGo) {
+      commissionGo.addEventListener('click', function (e) {
+        e.preventDefault();
+        var href = commissionGo.getAttribute('data-href') || '/panel_gestion/?abrir=hunter';
+        window.location.assign(href);
+      });
+    }
   }
 
   function openResetConfirm() {

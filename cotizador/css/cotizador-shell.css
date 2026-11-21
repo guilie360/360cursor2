@@ -404,10 +404,19 @@ body.cotizador-app .manual-upsell--compact .manual-upsell-close{
   font-size:14px!important;
   color:#99938a!important;
 }
-/* Paquete completo debajo; comisión Hunter encima al abrirse */
+/* Paquete completo debajo; comisión Hunter encima (misma pastilla, apiladas) */
 body.cotizador-app #manualUpsell,
 body.cotizador-app .manual-upsell:not(.interno-commission-card){
   z-index:90!important;
+}
+body.cotizador-app #internoCommissionCard.manual-upsell--compact,
+body.cotizador-app .interno-commission-card.manual-upsell--compact{
+  width:auto!important;
+  max-width:min(340px,calc(100vw - 28px))!important;
+}
+/* Si el upsell de paquete está visible, la comisión se apila encima (sin solaparse) */
+body.cotizador-app:has(#manualUpsell:not(.hidden)) #internoCommissionCard:not(.hidden){
+  bottom:calc(var(--quote-footer-clearance) + 12px + 54px)!important;
 }
 /* Recordatorio sutil cada 5s: zumbido / shake corto */
 body.cotizador-app #manualUpsell:not(.hidden){
@@ -432,11 +441,9 @@ body.cotizador-app #internoCommissionCard,
 body.cotizador-app .interno-commission-card{
   z-index:120!important;
 }
-.interno-commission-hint{
-  display:block;margin-top:4px;font-size:11px;line-height:1.45;color:#a7a198;
-}
 body.cotizador-app.modo-interno .interno-commission-card:not(.hidden){
-  display:flex;
+  display:flex!important;
+  align-items:center!important;
 }
 
 /* Público: ocultar acciones solo de equipo en el modal final */
@@ -559,10 +566,14 @@ body.cotizador-app .package-accordion-list{
   body.cotizador-app .package-accordion-list{
     padding-bottom:0!important;
   }
-  body.cotizador-app #manualUpsell.manual-upsell--compact:not(.hidden){
+  body.cotizador-app #manualUpsell.manual-upsell--compact:not(.hidden),
+  body.cotizador-app #internoCommissionCard.manual-upsell--compact:not(.hidden){
     right:12px!important;
     max-width:calc(100vw - 24px)!important;
     padding:7px 32px 7px 11px!important;
+  }
+  body.cotizador-app:has(#manualUpsell:not(.hidden)) #internoCommissionCard:not(.hidden){
+    bottom:calc(var(--quote-footer-clearance) + 10px + 50px)!important;
   }
 }
 
