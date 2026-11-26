@@ -337,7 +337,8 @@
       close();
       try {
         if (window.BoxiesClientChat && typeof window.BoxiesClientChat.open === 'function') {
-          window.BoxiesClientChat.open({ notify: true });
+          // Solo abrir el chat; el cliente escribe cuando quiera.
+          window.BoxiesClientChat.open({ notify: false });
           return;
         }
       } catch (e) {}

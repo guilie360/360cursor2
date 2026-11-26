@@ -161,15 +161,8 @@ Deno.serve(async (req) => {
                 const meta = (authUser?.user?.user_metadata || {}) as Record<string, string>;
                 const phone = meta.telefono || meta.phone || "";
                 passwordMasked = maskPassword(phonePassword(phone));
-                await admin
-                  .from("profiles")
-                  .update({
-                    etapa_nombre: "En producción",
-                    etapa_pct: 50,
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq("id", uid)
-                  .eq("rol", "cliente");
+                // No pisar etapa al cobrar: el default es 5% Revisando documentos
+                // (client-provision) y el admin la avanza en Base de datos.
               }
               await sendOrderEmail({
                 to: email,

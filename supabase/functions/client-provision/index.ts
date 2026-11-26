@@ -150,8 +150,8 @@ Deno.serve(async (req) => {
       nombre_visible: name || email.split("@")[0],
       telefono: phoneRaw || "",
       rol: "cliente",
-      etapa_nombre: "Pedido recibido",
-      etapa_pct: 10,
+      etapa_nombre: "Revisando documentos",
+      etapa_pct: 5,
       permisos: {
         editarProyecto: false,
         aplicarTemaProyecto: false,

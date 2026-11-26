@@ -143,25 +143,21 @@
 
   function applyStage(profile, ped) {
     var pct = Number(profile && profile.etapa_pct);
-    if (!Number.isFinite(pct)) pct = 0;
+    if (!Number.isFinite(pct) || pct < 0) pct = 0;
     var nombre = String((profile && profile.etapa_nombre) || '').trim();
-    if (!nombre && ped) {
-      var st = String(ped.status || '').toLowerCase();
-      if (st === 'en_produccion' || st === 'pendiente_entrega') {
-        nombre = 'En producción';
-        if (!pct) pct = 50;
-      } else if (st === 'pagado') {
-        nombre = 'Entregado';
-        if (!pct) pct = 100;
-      } else if (st === 'pendiente_anticipo') {
-        nombre = 'Anticipo pendiente';
-        if (!pct) pct = 5;
-      }
+    // Etapa inicial por defecto: 5% Revisando documentos (no inferir 50% del pedido).
+    if (!nombre && !pct) {
+      nombre = 'Revisando documentos';
+      pct = 5;
+    } else if (!nombre) {
+      nombre = 'Revisando documentos';
+      if (!pct) pct = 5;
+    } else if (!pct) {
+      pct = 5;
     }
-    if (!nombre) nombre = pct ? ('Avance ' + pct + '%') : 'Pedido';
     setFooterProgress(pct, 'Proyecto · ' + pct + '%', 'Etapa', nombre);
     var lead = $('welcomeLead');
-    if (lead) lead.textContent = nombre + (pct ? (' · ' + pct + '%') : '');
+    if (lead) lead.textContent = nombre + ' · ' + pct + '%';
   }
 
   async function loadHome(user, profile) {
