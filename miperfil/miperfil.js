@@ -111,7 +111,7 @@
       }
     }
     if (!nombre) nombre = pct ? ('Avance ' + pct + '%') : 'Pedido';
-    setFooterProgress(pct, 'Proyecto · ' + nombre, 'Etapa', nombre);
+    setFooterProgress(pct, 'Proyecto · ' + pct + '%', 'Etapa', nombre);
     var lead = $('welcomeLead');
     if (lead) lead.textContent = nombre + (pct ? (' · ' + pct + '%') : '');
   }
@@ -270,6 +270,11 @@
       location.href = '/miperfil/';
     });
   }
+
+  window.BoxiesMiPerfilHome = function () {
+    showHome();
+    try { window.scrollTo(0, 0); } catch (e) {}
+  };
 
   boot();
 })();

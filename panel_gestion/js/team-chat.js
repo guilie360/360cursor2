@@ -22,6 +22,7 @@
     activeView: 'team', // team | clave | dm | client
     clientId: null,
     clientName: '',
+    clientContacts: {}, // id -> { id, name, lastAt }
     awaitingPaymentsGate: false,
     clearedAt: { team: 0, clave: 0 } // per-account watermarks (ms)
   };
@@ -409,13 +410,61 @@
     ensureRequestButton();
   }
 
+  function loadClientContacts() {
+    try {
+      var raw = localStorage.getItem('boxiesClientChatContacts');
+      var parsed = raw ? JSON.parse(raw) : null;
+      if (parsed && typeof parsed === 'object') state.clientContacts = parsed;
+    } catch (e) {}
+  }
+
+  function saveClientContacts() {
+    try {
+      localStorage.setItem('boxiesClientChatContacts', JSON.stringify(state.clientContacts || {}));
+    } catch (e) {}
+  }
+
+  function rememberClientContact(clientId, clientName, lastAt) {
+    if (!clientId) return;
+    var prev = state.clientContacts[clientId] || {};
+    state.clientContacts[clientId] = {
+      id: clientId,
+      name: clientName || prev.name || 'Cliente',
+      lastAt: lastAt || prev.lastAt || new Date().toISOString()
+    };
+    saveClientContacts();
+  }
+
+  function collectClientContacts() {
+    (state.messages || []).forEach(function (m) {
+      if (m.kind !== 'client_chat') return;
+      var meta = m.meta || {};
+      var id = String(meta.client_id || m.sender_id || '');
+      if (!id) return;
+      rememberClientContact(id, meta.client_name || m.sender_name || 'Cliente', m.created_at);
+    });
+    if (state.clientId) {
+      rememberClientContact(state.clientId, state.clientName, new Date().toISOString());
+    }
+    return Object.keys(state.clientContacts).map(function (k) {
+      return state.clientContacts[k];
+    }).sort(function (a, b) {
+      return String(b.lastAt || '').localeCompare(String(a.lastAt || ''));
+    });
+  }
+
   async function openClientChat(clientId, clientName) {
     if (!isAdmin() || !clientId) return;
     state.activeView = 'client';
     state.clientId = clientId;
     state.clientName = clientName || 'Cliente';
+    rememberClientContact(clientId, state.clientName, new Date().toISOString());
     var panel = $('chatRecipientPanel');
     if (panel) panel.classList.add('portal-hidden');
+    var teamTab = $('chatTeamTab');
+    var directTab = $('chatDirectTab');
+    if (teamTab) teamTab.classList.remove('active');
+    if (directTab) directTab.classList.remove('active');
     try {
       state.clientMessages = await fetchClientMessages(clientId);
     } catch (e) {
@@ -423,6 +472,7 @@
       console.warn('[TeamChat] client thread', e);
     }
     render();
+    injectClientContactsInMemberList();
     openChatPopup();
     setTimeout(function () {
       try { $('teamChatInput') && $('teamChatInput').focus(); } catch (err) {}
@@ -450,7 +500,6 @@
     btn.disabled = false;
     btn.title = 'Abrir el chat de Clave dinámica';
     btn.style.display = state.activeView === 'client' ? 'none' : '';
-    btn.style.display = '';
   }
 
   function syncAppThread(thread) {
@@ -497,17 +546,61 @@
   function injectClaveInMemberList() {
     var list = $('chatMemberList');
     if (!list) return;
-    if (list.querySelector('[data-chat-clave]')) return;
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'chat-member-option';
-    btn.setAttribute('data-chat-clave', '1');
-    btn.textContent = 'Clave dinámica';
-    list.insertBefore(btn, list.firstChild);
-    btn.addEventListener('click', function () {
-      var panel = $('chatRecipientPanel');
-      if (panel) panel.classList.add('portal-hidden');
-      openClaveView();
+    if (!list.querySelector('[data-chat-clave]')) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chat-member-option';
+      btn.setAttribute('data-chat-clave', '1');
+      btn.textContent = 'Clave dinámica';
+      list.insertBefore(btn, list.firstChild);
+      btn.addEventListener('click', function () {
+        var panel = $('chatRecipientPanel');
+        if (panel) panel.classList.add('portal-hidden');
+        openClaveView();
+      });
+    }
+    injectClientContactsInMemberList();
+  }
+
+  function injectClientContactsInMemberList() {
+    if (!isAdmin()) return;
+    var list = $('chatMemberList');
+    if (!list) return;
+
+    list.querySelectorAll('[data-chat-client], .chat-clients-label, .chat-clients-empty').forEach(function (n) {
+      n.remove();
+    });
+
+    var contacts = collectClientContacts();
+    var label = document.createElement('div');
+    label.className = 'chat-clients-label';
+    label.textContent = contacts.length ? 'Clientes' : 'Clientes (sin chats aún)';
+    list.appendChild(label);
+
+    if (!contacts.length) {
+      var empty = document.createElement('p');
+      empty.className = 'desc chat-clients-empty';
+      empty.textContent = 'Cuando un cliente escriba desde Mi perfil, aparecerá aquí.';
+      list.appendChild(empty);
+      return;
+    }
+
+    contacts.forEach(function (c) {
+      var opt = document.createElement('button');
+      opt.type = 'button';
+      opt.className = 'chat-member-option';
+      opt.setAttribute('data-chat-client', c.id);
+      opt.setAttribute('data-client-name', c.name || 'Cliente');
+      if (state.activeView === 'client' && state.clientId === c.id) {
+        opt.classList.add('active');
+      }
+      opt.textContent = c.name || 'Cliente';
+      opt.addEventListener('click', function () {
+        var panel = $('chatRecipientPanel');
+        if (panel) panel.classList.add('portal-hidden');
+        openClientChat(c.id, c.name || 'Cliente');
+      });
+      list.appendChild(opt);
     });
   }
 
@@ -851,6 +944,7 @@
 
   async function start() {
     bindUi();
+    loadClientContacts();
     var ok = await refreshIdentity();
     if (!ok) return;
     await reload();
@@ -865,6 +959,7 @@
     openTeamView: openTeamView,
     openDmMode: openDmMode,
     openClientChat: openClientChat,
+    refreshMemberList: injectClaveInMemberList,
     clearCurrentChat: clearCurrentChat,
     finishPaymentsKeyCopy: finishPaymentsKeyCopy,
     verifyOtp: verifyOtp,

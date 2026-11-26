@@ -127,12 +127,13 @@
 
   /** Links principales (FS va aparte, en el footer del menú) */
   function linksForContext() {
-    /* Mi perfil (cliente): Inicio, Chatear, Salir */
+    /* Mi perfil (cliente): Inicio = panel perfil, Ver demo, Chatear, Salir */
     if (isClienteAuthed()) {
       return [
-        { action: 'go-home', label: 'Inicio', n: '01' },
-        { action: 'client-chat', label: 'Chatear', n: '02' },
-        { action: 'logout', label: 'Salir', n: '03' }
+        { action: 'miperfil-home', label: 'Inicio', n: '01' },
+        { action: 'go-demo', label: 'Ver demo', n: '02' },
+        { action: 'client-chat', label: 'Chatear', n: '03' },
+        { action: 'logout', label: 'Salir', n: '04' }
       ];
     }
     /* Menú privado: solo con sesión de empresa (panel / cotizar interno) */
@@ -249,6 +250,7 @@
         btn.style.setProperty('--dl', delay);
         if (item.action === 'logout') btn.setAttribute('data-nav-logout', '1');
         else if (item.action === 'go-home') btn.setAttribute('data-nav-go-home', '1');
+        else if (item.action === 'miperfil-home') btn.setAttribute('data-nav-miperfil-home', '1');
         else if (item.action === 'go-demo') btn.setAttribute('data-nav-go-demo', '1');
         else if (item.action === 'panel-home') btn.setAttribute('data-nav-panel-home', '1');
         else if (item.action === 'client-chat') btn.setAttribute('data-nav-client-chat', '1');
@@ -375,6 +377,24 @@
       goKeepFs('/#inicio');
     }
 
+    function goMiperfilHome() {
+      close();
+      try {
+        if (typeof window.BoxiesMiPerfilHome === 'function') {
+          window.BoxiesMiPerfilHome();
+          return;
+        }
+      } catch (e) {}
+      try {
+        if (/\/miperfil\/?/i.test(location.pathname || '')) {
+          location.hash = '';
+          location.reload();
+          return;
+        }
+      } catch (e2) {}
+      location.href = '/miperfil/';
+    }
+
     function goDemo() {
       goKeepFs('/#demo');
     }
@@ -457,6 +477,12 @@
         e.preventDefault();
         e.stopPropagation();
         goHome();
+        return;
+      }
+      if (e.target.closest('[data-nav-miperfil-home]')) {
+        e.preventDefault();
+        e.stopPropagation();
+        goMiperfilHome();
         return;
       }
       if (e.target.closest('[data-nav-go-demo]')) {
