@@ -43,9 +43,22 @@
 .miperfil-pay-btn{
   border:1px solid rgba(255,255,255,.22)!important;background:transparent!important;color:#eee!important;
   padding:8px 14px!important;font:600 11px Manrope,Arial,sans-serif!important;letter-spacing:.08em;text-transform:uppercase;
-  border-radius:999px!important;min-height:36px
+  border-radius:13px!important;min-height:36px
 }
 .miperfil-pay-btn:hover{background:rgba(255,255,255,.06)!important;border-color:rgba(255,255,255,.4)!important;color:#fff!important}
+.miperfil-pay-dots{
+  display:inline-flex;align-items:center;gap:5px;margin-right:2px
+}
+.miperfil-mode .pay-stage-dots{
+  display:inline-flex;align-items:center;gap:5px;flex:none
+}
+.miperfil-mode .pay-stage-dot{
+  width:8px;height:8px;border-radius:50%;box-sizing:border-box;
+  border:1.5px solid rgba(255,255,255,.28);background:transparent;display:inline-block
+}
+.miperfil-mode .pay-stage-dot.is-on{
+  border-color:#7dcea0;background:#7dcea0;box-shadow:0 0 0 3px rgba(125,206,160,.12)
+}
 .pays-list{margin-top:22px;display:grid;gap:12px;max-width:720px}
 .pay-project{
   border:1px solid rgba(255,255,255,.12);background:#141414;border-radius:18px;overflow:hidden
@@ -55,8 +68,9 @@
   user-select:text;-webkit-user-select:text
 }
 .pay-project>summary::-webkit-details-marker{display:none}
-.pay-project-title{flex:1;font:400 22px Italiana,Georgia,serif;color:#fff}
-.pay-project-meta{font-size:12px;color:#999;text-align:right}
+.pay-project-title{flex:1;font:400 22px Italiana,Georgia,serif;color:#fff;min-width:0}
+.pay-project-meta{font-size:12px;color:#999;text-align:right;white-space:nowrap}
+.pay-project>summary .pay-stage-dots{margin:0 4px}
 .pay-project .accordion-chevron{color:#888;font-size:14px}
 .pay-project[open] .accordion-chevron{transform:rotate(45deg)}
 .pay-project-body{padding:0 18px 18px;border-top:1px solid rgba(255,255,255,.08)}

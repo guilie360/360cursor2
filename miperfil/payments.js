@@ -54,6 +54,60 @@
     return s || '—';
   }
 
+  /** Dos puntos: Anticipo · Entrega (igual Contabilidad panel). */
+  function stageFromStatus(status) {
+    var st = String(status || '').toLowerCase();
+    if (st === 'pagado') {
+      return { deposit: true, balance: true, label: 'Anticipo y entrega pagados' };
+    }
+    if (st === 'en_produccion' || st === 'pendiente_entrega') {
+      return { deposit: true, balance: false, label: 'Anticipo pagado · entrega pendiente' };
+    }
+    return { deposit: false, balance: false, label: 'Anticipo pendiente' };
+  }
+
+  function dotsHtml(stage) {
+    stage = stage || { deposit: false, balance: false, label: 'Sin pagos' };
+    var tip = stage.label || 'Estado de pago';
+    return (
+      '<span class="pay-stage-dots" title="' + escapeHtml(tip) + '" aria-label="' + escapeHtml(tip) + '">' +
+        '<i class="pay-stage-dot' + (stage.deposit ? ' is-on' : '') + '" data-stage="deposit"></i>' +
+        '<i class="pay-stage-dot' + (stage.balance ? ' is-on' : '') + '" data-stage="balance"></i>' +
+      '</span>'
+    );
+  }
+
+  function aggregateStage(pedidos) {
+    if (!pedidos || !pedidos.length) {
+      return { deposit: false, balance: false, label: 'Sin pagos' };
+    }
+    // Header: reflejar el proyecto más reciente; si hay varios, verde solo si TODOS lo tienen
+    var deposit = pedidos.every(function (p) {
+      var s = stageFromStatus(p.status);
+      return s.deposit;
+    });
+    var balance = pedidos.every(function (p) {
+      var s = stageFromStatus(p.status);
+      return s.balance;
+    });
+    var label = balance
+      ? 'Anticipo y entrega pagados'
+      : (deposit ? 'Anticipo pagado · entrega pendiente' : 'Anticipo pendiente');
+    return { deposit: deposit, balance: balance, label: label };
+  }
+
+  function updateHeaderDots() {
+    var el = $('payHeaderDots');
+    if (!el) return;
+    var stage = aggregateStage(state.pedidos);
+    el.title = stage.label;
+    el.setAttribute('aria-label', stage.label);
+    var dep = el.querySelector('[data-stage="deposit"]');
+    var bal = el.querySelector('[data-stage="balance"]');
+    if (dep) dep.classList.toggle('is-on', !!stage.deposit);
+    if (bal) bal.classList.toggle('is-on', !!stage.balance);
+  }
+
   function readExtraMap() {
     try {
       return JSON.parse(localStorage.getItem(EXTRA_KEY) || '{}') || {};
@@ -92,8 +146,9 @@
 
     list.innerHTML = state.pedidos.map(function (p, i) {
       var st = String(p.status || '').toLowerCase();
-      var depositDone = st === 'en_produccion' || st === 'pendiente_entrega' || st === 'pagado';
-      var balanceDone = st === 'pagado';
+      var stage = stageFromStatus(st);
+      var depositDone = !!stage.deposit;
+      var balanceDone = !!stage.balance;
       var canDeposit = st === 'pendiente_anticipo';
       var canBalance = st === 'en_produccion' || st === 'pendiente_entrega';
       var open = i === 0 ? ' open' : '';
@@ -131,6 +186,7 @@
         '<details class="pay-project"' + open + ' data-pedido-id="' + escapeHtml(p.id) + '">' +
           '<summary>' +
             '<span class="pay-project-title">' + escapeHtml(p.proyecto_label || 'Showroom') + '</span>' +
+            dotsHtml(stage) +
             '<span class="pay-project-meta">' + escapeHtml(statusLabel(st)) +
               ' · ' + escapeHtml(money(p.quote_total_cents)) + '</span>' +
             '<span class="accordion-chevron">＋</span>' +
@@ -152,6 +208,7 @@
         '</details>'
       );
     }).join('');
+    updateHeaderDots();
   }
 
   async function createCheckout(pedido, stage) {
@@ -339,14 +396,38 @@
 
   function setHeaderVisible(on) {
     var btn = $('payHeaderBtn');
-    if (!btn) return;
-    btn.classList.toggle('portal-hidden', !on);
+    var dots = $('payHeaderDots');
+    if (btn) btn.classList.toggle('portal-hidden', !on);
+    if (dots) dots.classList.toggle('portal-hidden', !on);
+    if (on) updateHeaderDots();
+  }
+
+  /** Carga silenciosa de pedidos para actualizar puntos del header (home). */
+  async function refreshHeader() {
+    try {
+      var sb = client();
+      var session = await sb.auth.getSession();
+      var user = session && session.data && session.data.session && session.data.session.user;
+      if (!user) return;
+      state.email = String(user.email || '').toLowerCase();
+      var pedRes = await sb
+        .from('panel_pedidos')
+        .select('id,status,proyecto_label,quote_total_cents,deposit_cents,balance_cents,created_at')
+        .eq('customer_email', state.email)
+        .order('created_at', { ascending: false })
+        .limit(40);
+      if (!pedRes.error) state.pedidos = pedRes.data || [];
+      updateHeaderDots();
+    } catch (e) {
+      console.warn('[pays] refreshHeader', e);
+    }
   }
 
   window.BoxiesMiPerfilPays = {
     load: load,
     bind: bind,
     setHeaderVisible: setHeaderVisible,
+    refreshHeader: refreshHeader,
     reload: load
   };
 })();

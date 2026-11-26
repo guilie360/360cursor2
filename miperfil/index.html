@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
 <link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel70">
 <link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel70">
-<link rel="stylesheet" href="/miperfil/miperfil.css?v=7">
+<link rel="stylesheet" href="/miperfil/miperfil.css?v=8">
 </head>
 <body class="portal-mode miperfil-mode">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat con admin">
@@ -29,6 +29,10 @@
    <span class="portal-brand-copy">360Preventa<small>Mi perfil</small></span>
   </div>
   <div class="portal-head-right">
+   <span class="pay-stage-dots miperfil-pay-dots portal-hidden" id="payHeaderDots" title="Estado de pago" aria-label="Estado de pago" aria-hidden="true">
+    <i class="pay-stage-dot" data-stage="deposit"></i>
+    <i class="pay-stage-dot" data-stage="balance"></i>
+   </span>
    <button class="btn miperfil-pay-btn portal-hidden" id="payHeaderBtn" type="button">Pagos</button>
    <button class="btn portal-logout portal-logout-icon" id="logoutBtn" type="button" aria-label="Cerrar sesión" title="Cerrar sesión">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5M14 16l4-4-4-4M18 12H9"/></svg>
@@ -125,7 +129,7 @@
 <script src="/shared/js/global-nav.js?v=21"></script>
 <script src="/miperfil/client-chat.js?v=2"></script>
 <script src="/miperfil/docs.js?v=2"></script>
-<script src="/miperfil/payments.js?v=2"></script>
-<script src="/miperfil/miperfil.js?v=7"></script>
+<script src="/miperfil/payments.js?v=3"></script>
+<script src="/miperfil/miperfil.js?v=8"></script>
 </body>
 </html>

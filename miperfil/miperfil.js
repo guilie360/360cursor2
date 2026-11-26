@@ -96,6 +96,11 @@
     hideAll();
     if (homeView) homeView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.add('portal-hidden');
+    try {
+      if (window.BoxiesMiPerfilPays && typeof BoxiesMiPerfilPays.refreshHeader === 'function') {
+        BoxiesMiPerfilPays.refreshHeader();
+      }
+    } catch (e) {}
   }
 
   function showInfo() {
