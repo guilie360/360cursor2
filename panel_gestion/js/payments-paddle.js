@@ -1300,71 +1300,221 @@
         '<div class="pay-kpi"><small>Pendiente</small><strong>' + moneyFromCents(pendiente) + '</strong><em>links / entregas</em></div>';
     }
 
-    function renderLedger(month) {
-      var rows = accountingRows(month).slice().sort(function (a, b) {
-        return new Date(cobroWhen(b)) - new Date(cobroWhen(a));
+    function fmtCobroWhen(iso) {
+      if (!iso) return '—';
+      var d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleString('es-ES', {
+        day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
       });
+    }
+
+    /** Un contenedor por pedido: anticipo + entrega enlazados (no duplicar filas). */
+    function groupCobrosByPedido(rows) {
+      var order = [];
+      var map = {};
+      (rows || []).forEach(function (r) {
+        var key = r.pedido_id ? ('p:' + r.pedido_id) : ('c:' + r.id);
+        if (!map[key]) {
+          map[key] = { key: key, pedido_id: r.pedido_id || null, cobros: [] };
+          order.push(map[key]);
+        }
+        map[key].cobros.push(r);
+      });
+      order.forEach(function (g) {
+        g.cobros.sort(function (a, b) {
+          return new Date(cobroWhen(a) || 0) - new Date(cobroWhen(b) || 0);
+        });
+      });
+      order.sort(function (a, b) {
+        var ta = 0;
+        var tb = 0;
+        a.cobros.forEach(function (c) {
+          var t = new Date(cobroWhen(c) || 0).getTime();
+          if (t > ta) ta = t;
+        });
+        b.cobros.forEach(function (c) {
+          var t = new Date(cobroWhen(c) || 0).getTime();
+          if (t > tb) tb = t;
+        });
+        return tb - ta;
+      });
+      return order;
+    }
+
+    function pickStageCobro(cobros, stage) {
+      var want = stage === 'balance' ? /^(balance|entrega)$/i : /^(deposit|anticipo)$/i;
+      var hit = cobros.filter(function (c) {
+        var s = String(c.payment_stage || (c.metadata && c.metadata.stage) || '');
+        return want.test(s);
+      });
+      var paid = hit.filter(isPaidCobro);
+      if (paid.length) return paid[paid.length - 1];
+      return hit.length ? hit[hit.length - 1] : null;
+    }
+
+    function renderLedger(month) {
+      var rows = accountingRows(month).slice();
       if (!rows.length) {
         ledgerEl.innerHTML = '<p class="desc">Sin movimientos en ' + escapeHtml(monthLabel(month)) + '.</p>';
         if (noteEl) noteEl.textContent = 'Esto se llena solo: al pagar el cliente en Paddle, el webhook marca el cobro como Cobrado.';
         return;
       }
 
-      var paid = rows.filter(isPaidCobro);
-      var open = rows.filter(isOpenCobro);
-      var other = rows.filter(function (r) { return !isPaidCobro(r) && !isOpenCobro(r); });
-      var ordered = paid.concat(open, other);
+      var groups = groupCobrosByPedido(rows);
+      // Orden: grupos con algo cobrado primero, luego abiertos
+      groups.sort(function (a, b) {
+        var aPaid = a.cobros.some(isPaidCobro);
+        var bPaid = b.cobros.some(isPaidCobro);
+        if (aPaid !== bPaid) return aPaid ? -1 : 1;
+        var ta = 0;
+        var tb = 0;
+        a.cobros.forEach(function (c) {
+          var t = new Date(cobroWhen(c) || 0).getTime();
+          if (t > ta) ta = t;
+        });
+        b.cobros.forEach(function (c) {
+          var t = new Date(cobroWhen(c) || 0).getTime();
+          if (t > tb) tb = t;
+        });
+        return tb - ta;
+      });
 
       ledgerEl.innerHTML =
         '<div class="portal-list pay-ledger-list">' +
-        ordered.map(function (r) {
-          var when = cobroWhen(r);
-          var day = when ? new Date(when).toLocaleString('es-ES', {
-            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-          }) : '—';
-          var stageName = stageLabel(r.payment_stage || (r.metadata && r.metadata.stage));
-          var fee = estimateFeeCents(r.amount_cents);
-          var stateClass = isPaidCobro(r) ? 'is-paid' : (isOpenCobro(r) ? 'is-open' : 'is-other');
-          var title = String(r.customer_name || '').trim() || String(r.customer_email || '').trim() || 'Cobro';
-          var dots = payStageFromCobro(r);
-          if (r.pedido_id && cache.pedidos) {
-            var ped = cache.pedidos.find(function (p) { return p.id === r.pedido_id; });
-            if (ped) dots = payStageFromPedidoStatus(ped.status);
+        groups.map(function (g) {
+          var cobros = g.cobros;
+          var head = cobros[cobros.length - 1] || cobros[0];
+          var ped = null;
+          if (g.pedido_id && cache.pedidos) {
+            ped = cache.pedidos.find(function (p) { return p.id === g.pedido_id; }) || null;
           }
-          var isTest = looksLikeTestPay(r);
+          var dots = ped
+            ? payStageFromPedidoStatus(ped.status)
+            : (cobros.length === 1
+              ? payStageFromCobro(cobros[0])
+              : {
+                deposit: cobros.some(function (c) {
+                  var s = String(c.payment_stage || '');
+                  return isPaidCobro(c) && /deposit|anticipo/i.test(s);
+                }),
+                balance: cobros.some(function (c) {
+                  var s = String(c.payment_stage || '');
+                  return isPaidCobro(c) && /balance|entrega/i.test(s);
+                }),
+                label: 'Pagos del pedido'
+              });
+          if (dots.deposit && dots.balance) dots.label = 'Anticipo y entrega pagados';
+          else if (dots.deposit) dots.label = 'Anticipo pagado · entrega pendiente';
+          else dots.label = dots.label || 'Anticipo pendiente';
+
+          var depCobro = pickStageCobro(cobros, 'deposit');
+          var balCobro = pickStageCobro(cobros, 'balance');
+          var paidSum = cobros.filter(isPaidCobro).reduce(function (s, r) {
+            return s + (Number(r.amount_cents) || 0);
+          }, 0);
+          var totalCents = ped && ped.quote_total_cents
+            ? Number(ped.quote_total_cents)
+            : paidSum || cobros.reduce(function (s, r) { return s + (Number(r.amount_cents) || 0); }, 0);
+          var anyPaid = cobros.some(isPaidCobro);
+          var anyOpen = cobros.some(isOpenCobro);
+          var stateClass = anyPaid ? 'is-paid' : (anyOpen ? 'is-open' : 'is-other');
+          var isTest = cobros.some(looksLikeTestPay) || (ped && looksLikeTestPay(ped));
+          var title = String(
+            (ped && ped.customer_name) ||
+            head.customer_name ||
+            (ped && ped.customer_email) ||
+            head.customer_email ||
+            'Proyecto'
+          ).trim();
+          var email = String((ped && ped.customer_email) || head.customer_email || '').trim();
+          if (email && title.indexOf('@') < 0) {
+            /* keep name as title; email in body */
+          } else if (!title || title === 'Proyecto') {
+            title = email || 'Proyecto';
+          }
+          var latestWhen = cobros.reduce(function (best, c) {
+            var t = cobroWhen(c);
+            if (!t) return best;
+            if (!best || new Date(t) > new Date(best)) return t;
+            return best;
+          }, null);
+          var day = fmtCobroWhen(latestWhen);
+          var proyecto = (ped && ped.proyecto_label) || head.proyecto_label || '—';
+
+          function stageBlock(label, cobro, done) {
+            var when = cobro ? cobroWhen(cobro) : null;
+            var amt = cobro
+              ? moneyFromCents(cobro.amount_cents)
+              : (label === 'Anticipo' && ped
+                ? moneyFromCents(ped.deposit_cents)
+                : (label === 'Entrega' && ped ? moneyFromCents(ped.balance_cents) : '—'));
+            var st = done
+              ? ('Pagado · ' + fmtCobroWhen(when))
+              : (cobro && isOpenCobro(cobro) ? 'Link pendiente' : 'Pendiente');
+            return (
+              '<div class="pay-meta-grid pay-stage-block">' +
+                metaRow(label, escapeHtml(st)) +
+                metaRow('Importe', amt) +
+                (cobro && cobro.paddle_transaction_id
+                  ? metaRow('ID Paddle', escapeHtml(cobro.paddle_transaction_id))
+                  : '') +
+                (cobro
+                  ? '<div class="quote-crm-row-actions">' +
+                      '<button type="button" class="btn" data-pay-test="' + escapeHtml(cobro.id) + '">' +
+                        (looksLikeTestPay(cobro) ? 'No prueba' : 'Prueba') +
+                      '</button>' +
+                      '<button type="button" class="btn" data-pay-delete="' + escapeHtml(cobro.id) + '">Borrar</button>' +
+                    '</div>'
+                  : '') +
+              '</div>'
+            );
+          }
+
+          // Cobros sueltos sin stage claro
+          var extras = cobros.filter(function (c) {
+            return c !== depCobro && c !== balCobro;
+          });
+
           var body =
             (isTest ? '<div class="quote-crm-test-tag">prueba</div>' : '') +
             '<div class="pay-meta-grid">' +
-              metaRow('Estado', escapeHtml(statusLabel(r.status))) +
-              metaRow('Tipo', escapeHtml(stageName)) +
+              metaRow('Email', escapeHtml(email || '—')) +
+              metaRow('Proyecto', escapeHtml(proyecto)) +
               metaRow('Pago', escapeHtml(dots.label)) +
-              metaRow('Proyecto', escapeHtml(r.proyecto_label || '—')) +
-              metaRow('Importe', moneyFromCents(r.amount_cents)) +
-              metaRow('Fee estimado', moneyFromCents(fee)) +
-              metaRow('Neto estimado', moneyFromCents(Math.max(0, (Number(r.amount_cents) || 0) - fee))) +
-              metaRow('Hunter', moneyFromCents(estimateHunterCents(r.amount_cents))) +
-              (r.paddle_transaction_id ? metaRow('ID Paddle', escapeHtml(r.paddle_transaction_id)) : '') +
+              metaRow('Total proyecto', moneyFromCents(totalCents)) +
+              (paidSum ? metaRow('Cobrado', moneyFromCents(paidSum)) : '') +
             '</div>' +
-            '<div class="quote-crm-row-actions">' +
-              '<button type="button" class="btn" data-pay-test="' + escapeHtml(r.id) + '">' +
-                (isTest ? 'No prueba' : 'Prueba') +
-              '</button>' +
-              '<button type="button" class="btn" data-pay-delete="' + escapeHtml(r.id) + '">Borrar</button>' +
-            '</div>' +
-            '<p class="desc pay-auto-hint">Paddle confirma el cobro. Puedes marcar/borrar pruebas para limpiar sandbox.</p>';
+            '<div class="eyebrow" style="margin:14px 0 8px">Anticipo</div>' +
+            stageBlock('Anticipo', depCobro, !!dots.deposit) +
+            '<div class="eyebrow" style="margin:14px 0 8px">Entrega</div>' +
+            stageBlock('Entrega', balCobro, !!dots.balance) +
+            (extras.length
+              ? ('<div class="eyebrow" style="margin:14px 0 8px">Otros</div>' +
+                extras.map(function (c) {
+                  return stageBlock(
+                    stageLabel(c.payment_stage || (c.metadata && c.metadata.stage) || 'Cobro'),
+                    c,
+                    isPaidCobro(c)
+                  );
+                }).join(''))
+              : '') +
+            '<p class="desc pay-auto-hint">Un proyecto = un contenedor. Anticipo y entrega actualizan los mismos puntos verdes.</p>';
+
           return clientCardHtml({
             title: title,
             time: day,
-            amount: moneyFromCents(r.amount_cents),
+            amount: moneyFromCents(totalCents),
             stageHtml: payStageDotsHtml(dots),
             extraClass: 'pay-ledger-row ' + stateClass + (isTest ? ' is-test' : ''),
-            bodyHtml: body
+            bodyHtml: body,
+            attrs: g.pedido_id ? (' data-pedido-id="' + escapeHtml(g.pedido_id) + '"') : ''
           });
         }).join('') +
         '</div>';
 
       if (noteEl) {
-        noteEl.textContent = 'Pendiente = link creado, aún no pagado. Cobrado = pago confirmado por Paddle. Desmarca “Ocultar pruebas” para ver sandbox y borrarlas.';
+        noteEl.textContent = 'Cada proyecto es un solo contenedor: anticipo y entrega se enlazan. Desmarca “Ocultar pruebas” para ver sandbox.';
       }
     }
 
