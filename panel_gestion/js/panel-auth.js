@@ -55,16 +55,27 @@
   async function loadAndApplyRole(userId) {
     if (!userId) {
       applyPanelRole('usuario');
-      return;
+      return 'usuario';
     }
     try {
       var client = PlatformAuth.getClient();
       var result = await client.from('profiles').select('rol').eq('id', userId).maybeSingle();
       if (result.error) throw result.error;
-      applyPanelRole(result.data && result.data.rol);
+      var rol = (result.data && result.data.rol) || 'usuario';
+      applyPanelRole(rol);
+      return String(rol).toLowerCase();
     } catch (err) {
       console.warn('[PanelAuth] role', err);
       applyPanelRole('usuario');
+      return 'usuario';
+    }
+  }
+
+  function redirectClienteHome() {
+    try {
+      window.location.replace('/miperfil/');
+    } catch (e) {
+      window.location.href = '/miperfil/';
     }
   }
 
@@ -286,7 +297,11 @@
         setBusy(true);
         try {
           var session = await loginWithPassword(email, password, remember);
-          await loadAndApplyRole(session && session.user && session.user.id);
+          var rol = await loadAndApplyRole(session && session.user && session.user.id);
+          if (rol === 'cliente') {
+            redirectClienteHome();
+            return;
+          }
           enterWorkspace();
         } catch (err) {
           console.error('[PanelAuth] login', err);
@@ -370,7 +385,11 @@
       await exchangeCodeIfPresent();
       var session = await getSession();
       if (session) {
-        await loadAndApplyRole(session.user && session.user.id);
+        var bootRol = await loadAndApplyRole(session.user && session.user.id);
+        if (bootRol === 'cliente') {
+          redirectClienteHome();
+          return;
+        }
         enterWorkspace();
       } else {
         leaveWorkspace();

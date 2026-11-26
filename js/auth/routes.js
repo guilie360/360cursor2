@@ -5,12 +5,14 @@ var AuthRouter = (function () {
     staff: '/boxies/',
     visitante: '/auth/cuenta.html',
     asesor: '/auth/cuenta.html',
-    cliente: '/auth/cuenta.html',
+    cliente: '/miperfil/',
     propietario: '/auth/cuenta.html'
   };
 
   var PROTECTED_VISITOR_PATHS = [
-    '/auth/cuenta.html'
+    '/auth/cuenta.html',
+    '/miperfil/',
+    '/miperfil/index.html'
   ];
 
   function getAccountType(profile) {

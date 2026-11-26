@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mi perfil · 360Preventa</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/hall/hall.css">
+  <style>
+    :root {
+      --bg: #050505;
+      --card: #111;
+      --line: rgba(255,255,255,.1);
+      --fg: #f2f2f2;
+      --muted: #8f8f8f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255,255,255,.04), transparent 60%), var(--bg);
+      color: var(--fg);
+      font-family: Manrope, system-ui, sans-serif;
+    }
+    .wrap { width: min(720px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 64px; }
+    .brand { font: 28px/1 Italiana, Georgia, serif; letter-spacing: .08em; margin: 0 0 8px; }
+    .lead { color: var(--muted); font-size: 15px; line-height: 1.55; margin: 0 0 28px; }
+    .card {
+      border: 1px solid var(--line); border-radius: 18px; background: rgba(17,17,17,.92);
+      padding: 28px; margin-bottom: 16px;
+    }
+    label { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 7px; }
+    input {
+      width: 100%; padding: 14px; margin-bottom: 14px; border-radius: 10px;
+      border: 1px solid var(--line); background: #0a0a0a; color: var(--fg); font: inherit;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 44px; padding: 0 18px; border-radius: 999px; cursor: pointer;
+      border: 1px solid var(--line); background: #000; color: var(--fg); font: 600 13px Manrope, system-ui, sans-serif;
+      text-decoration: none;
+    }
+    .btn.solid { background: #f2f2f2; color: #0a0a0a; border-color: #f2f2f2; }
+    .btn + .btn { margin-left: 8px; }
+    .err { color: #e5a0a0; font-size: 13px; min-height: 18px; margin-top: 8px; }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 0 0 16px; }
+    .row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+    .row strong { font: 22px Italiana, Georgia, serif; font-weight: 400; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .status-pill {
+      display: inline-block; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line);
+      font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: #ddd;
+    }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .hidden { display: none !important; }
+    h2 { font: 22px Italiana, Georgia, serif; font-weight: 400; margin: 0 0 10px; }
+    ul.steps { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <p class="brand">Mi perfil</p>
+      <button type="button" class="btn hidden" id="logoutBtn">Salir</button>
+    </div>
+
+    <section class="card" id="loginCard">
+      <h2>Tu espacio en 360Preventa</h2>
+      <p class="hint">Entra con el correo de tu cotización. La contraseña es tu número de celular, sin +57.</p>
+      <form id="loginForm">
+        <label for="email">Correo</label>
+        <input id="email" type="email" autocomplete="username" required placeholder="correo@empresa.com">
+        <label for="password">Celular (sin +57)</label>
+        <input id="password" type="password" inputmode="numeric" autocomplete="current-password" required placeholder="3001234567">
+        <button class="btn solid" type="submit">Entrar</button>
+        <p class="err" id="loginError" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="hidden" id="homeCard">
+      <p class="lead" id="welcomeLead">Hola. Aquí ves el estado de tu proyecto y los siguientes pasos.</p>
+
+      <div class="card">
+        <h2>Cómo sigue</h2>
+        <ul class="steps">
+          <li>Confirmamos tu anticipo y te asignamos producción.</li>
+          <li>Te avisamos cuando el showroom esté listo para revisar.</li>
+          <li>El 50% restante se paga al entregar.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <h2 style="margin:0">Tu pedido</h2>
+          <span class="status-pill" id="pedidoStatus">—</span>
+        </div>
+        <p class="muted" id="pedidoLabel" style="margin:12px 0 0">Cargando…</p>
+        <p class="muted" id="pedidoMoney" style="margin:8px 0 0"></p>
+      </div>
+
+      <div class="card">
+        <h2>Cotizaciones</h2>
+        <div id="quotesList" class="muted">Cargando…</div>
+      </div>
+
+      <div class="card">
+        <a class="btn" href="/cotizar">Nueva cotización</a>
+        <a class="btn" href="https://wa.me/573226834084" target="_blank" rel="noopener">Hablar con el equipo</a>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/shared/config.js"></script>
+  <script src="/js/shared/client-account.js?v=1"></script>
+  <script src="/js/auth/storage-prefs.js"></script>
+  <script src="/js/auth/client.js"></script>
+  <script>
+    (function () {
+      var loginCard = document.getElementById('loginCard');
+      var homeCard = document.getElementById('homeCard');
+      var logoutBtn = document.getElementById('logoutBtn');
+      var errEl = document.getElementById('loginError');
+
+      function money(cents) {
+        var n = Number(cents || 0) / 100;
+        try {
+          return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+        } catch (e) {
+          return n.toFixed(0) + ' €';
+        }
+      }
+
+      function statusLabel(s) {
+        s = String(s || '').toLowerCase();
+        if (s === 'pendiente_anticipo') return 'Pendiente de anticipo';
+        if (s === 'en_produccion' || s === 'pendiente_entrega') return 'En producción';
+        if (s === 'pagado') return 'Entregado / pagado';
+        if (s === 'cancelado') return 'Cancelado';
+        return s || 'Sin pedido aún';
+      }
+
+      function client() {
+        if (window.PlatformAuth && PlatformAuth.createClient) {
+          return PlatformAuth.createClient({ remember: true });
+        }
+        return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+
+      async function loadHome(user) {
+        loginCard.classList.add('hidden');
+        homeCard.classList.remove('hidden');
+        logoutBtn.classList.remove('hidden');
+
+        var sb = client();
+        var email = (user && user.email) || '';
+        var welcome = document.getElementById('welcomeLead');
+        var params = new URLSearchParams(location.search);
+        if (params.get('bienvenida') === '1') {
+          welcome.textContent = 'Pago recibido. Este es tu espacio: aquí verás el avance de tu showroom.';
+        } else {
+          welcome.textContent = 'Hola' + (email ? ', ' + email.split('@')[0] : '') + '. Aquí está el estado de tu proyecto con 360Preventa.';
+        }
+
+        var pedidos = await sb.from('panel_pedidos').select('*').order('created_at', { ascending: false }).limit(5);
+        var ped = (pedidos.data && pedidos.data[0]) || null;
+        document.getElementById('pedidoStatus').textContent = statusLabel(ped && ped.status);
+        document.getElementById('pedidoLabel').textContent = ped
+          ? (ped.proyecto_label || 'Showroom 360Preventa')
+          : 'Todavía no hay un pedido asociado a este correo. Si acabas de cotizar, descarga el PDF o completa el anticipo.';
+        document.getElementById('pedidoMoney').textContent = ped
+          ? ('Total ' + money(ped.total_cents) + ' · Anticipo ' + money(ped.deposit_cents))
+          : '';
+
+        var quotes = await sb.from('panel_cotizaciones').select('id,customer_name,proyecto_label,total_euros,created_at').order('created_at', { ascending: false }).limit(8);
+        var box = document.getElementById('quotesList');
+        var rows = quotes.data || [];
+        if (!rows.length) {
+          box.textContent = 'Aún no hay cotizaciones guardadas con este correo.';
+        } else {
+          box.innerHTML = rows.map(function (q) {
+            return '<div class="row" style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">' +
+              '<span>' + (q.proyecto_label || 'Cotización') + '<br><small class="muted">' + new Date(q.created_at).toLocaleDateString('es-ES') + '</small></span>' +
+              '<strong>' + (Number(q.total_euros) || 0).toLocaleString('es-ES') + ' €</strong>' +
+            '</div>';
+          }).join('');
+        }
+      }
+
+      async function boot() {
+        var sb = client();
+        var session = await sb.auth.getSession();
+        var user = session && session.data && session.data.session && session.data.session.user;
+        if (user) {
+          var prof = await sb.from('profiles').select('rol,nombre_visible').eq('id', user.id).maybeSingle();
+          var rol = String((prof.data && prof.data.rol) || '').toLowerCase();
+          if (rol === 'admin' || rol === 'super_admin' || rol === 'hunter' || rol === 'asesor') {
+            location.replace('/panel_gestion/');
+            return;
+          }
+          await loadHome(user);
+          return;
+        }
+        loginCard.classList.remove('hidden');
+        homeCard.classList.add('hidden');
+      }
+
+      document.getElementById('loginForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        errEl.textContent = '';
+        var email = document.getElementById('email').value.trim().toLowerCase();
+        var phone = document.getElementById('password').value.trim();
+        var password = window.ClientAccount.phonePassword(phone);
+        try {
+          var sb = client();
+          var result = await sb.auth.signInWithPassword({ email: email, password: password });
+          if (result.error) throw result.error;
+          await loadHome(result.data.user);
+        } catch (err) {
+          errEl.textContent = (err && err.message) || 'No se pudo entrar. Revisa correo y celular.';
+        }
+      });
+
+      logoutBtn.addEventListener('click', async function () {
+        var sb = client();
+        await sb.auth.signOut();
+        location.href = '/miperfil/';
+      });
+
+      boot();
+    })();
+  </script>
+</body>
+</html>

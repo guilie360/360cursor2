@@ -96,7 +96,16 @@
 
       if (ok) {
         title.textContent = 'Pago recibido';
-        copy.textContent = 'Gracias. El anticipo o la entrega ya quedó registrado. Te contactaremos para continuar con el showroom.';
+        copy.textContent = 'Listo. Te llevamos a Mi perfil, donde verás el estado de tu proyecto.';
+        var actions = document.querySelector('.actions');
+        if (actions) {
+          actions.innerHTML =
+            '<a class="btn primary" href="/miperfil/?bienvenida=1">Ir a Mi perfil</a>' +
+            '<a class="btn" href="https://wa.me/573226834084" target="_blank" rel="noopener">Hablar con el equipo</a>';
+        }
+        setTimeout(function () {
+          window.location.replace('/miperfil/?bienvenida=1');
+        }, 1600);
         return;
       }
 

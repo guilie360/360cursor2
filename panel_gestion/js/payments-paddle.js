@@ -269,15 +269,29 @@
         var statusEl = document.getElementById('orderPayStatus');
         var email = (document.getElementById('customerEmail') || {}).value || c.customerEmail || '';
         var name = (document.getElementById('customerName') || {}).value || c.customerName || '';
+        var phone = (document.getElementById('customerPhone') || {}).value || '';
         if (!email) {
           if (statusEl) statusEl.textContent = 'Indica el correo del cliente antes de pagar.';
           var emailInput = document.getElementById('customerEmail');
           if (emailInput) emailInput.focus();
           return;
         }
+        if (window.ClientAccount) {
+          var fieldErr = ClientAccount.validateFields({ name: name, email: email, phone: phone });
+          if (fieldErr) {
+            if (statusEl) statusEl.textContent = fieldErr;
+            var phoneInput = document.getElementById('customerPhone');
+            if (phoneInput) phoneInput.focus();
+            return;
+          }
+        }
         btn.disabled = true;
-        if (statusEl) statusEl.textContent = 'Creando cobro Paddle…';
+        if (statusEl) statusEl.textContent = 'Creando tu acceso a Mi perfil…';
         try {
+          if (window.ClientAccount && typeof ClientAccount.ensureClientAccess === 'function') {
+            await ClientAccount.ensureClientAccess();
+          }
+          if (statusEl) statusEl.textContent = 'Creando cobro Paddle…';
           var payload = {
             stage: stage,
             quote_total_euros: c.totalEuros,

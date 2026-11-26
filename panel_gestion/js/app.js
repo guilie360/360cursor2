@@ -729,25 +729,41 @@ async function persistDownloadedQuote(){
 $('downloadPdf').addEventListener('click',async()=>{
  const name=$('customerName').value.trim();
  const email=$('customerEmail').value.trim();
+ const phone=$('customerPhone')?.value.trim()||'';
  if(!name){$('confirmStatus').textContent='Por favor, ingresa tu nombre antes de descargar.';$('customerName').focus();return;}
  if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
   $('confirmStatus').textContent='Ingresa un correo electrónico válido para descargar la cotización.';
   $('customerEmail').focus();return;
  }
+ if(window.ClientAccount){
+  const phoneErr=ClientAccount.validateFields({name,email,phone});
+  if(phoneErr){$('confirmStatus').textContent=phoneErr;$('customerPhone')?.focus();return;}
+ }
  try{
   $('downloadPdf').disabled=true;
   $('downloadPdf').textContent='Generando PDF…';
+  if(window.ClientAccount&&typeof ClientAccount.ensureClientAccess==='function'){
+   try{
+    $('confirmStatus').textContent='Preparando tu acceso a Mi perfil…';
+    await ClientAccount.ensureClientAccess();
+   }catch(accErr){
+    console.warn('[ClientAccount]',accErr);
+    $('confirmStatus').textContent=accErr.message||'No se pudo crear tu acceso. Revisa correo y celular.';
+    $('downloadPdf').disabled=false;
+    $('downloadPdf').textContent='Descargar PDF';
+    return;
+   }
+  }
   const canvas=await buildSummaryCanvas(true);
   const jpeg=canvas.toDataURL('image/jpeg',0.96);
   const pdf=createSinglePagePdf(jpeg,canvas);
   downloadBlob(pdf,`Showroom_Cotizacion_${safeFileName()}.pdf`);
   try{
    await persistDownloadedQuote();
-   $('confirmStatus').textContent='PDF generado y cotización guardada.';
+   $('confirmStatus').textContent='PDF listo. Tu espacio: Mi perfil (correo + celular sin +57).';
   }catch(saveErr){
    console.warn('No se pudo guardar la cotización:',saveErr);
-   const detail=(saveErr&&(saveErr.message||saveErr.details))||'revisa conexión';
-   $('confirmStatus').textContent='PDF generado. No se pudo guardar: '+detail;
+   const detail=(saveErr&&(saveErr.message||saveErr.details))||'revisa conexión';   $('confirmStatus').textContent='PDF generado. No se pudo guardar: '+detail;
   }
  }catch(error){
   console.error('Error al generar el PDF:',error);
