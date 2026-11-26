@@ -310,8 +310,15 @@ if($('sales'))$('sales').addEventListener('input',()=>{renderHunterPrices();upda
 if($('hunterAverage'))$('hunterAverage').addEventListener('input',updateHunter);
 document.querySelectorAll('input[name="hunterPriceMode"]').forEach(x=>x.addEventListener('change',updateHunter));
 /* Módulos congelados temporalmente en el home del panel (contenido intacto). */
-const PORTAL_LOCKED_PAGES=new Set(['tasks','database']);
-function portalModuleLocked(key){return PORTAL_LOCKED_PAGES.has(key)}
+const PORTAL_LOCKED_PAGES=new Set(['tasks']);
+function portalIsAdmin(){
+ const rol=(document.body.dataset.panelRole||sessionStorage.getItem('boxiesPanelRole')||'').toLowerCase();
+ return rol==='admin'||rol==='super_admin'||!!window.BoxiesTeamChat?.isAdmin?.();
+}
+function portalModuleLocked(key){
+ if(key==='database') return !portalIsAdmin();
+ return PORTAL_LOCKED_PAGES.has(key);
+}
 function showPortalLockedToast(msg){
  let toast=document.getElementById('portalLockToast');
  if(!toast){
@@ -1217,76 +1224,7 @@ const projectRows=()=>demoProjects.map(p=>`<tr><td><button class="project-open" 
 const portalPages={
  payments:{title:'Pagos',intro:'Cotizaciones (pipeline) y Contabilidad (ingresos reales).',body:`<div id="panelPaymentsRoot" class="panel-payments" data-payments-root="1"><div class="portal-note">Cargando…</div></div>`},
  contracts:{title:'Contratos',intro:'Prepara contratos desde los datos del proyecto para evitar introducir la información dos veces.',body:`<div class="portal-note">Flujo previsto: seleccionar proyecto → completar datos fiscales faltantes → generar documento desde plantilla → revisión → firma.</div><div class="portal-form"><label>Proyecto<select><option>Seleccionar proyecto…</option><option>Miralago</option><option>Apartamento Centro</option><option>Co-living Norte</option></select></label><label>Plantilla<select><option>Contrato de servicios</option><option>Acuerdo de confidencialidad</option></select></label><label>Razón social<input placeholder="Se completará desde el proyecto"></label><label>Documento fiscal<input placeholder="NIF / CIF / NIT"></label></div><button class="btn primary" data-demo="contracts">Preparar contrato</button><p class="desc">La generación automática requiere cargar la plantilla contractual aprobada.</p>`},
- database:{title:'Base de datos',intro:'Un espacio central para consultar y organizar los archivos compartidos de 360Preventa. Conecta Google Drive una sola vez y accede a cada categoría.',body:`
-<div class="database-toolbar">
- <div class="database-toolbar-copy"><b>Biblioteca central · 360PREVENTA</b><small>Una conexión de Drive para consultar clientes, plantillas, proyectos y contratos.</small></div>
- <button class="btn primary" id="boxiesDriveConnect" type="button">Conectar Google Drive</button>
-</div>
-<div id="boxiesDriveStatus" class="database-status" role="status" aria-live="polite">Google Drive no está conectado en esta sesión.</div>
-<div class="database-groups">
- <details class="database-group">
-  <summary><span class="database-group-title"><span class="database-group-icon">♙</span><span><b>Clientes</b><small>Contactos, fichas y documentación de cada cliente</small></span></span><span class="accordion-chevron">＋</span></summary>
-  <div class="profile-accordion-content">
-   <p class="desc">Centraliza la información de clientes y sus documentos. Los datos de cliente vinculados a proyectos se consultan también desde el expediente correspondiente.</p>
-   <div class="database-folder-action"><div><b>Carpeta Clientes en Google Drive</b><small>Abre la carpeta compartida de clientes dentro de 360PREVENTA.</small></div><button class="btn" type="button" data-drive-category="Clientes">Abrir carpeta ↗</button></div>
-   <div class="database-status" id="driveCategoryStatusClientes">Conecta Drive para consultar esta carpeta.</div>
-  </div>
- </details>
- <details class="database-group">
-  <summary><span class="database-group-title"><span class="database-group-icon">▤</span><span><b>Plantillas</b><small>Modelos de documentos, recursos y archivos reutilizables</small></span></span><span class="accordion-chevron">＋</span></summary>
-  <div class="profile-accordion-content">
-   <p class="desc">Guarda aquí los documentos maestros y recursos que se reutilizan entre distintos clientes y proyectos.</p>
-   <div class="database-folder-action"><div><b>Carpeta Plantillas en Google Drive</b><small>Acceso a los archivos base y modelos compartidos.</small></div><button class="btn" type="button" data-drive-category="Plantillas">Abrir carpeta ↗</button></div>
-   <div class="database-status" id="driveCategoryStatusPlantillas">Conecta Drive para consultar esta carpeta.</div>
-  </div>
- </details>
- <details class="database-group" id="projectsDatabaseAccordion">
-  <summary><span class="database-group-title"><span class="database-group-icon">▦</span><span><b>Proyectos</b><small>Seguimiento, responsables, importes y archivos de cada encargo</small></span></span><span class="accordion-chevron">＋</span></summary>
-  <div class="profile-accordion-content">
-   <div class="portal-dashboard-kpis database-projects-kpis">
-    <div class="portal-kpi"><small>Activos</small><strong>08</strong></div>
-    <div class="portal-kpi"><small>En revisión</small><strong>02</strong></div>
-    <div class="portal-kpi"><small>Entregados</small><strong>16</strong></div>
-    <div class="portal-kpi"><small>Valor contratado</small><strong>€ 28.450</strong></div>
-   </div>
-   <details class="profile-accordion projects-list-accordion" style="margin-top:16px">
-    <summary><span>Proyectos registrados</span><span class="accordion-chevron">＋</span></summary>
-    <div class="profile-accordion-content">
-     <div class="portal-toolbar"><input id="projectFilter" type="search" placeholder="Buscar proyecto o cliente…"><select id="projectStatus"><option value="">Todos los estados</option><option>Pendiente</option><option>En producción</option><option>En revisión</option></select><button class="btn primary" data-demo="projects">＋ Nuevo proyecto</button></div>
-     <div class="portal-table-wrap"><table class="portal-table"><thead><tr><th>Proyecto</th><th>Cliente</th><th>Responsable</th><th>Estado</th><th>Importe</th><th>Progreso</th></tr></thead><tbody id="projectTableBody">${projectRows()}</tbody></table></div>
-    </div>
-   </details>
-   <div class="database-folder-action"><div><b>Carpeta Proyectos en Google Drive</b><small>Explora las carpetas y documentos relacionados con los proyectos.</small></div><button class="btn" type="button" data-drive-category="Proyectos">Abrir carpeta ↗</button></div>
-   <div class="database-status" id="driveCategoryStatusProyectos">El explorador general permite consultar todos los archivos enlazados.</div>
-   <details class="profile-accordion projects-drive-accordion" style="margin-top:14px">
-    <summary><span>Explorador general · Todos los archivos de Drive</span><span class="accordion-chevron">＋</span></summary>
-    <div class="profile-accordion-content">
-     <div class="portal-files-panel" id="boxiesDrivePanel">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-       <div><b style="display:block">360PREVENTA · Unidad principal</b><small class="muted">Navega por todas las carpetas y archivos a los que tiene acceso la cuenta conectada.</small></div>
-       <button class="btn" id="boxiesDriveRefresh" type="button">Actualizar</button>
-      </div>
-      <div id="boxiesDriveExplorer" hidden style="margin-top:14px">
-       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-        <div id="boxiesDriveBreadcrumb" style="font-size:12px;color:#c9c2b5">360PREVENTA</div>
-       </div>
-       <div id="boxiesDriveItems" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px"></div>
-      </div>
-      <div class="muted" id="boxiesDriveExplorerHint" style="font-size:11px;margin-top:10px">Conecta Google Drive para ver todos los elementos enlazados.</div>
-     </div>
-    </div>
-   </details>
-  </div>
- </details>
- <details class="database-group">
-  <summary><span class="database-group-title"><span class="database-group-icon">▧</span><span><b>Contratos</b><small>Contratos generados, firmados y pendientes</small></span></span><span class="accordion-chevron">＋</span></summary>
-  <div class="profile-accordion-content">
-   <p class="desc">Separa los contratos por cliente y proyecto. Los documentos pueden abrirse desde Drive y relacionarse con la ficha del proyecto para evitar duplicar información.</p>
-   <div class="database-folder-action"><div><b>Carpeta Contratos en Google Drive</b><small>Accede a contratos firmados, pendientes y documentos asociados.</small></div><button class="btn" type="button" data-drive-category="Contratos">Abrir carpeta ↗</button></div>
-   <div class="database-status" id="driveCategoryStatusContratos">Conecta Drive para consultar esta carpeta.</div>
-  </div>
- </details>
-</div>`},
+ database:{title:'Base de datos',intro:'Cuentas cliente de Mi perfil (correo, contraseña = celular, paquete y pedidos). Solo admin.',body:`<div id="panelDatabaseRoot" class="panel-database" data-database-root="1"><div class="portal-note">Cargando cuentas desde Supabase…</div></div>`},
  tasks:{title:'Tareas',intro:'El tablero es común para coordinar el equipo. Cada integrante puede filtrar sus asignaciones; los permisos finales se aplicarán por rol.',body:`<div class="portal-toolbar"><button class="btn primary" id="newTaskBtn">＋ Nueva tarea</button><button class="btn" id="toggleArchivedTasks" type="button">Ver archivadas</button><select id="taskOwner"><option value="">Todos los responsables</option><option>Diseño</option><option>Marketing</option><option>Hunter</option></select><select id="taskProject"><option value="">Todos los proyectos</option><option>Miralago</option><option>Apartamento Centro</option><option>Co-living Norte</option></select><select id="taskPriority"><option value="">Todas las prioridades</option><option>Alta</option><option>Media</option><option>Baja</option></select><input id="taskDue" type="date" aria-label="Filtrar por fecha límite"></div><div id="taskCreateForm" class="portal-files-panel portal-hidden"><div class="portal-form"><label>Tarea<input id="newTaskTitle" placeholder="Descripción de la tarea"></label><label>Proyecto<select id="newTaskProject"><option>Miralago</option><option>Apartamento Centro</option><option>Co-living Norte</option></select></label><label>Responsable<select id="newTaskOwner"><option>Diseño</option><option>Marketing</option><option>Hunter</option></select></label><label>Prioridad<select id="newTaskPriority"><option>Media</option><option>Alta</option><option>Baja</option></select></label><label>Fecha límite<input id="newTaskDate" type="date"></label></div><button class="btn primary" id="saveTaskBtn">Guardar tarea (demo)</button></div><div class="kanban" id="taskBoard"></div><div class="portal-note">Las tareas se muestran a nivel de equipo. El filtro “responsable” permite consultar la carga individual. En producción, cada persona verá y actualizará sus tareas según sus permisos.</div>`},
  hunt:{title:'Hunt',intro:'Centro de captación y crecimiento comercial.',body:`<div class="profile-accordion-list">
  <details class="profile-accordion"><summary><span>Ads</span><span class="accordion-chevron">＋</span></summary><div class="profile-accordion-content"><div class="portal-dashboard-kpis"><div class="portal-kpi"><small>Plataformas</small><strong>Google + Meta</strong><span class="kpi-trend">Conexión pendiente</span></div><div class="portal-kpi"><small>Campañas activas</small><strong>—</strong><span class="kpi-trend">Esperando conexión</span></div><div class="portal-kpi"><small>Inversión</small><strong>—</strong><span class="kpi-trend">Sin datos sincronizados</span></div><div class="portal-kpi"><small>Leads</small><strong>—</strong><span class="kpi-trend">Sin datos sincronizados</span></div></div><h3>Plataformas publicitarias</h3><div class="portal-list"><div class="portal-list-item"><b>Google Ads</b><span class="status-pill">Pendiente de conectar API</span></div><div class="portal-list-item"><b>Meta Ads · Facebook e Instagram</b><span class="status-pill">Pendiente de conectar API</span></div></div><h3>Contenido Ads</h3><p class="desc">Carpeta para almacenar y compartir los vídeos, creatividades y materiales que se prepararán para los anuncios.</p><div class="portal-files-panel"><div class="file-folder"><b>▰ Contenido Ads</b><span class="muted">Drive compartido · vídeos · imágenes · copys</span></div><label class="field">Enlace de la carpeta de Google Drive<input id="adsDriveUrl" type="url" placeholder="Pega aquí el enlace de la carpeta"></label><div style="display:flex;gap:9px;flex-wrap:wrap"><button class="btn" id="saveAdsDrive" type="button">Guardar enlace</button><button class="btn primary" id="openAdsDrive" type="button">Abrir Contenido Ads ↗</button></div><small class="muted" id="adsDriveStatus">El enlace se guarda localmente por ahora. La integración con Drive queda pendiente.</small></div>
@@ -1475,7 +1413,7 @@ function openEmbeddedQuote(){
 
 function portalOpenPage(key){
  if(portalModuleLocked(key)){
-  showPortalLockedToast('Acceso bloqueado temporalmente');
+  showPortalLockedToast(key==='database'?'Solo admin puede abrir Base de datos':'Acceso bloqueado temporalmente');
   return;
  }
  if(key==='payments' && !window.boxiesPaymentsUnlocked){
@@ -1516,6 +1454,9 @@ function portalOpenPage(key){
   try{ window.PanelPaddle?.mount?.($('portalSubpage')); }catch(ePay){
    try{ window.PanelPayments?.mount?.($('portalSubpage')); }catch(e2){ console.warn('[Pagos]', ePay||e2); }
   }
+ }
+ if(key==='database'){
+  try{ window.PanelDatabase?.mount?.($('portalSubpage')); }catch(eDb){ console.warn('[Base de datos]', eDb); }
  }
  if(key==='hunt'){const input=document.getElementById('adsDriveUrl');try{input.value=localStorage.getItem('boxiesAdsDriveUrl')||'';}catch(e){}}
  if(key==='library'){const input=document.getElementById('libraryDriveUrl');try{input.value=localStorage.getItem('boxiesLibraryDriveUrl')||'';}catch(e){}}

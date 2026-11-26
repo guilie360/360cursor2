@@ -50,6 +50,11 @@
     if (window.BoxiesGlobalNav && typeof window.BoxiesGlobalNav.refresh === 'function') {
       window.BoxiesGlobalNav.refresh();
     }
+    try {
+      if (window.PanelDatabase && typeof window.PanelDatabase.unlockForAdmin === 'function') {
+        window.PanelDatabase.unlockForAdmin();
+      }
+    } catch (e2) {}
   }
 
   async function loadAndApplyRole(userId) {
