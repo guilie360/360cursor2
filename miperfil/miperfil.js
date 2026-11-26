@@ -15,9 +15,19 @@
   var goalBonus = document.getElementById('hunterGoalBonus');
   var goalTrack = document.getElementById('hunterGoalTrack');
   var goalFill = document.getElementById('hunterGoalFill');
+  var pageEyebrow = document.getElementById('miperfilEyebrow');
+  var pageTitle = document.getElementById('miperfilTitle');
+  var pageLead = document.getElementById('miperfilLead');
   var currentUser = null;
+  var homeLeadText = 'Sigue el avance de tu proyecto.';
 
   function $(id) { return document.getElementById(id); }
+
+  function setPageHead(title, lead, eyebrow) {
+    if (pageEyebrow) pageEyebrow.textContent = eyebrow || '360PREVENTA · MI PERFIL';
+    if (pageTitle) pageTitle.textContent = title || '';
+    if (pageLead) pageLead.textContent = lead || '';
+  }
 
   function setAuthChrome(on) {
     document.body.classList.toggle('workspace-authenticated', !!on);
@@ -85,6 +95,7 @@
     setClientName('');
     setPayHeader(false);
     hideAll();
+    setPageHead('Mi perfil', 'Correo y celular.', '360PREVENTA · MI PERFIL');
     if (loginView) loginView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.add('portal-hidden');
     setFooterProgress(0, 'Mi perfil · 360Preventa', 'Acceso', 'Cliente');
@@ -94,6 +105,9 @@
     setAuthChrome(true);
     setPayHeader(true);
     hideAll();
+    var name = '';
+    try { name = document.body.dataset.clientName || sessionStorage.getItem('boxiesClientName') || ''; } catch (e0) {}
+    setPageHead(name ? ('Hola, ' + name) : 'Hola', homeLeadText);
     if (homeView) homeView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.add('portal-hidden');
     try {
@@ -107,6 +121,7 @@
     setAuthChrome(true);
     setPayHeader(true);
     hideAll();
+    setPageHead('Mi información', 'Nombre, correo y teléfono.');
     if (infoView) infoView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.remove('portal-hidden');
   }
@@ -115,6 +130,7 @@
     setAuthChrome(true);
     setPayHeader(true);
     hideAll();
+    setPageHead('Mis documentos', 'Cotización, contrato e invoice.');
     if (docsView) docsView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.remove('portal-hidden');
     try {
@@ -129,6 +145,7 @@
     setAuthChrome(true);
     setPayHeader(true);
     hideAll();
+    setPageHead('Pagos', 'Entrega restante y cobros extra.');
     if (paysView) paysView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.remove('portal-hidden');
     try {
@@ -156,13 +173,15 @@
       pct = 5;
     }
     setFooterProgress(pct, 'Proyecto · ' + pct + '%', 'Etapa', nombre);
-    var lead = $('welcomeLead');
-    if (lead) lead.textContent = nombre + ' · ' + pct + '%';
+    homeLeadText = nombre + ' · ' + pct + '%';
+    // Si estamos en home, refresca el lead fijo sin mover el bloque.
+    if (homeView && !homeView.classList.contains('portal-hidden')) {
+      if (pageLead) pageLead.textContent = homeLeadText;
+    }
   }
 
   async function loadHome(user, profile) {
     currentUser = user;
-    showHome();
     var email = (user && user.email) || '';
     var displayName = String(
       (profile && (profile.nombre_visible || profile.nombre)) || ''
@@ -170,12 +189,11 @@
     if (!displayName && email) displayName = email.split('@')[0];
     setClientName(displayName);
 
-    var welcomeTitle = $('welcomeTitle');
     var params = new URLSearchParams(location.search || '');
-    if (welcomeTitle) welcomeTitle.textContent = displayName ? ('Hola, ' + displayName) : 'Hola';
-    if (params.get('bienvenida') === '1' && $('welcomeLead')) {
-      $('welcomeLead').textContent = 'Pago recibido. Aquí monitoreas tu proyecto.';
+    if (params.get('bienvenida') === '1') {
+      homeLeadText = 'Pago recibido. Aquí monitoreas tu proyecto.';
     }
+    showHome();
 
     if ($('infoName')) $('infoName').value = displayName || '';
     if ($('infoEmail')) $('infoEmail').value = email || '';
@@ -295,8 +313,8 @@
         try { data = await res.json(); } catch (e2) {}
         if (!res.ok) throw new Error(data.error || 'No se pudo guardar');
         setClientName(data.name || $('infoName').value);
-        if ($('welcomeTitle')) {
-          $('welcomeTitle').textContent = 'Hola, ' + (data.name || $('infoName').value || 'Cliente');
+        if (homeView && !homeView.classList.contains('portal-hidden')) {
+          setPageHead('Hola, ' + (data.name || $('infoName').value || 'Cliente'), homeLeadText);
         }
         if (status) {
           status.textContent = 'Guardado.';

@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
 <link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel73">
 <link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel73">
-<link rel="stylesheet" href="/miperfil/miperfil.css?v=10">
+<link rel="stylesheet" href="/miperfil/miperfil.css?v=11">
 </head>
 <body class="portal-mode miperfil-mode">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat con admin">
@@ -41,24 +41,23 @@
  </div></header>
 
  <div class="portal-wrap">
+  <!-- Cabecera fija: misma posición en todas las pantallas; solo cambia el texto. -->
+  <div class="miperfil-page-head" id="miperfilPageHead">
+   <div class="eyebrow" id="miperfilEyebrow">360PREVENTA · MI PERFIL</div>
+   <h1 class="portal-title" id="miperfilTitle">Mi perfil</h1>
+   <p class="desc miperfil-lead" id="miperfilLead">Correo y celular.</p>
+  </div>
+
   <section id="loginView" class="miperfil-login">
-   <div class="eyebrow">360PREVENTA · CLIENTE</div>
-   <h1 class="portal-title">Mi perfil</h1>
-   <p class="desc">Correo de tu pedido. Contraseña = celular sin +57.</p>
    <form id="loginForm" class="miperfil-login-form">
     <div class="field"><label for="email">Correo</label><input id="email" type="email" autocomplete="username" required placeholder="correo@empresa.com"></div>
-    <div class="field"><label for="password">Celular (sin +57)</label><input id="password" type="password" inputmode="numeric" autocomplete="current-password" required placeholder="3001234567"></div>
+    <div class="field"><label for="password">Celular</label><input id="password" type="password" inputmode="numeric" autocomplete="current-password" required placeholder="3001234567"></div>
     <button class="btn" type="submit">Entrar</button>
     <p class="desc miperfil-error" id="loginError" aria-live="polite"></p>
    </form>
   </section>
 
   <section id="homeView" class="miperfil-home portal-hidden">
-   <div class="miperfil-page-head portal-home-intro">
-    <div class="eyebrow">360PREVENTA · MI PERFIL</div>
-    <h1 class="portal-title" id="welcomeTitle">Hola</h1>
-    <p class="desc miperfil-lead" id="welcomeLead">Sigue el avance de tu proyecto.</p>
-   </div>
    <div class="portal-grid miperfil-grid">
     <button type="button" class="portal-card portal-card--primary" data-miperfil-page="info">
      <span class="picon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 19c1.8-3.2 4.2-4.5 7-4.5S17.2 15.8 19 19"/></svg></span>
@@ -79,11 +78,6 @@
   </section>
 
   <section id="infoView" class="miperfil-page portal-hidden">
-   <div class="miperfil-page-head">
-    <div class="eyebrow">360PREVENTA · MI PERFIL</div>
-    <h1 class="portal-title">Mi información</h1>
-    <p class="desc miperfil-lead">Nombre, correo y teléfono.</p>
-   </div>
    <form id="infoForm" class="miperfil-info-form">
     <div class="field"><label for="infoName">Nombre</label><input id="infoName" type="text" autocomplete="name" required></div>
     <div class="field"><label for="infoEmail">Correo</label><input id="infoEmail" type="email" autocomplete="email" required></div>
@@ -94,20 +88,10 @@
   </section>
 
   <section id="docsView" class="miperfil-page portal-hidden">
-   <div class="miperfil-page-head">
-    <div class="eyebrow">360PREVENTA · MI PERFIL</div>
-    <h1 class="portal-title">Mis documentos</h1>
-    <p class="desc miperfil-lead">Cotización, contrato e invoice.</p>
-   </div>
    <div id="docsList" class="docs-list" aria-live="polite"></div>
   </section>
 
   <section id="paysView" class="miperfil-page portal-hidden">
-   <div class="miperfil-page-head">
-    <div class="eyebrow">360PREVENTA · MI PERFIL</div>
-    <h1 class="portal-title">Pagos</h1>
-    <p class="desc miperfil-lead">Entrega restante y cobros extra.</p>
-   </div>
    <div id="paysList" class="pays-list" aria-live="polite"></div>
   </section>
  </div>
@@ -137,6 +121,6 @@
 <script src="/miperfil/client-chat.js?v=3"></script>
 <script src="/miperfil/docs.js?v=2"></script>
 <script src="/miperfil/payments.js?v=3"></script>
-<script src="/miperfil/miperfil.js?v=10"></script>
+<script src="/miperfil/miperfil.js?v=11"></script>
 </body>
 </html>
