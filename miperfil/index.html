@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
 <link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel70">
 <link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel70">
-<link rel="stylesheet" href="/miperfil/miperfil.css?v=5">
+<link rel="stylesheet" href="/miperfil/miperfil.css?v=6">
 </head>
 <body class="portal-mode miperfil-mode">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat con admin">
@@ -59,10 +59,10 @@
      <b>Mi información</b>
      <small>Nombre, correo, teléfono y contraseña.</small>
     </button>
-    <button type="button" class="portal-card portal-card--primary portal-card--soon" data-miperfil-page="docs" disabled aria-disabled="true">
+    <button type="button" class="portal-card portal-card--primary" data-miperfil-page="docs">
      <span class="picon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7V3z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
      <b>Mis documentos</b>
-     <small>Próximamente: cotización, contrato e invoice.</small>
+     <small>Cotización, contrato e invoice del anticipo.</small>
     </button>
     <button type="button" class="portal-card portal-card--primary portal-card--soon" data-miperfil-page="showrooms" disabled aria-disabled="true">
      <span class="picon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 15l5-4 4 3 3-2 6 4"/></svg></span>
@@ -83,6 +83,13 @@
     <button class="btn primary" type="submit">Guardar</button>
     <p class="desc miperfil-error" id="infoStatus" aria-live="polite"></p>
    </form>
+  </section>
+
+  <section id="docsView" class="miperfil-page portal-hidden">
+   <div class="eyebrow">360PREVENTA · DOCUMENTOS</div>
+   <h1 class="portal-title">Mis documentos</h1>
+   <p class="desc">Cotización guardada, contrato para firmar e invoice del anticipo.</p>
+   <div id="docsList" class="docs-list" aria-live="polite"></div>
   </section>
  </div>
 
@@ -108,6 +115,7 @@
 <script src="/js/shared/client-account.js?v=2"></script>
 <script src="/shared/js/global-nav.js?v=21"></script>
 <script src="/miperfil/client-chat.js?v=1"></script>
-<script src="/miperfil/miperfil.js?v=5"></script>
+<script src="/miperfil/docs.js?v=1"></script>
+<script src="/miperfil/miperfil.js?v=6"></script>
 </body>
 </html>

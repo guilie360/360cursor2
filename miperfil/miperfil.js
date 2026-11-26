@@ -5,6 +5,7 @@
   var loginView = document.getElementById('loginView');
   var homeView = document.getElementById('homeView');
   var infoView = document.getElementById('infoView');
+  var docsView = document.getElementById('docsView');
   var logoutBtn = document.getElementById('logoutBtn');
   var portalBack = document.getElementById('portalBack');
   var errEl = document.getElementById('loginError');
@@ -65,7 +66,7 @@
   }
 
   function hideAll() {
-    [loginView, homeView, infoView].forEach(function (el) {
+    [loginView, homeView, infoView, docsView].forEach(function (el) {
       if (el) el.classList.add('portal-hidden');
     });
   }
@@ -91,6 +92,19 @@
     hideAll();
     if (infoView) infoView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.remove('portal-hidden');
+  }
+
+  function showDocs() {
+    setAuthChrome(true);
+    hideAll();
+    if (docsView) docsView.classList.remove('portal-hidden');
+    if (portalBack) portalBack.classList.remove('portal-hidden');
+    try {
+      if (window.BoxiesMiPerfilDocs) {
+        BoxiesMiPerfilDocs.bind();
+        BoxiesMiPerfilDocs.load();
+      }
+    } catch (e) {}
   }
 
   function applyStage(profile, ped) {
@@ -206,6 +220,7 @@
       if (btn.disabled || btn.getAttribute('aria-disabled') === 'true') return;
       var page = btn.getAttribute('data-miperfil-page');
       if (page === 'info') showInfo();
+      else if (page === 'docs') showDocs();
     });
   });
 

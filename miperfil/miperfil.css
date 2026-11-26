@@ -24,3 +24,18 @@
 .miperfil-login-form input{
   -webkit-user-select:text!important;user-select:text!important;caret-color:auto!important;cursor:text!important
 }
+.docs-list{margin-top:22px;display:grid;gap:14px;max-width:720px}
+.doc-card{
+  text-align:left;padding:22px 22px 18px;border:1px solid rgba(255,255,255,.12);
+  background:#141414;border-radius:18px
+}
+.doc-card.is-pending,.doc-card.is-empty{opacity:.78}
+.doc-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.doc-kind{
+  font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#999
+}
+.doc-date,.doc-status{font-size:11px;color:#888}
+.doc-status.is-ready{color:#c8e0c8}
+.doc-card h3{margin:0 0 6px;font:400 26px Italiana,Georgia,serif;color:#fff}
+.doc-card .desc{margin:0 0 14px}
+.doc-card .btn{min-width:150px}

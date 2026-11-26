@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
     const { data: pedidos } = await admin
       .from("panel_pedidos")
       .select(
-        "id,customer_name,customer_email,proyecto_label,quote_total_cents,deposit_cents,balance_cents,status,quote_snapshot,is_test,created_at",
+        "id,customer_name,customer_email,proyecto_label,quote_total_cents,deposit_cents,balance_cents,status,quote_snapshot,contrato_url,is_test,created_at",
       )
       .order("created_at", { ascending: false })
       .limit(300);
@@ -200,6 +200,7 @@ Deno.serve(async (req) => {
             quote_total_cents: latestPed.quote_total_cents,
             deposit_cents: latestPed.deposit_cents,
             balance_cents: latestPed.balance_cents,
+            contrato_url: latestPed.contrato_url || null,
             is_test: !!latestPed.is_test,
             created_at: latestPed.created_at,
             summary: packageSummary(
@@ -267,6 +268,49 @@ Deno.serve(async (req) => {
     return json(200, { ok: true, user_id: userId, etapa_pct: pct, etapa_nombre: nombre || null });
   }
 
+  if (action === "update_contrato") {
+    const userId = String(body.user_id || body.id || "").trim();
+    if (!/^[0-9a-f-]{36}$/i.test(userId)) {
+      return json(400, { error: "user_id inválido." });
+    }
+    const contratoUrl = String(body.contrato_url || "").trim().slice(0, 2000);
+    if (contratoUrl && !/^https?:\/\//i.test(contratoUrl)) {
+      return json(400, { error: "La URL del contrato debe empezar por http(s)://" });
+    }
+
+    const { data: targetUser } = await admin.auth.admin.getUserById(userId);
+    const email = String(targetUser?.user?.email || "").trim().toLowerCase();
+    if (!email) return json(404, { error: "Cliente sin correo." });
+
+    const { data: ped } = await admin
+      .from("panel_pedidos")
+      .select("id")
+      .eq("customer_email", email)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!ped?.id) {
+      return json(404, { error: "Este cliente aún no tiene pedido." });
+    }
+
+    const { error: upErr } = await admin
+      .from("panel_pedidos")
+      .update({
+        contrato_url: contratoUrl || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", ped.id);
+    if (upErr) {
+      return json(400, { error: upErr.message || "No se pudo guardar el contrato." });
+    }
+    return json(200, {
+      ok: true,
+      user_id: userId,
+      pedido_id: ped.id,
+      contrato_url: contratoUrl || null,
+    });
+  }
+
   if (action === "delete") {
     const userId = String(body.user_id || body.id || "").trim();
     if (!/^[0-9a-f-]{36}$/i.test(userId)) {
@@ -322,5 +366,5 @@ Deno.serve(async (req) => {
     });
   }
 
-  return json(400, { error: "Acción no soportada. Usa list o delete." });
+  return json(400, { error: "Acción no soportada. Usa list, update_stage, update_contrato o delete." });
 });

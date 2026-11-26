@@ -125,6 +125,15 @@
                 '<button type="button" class="btn primary db-stage-save" data-save-stage="' + escapeHtml(c.id) + '">Guardar etapa</button>' +
               '</div>' +
             '</details>' +
+            '<details class="db-stage">' +
+              '<summary>Contrato (Mis documentos)</summary>' +
+              '<div class="db-stage-body">' +
+                '<label class="db-stage-name">URL del contrato' +
+                  '<input type="url" class="db-stage-input" data-contrato-url="' + escapeHtml(c.id) + '" value="' + escapeHtml((ped && ped.contrato_url) || '') + '" placeholder="https://drive.google.com/…" maxlength="2000">' +
+                '</label>' +
+                '<button type="button" class="btn primary db-stage-save" data-save-contrato="' + escapeHtml(c.id) + '">Guardar contrato</button>' +
+              '</div>' +
+            '</details>' +
             '<div class="db-account-actions">' +
               '<button type="button" class="btn db-delete-btn" data-delete-client="' + escapeHtml(c.id) + '" data-client-email="' + escapeHtml(c.email || '') + '" data-client-name="' + escapeHtml(c.name || '') + '">Eliminar</button>' +
             '</div>' +
@@ -218,6 +227,13 @@
           e.preventDefault();
           e.stopPropagation();
           saveStage(host, save);
+          return;
+        }
+        var saveContrato = e.target.closest('[data-save-contrato]');
+        if (saveContrato && host.contains(saveContrato)) {
+          e.preventDefault();
+          e.stopPropagation();
+          saveContratoUrl(host, saveContrato);
         }
       });
     }
@@ -243,6 +259,26 @@
       await loadList(root);
     } catch (err) {
       alert(err.message || 'No se pudo guardar la etapa');
+      btn.disabled = false;
+    }
+  }
+
+  async function saveContratoUrl(root, btn) {
+    var id = btn.getAttribute('data-save-contrato');
+    if (!id) return;
+    var card = btn.closest('.db-account');
+    var input = card && card.querySelector('[data-contrato-url="' + id + '"]');
+    var url = input ? input.value.trim() : '';
+    btn.disabled = true;
+    try {
+      await api({
+        action: 'update_contrato',
+        user_id: id,
+        contrato_url: url
+      });
+      await loadList(root);
+    } catch (err) {
+      alert(err.message || 'No se pudo guardar el contrato');
       btn.disabled = false;
     }
   }
