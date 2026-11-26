@@ -453,6 +453,24 @@
     });
   }
 
+  /** Carga hilos client:* desde DB (no depende solo del aviso en Equipo). */
+  async function syncClientThreadsFromDb() {
+    if (!isAdmin()) return;
+    var client = getClient();
+    if (!client) return;
+    try {
+      var result = await client.rpc('panel_client_chat_threads', { p_limit: 40 });
+      if (result.error) throw result.error;
+      (result.data || []).forEach(function (row) {
+        var id = String(row.client_id || '');
+        if (!id) return;
+        rememberClientContact(id, row.client_name || 'Cliente', row.last_at || new Date().toISOString());
+      });
+    } catch (err) {
+      console.warn('[TeamChat] client threads', err);
+    }
+  }
+
   async function openClientChat(clientId, clientName) {
     if (!isAdmin() || !clientId) return;
     state.activeView = 'client';
@@ -608,6 +626,7 @@
     try {
       await loadClears();
       state.messages = await fetchMessages();
+      await syncClientThreadsFromDb();
       if (state.activeView === 'client' && state.clientId) {
         try { state.clientMessages = await fetchClientMessages(state.clientId); } catch (e) {}
       }
