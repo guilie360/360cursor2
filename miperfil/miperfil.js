@@ -6,9 +6,30 @@
   var homeView = document.getElementById('homeView');
   var logoutBtn = document.getElementById('logoutBtn');
   var errEl = document.getElementById('loginError');
-  var headUser = document.getElementById('headUserLabel');
+  var goalCaption = document.getElementById('hunterGoalCaption');
+  var goalBonus = document.getElementById('hunterGoalBonus');
+  var goalTrack = document.getElementById('hunterGoalTrack');
+  var goalFill = document.getElementById('hunterGoalFill');
 
   function $(id) { return document.getElementById(id); }
+
+  function setAuthChrome(on) {
+    document.body.classList.toggle('workspace-authenticated', !!on);
+    document.body.classList.toggle('nav-panel-authed', !!on);
+  }
+
+  function setFooterProgress(pct, caption, bonusLabel, bonusValue) {
+    var p = Math.max(0, Math.min(100, Number(pct) || 0));
+    if (goalTrack) {
+      goalTrack.style.setProperty('--goal-step', p + '%');
+      goalTrack.setAttribute('aria-valuenow', String(p));
+    }
+    if (goalFill) goalFill.style.width = p + '%';
+    if (goalCaption) goalCaption.textContent = caption || 'Mi perfil · avance';
+    if (goalBonus) {
+      goalBonus.innerHTML = '<small>' + (bonusLabel || 'Estado') + '</small>' + (bonusValue || '—');
+    }
+  }
 
   function money(cents) {
     var n = Number(cents || 0) / 100;
@@ -45,20 +66,42 @@
   }
 
   function showLogin() {
+    setAuthChrome(false);
     if (loginView) loginView.classList.remove('portal-hidden');
     if (homeView) homeView.classList.add('portal-hidden');
-    if (headUser) headUser.textContent = 'Tu espacio';
+    setFooterProgress(0, 'Mi perfil · 360Preventa', 'Acceso', 'Cliente');
   }
 
   function showHome() {
+    setAuthChrome(true);
     if (loginView) loginView.classList.add('portal-hidden');
     if (homeView) homeView.classList.remove('portal-hidden');
+  }
+
+  function footerFromPedido(ped) {
+    var st = String((ped && ped.status) || '').toLowerCase();
+    if (!ped) {
+      setFooterProgress(0, 'Proyecto · sin pedido', 'Estado', 'Pendiente');
+      return;
+    }
+    if (st === 'pagado') {
+      setFooterProgress(100, 'Proyecto · entregado', 'Estado', 'Completo');
+      return;
+    }
+    if (st === 'en_produccion' || st === 'pendiente_entrega') {
+      setFooterProgress(50, 'Proyecto · en producción', 'Estado', 'Anticipo');
+      return;
+    }
+    if (st === 'pendiente_anticipo') {
+      setFooterProgress(25, 'Proyecto · anticipo', 'Estado', 'Pendiente');
+      return;
+    }
+    setFooterProgress(35, 'Proyecto · en curso', 'Estado', statusLabel(st));
   }
 
   async function loadHome(user) {
     showHome();
     var email = (user && user.email) || '';
-    if (headUser) headUser.textContent = email || 'Cliente';
 
     var welcomeTitle = $('welcomeTitle');
     var welcomeLead = $('welcomeLead');
@@ -86,8 +129,10 @@
           ? ('Total ' + money(ped.quote_total_cents || ped.total_cents) + ' · Anticipo ' + money(ped.deposit_cents))
           : '';
       }
+      footerFromPedido(ped);
     } catch (e) {
       if ($('pedidoLabel')) $('pedidoLabel').textContent = 'No se pudo cargar el pedido.';
+      setFooterProgress(0, 'Proyecto · sin datos', 'Estado', '—');
     }
 
     try {

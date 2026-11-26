@@ -14,17 +14,17 @@
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
 <link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel66">
 <link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel66">
-<link rel="stylesheet" href="/miperfil/miperfil.css?v=1">
+<link rel="stylesheet" href="/miperfil/miperfil.css?v=2">
 </head>
-<body class="portal-mode workspace-authenticated miperfil-mode">
+<body class="portal-mode miperfil-mode">
 <div class="portal" id="portal">
  <header class="portal-head"><div class="portal-head-inner">
   <div class="portal-brand">
-   <img class="portal-brand-logo" alt="Logo 360Preventa" src="/panel_gestion/assets/logo.png">
+   <img class="portal-brand-logo" id="portalLogo" alt="Logo 360Preventa" src="/panel_gestion/assets/logo.png">
    <span class="portal-brand-copy">360Preventa<small>Mi perfil</small></span>
   </div>
   <div class="portal-head-right">
-   <span class="miperfil-head-user" id="headUserLabel">Tu espacio</span>
+   <input class="portal-search" id="globalSearch" type="search" placeholder="Buscar en tu espacio…" aria-label="Buscar en Mi perfil">
    <button class="btn portal-logout portal-logout-icon" id="logoutBtn" type="button" aria-label="Cerrar sesión" title="Cerrar sesión">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5M14 16l4-4-4-4M18 12H9"/></svg>
    </button>
@@ -75,16 +75,17 @@
   </section>
  </div>
 
- <footer class="hunter-goal-footer miperfil-footer" id="miperfilFooter" aria-label="Acciones Mi perfil">
+ <footer class="hunter-goal-footer" id="hunterGoalFooter" aria-label="Progreso de tu proyecto">
   <div class="hunter-goal-footer-inner">
-   <a class="footer-back mag" href="/" aria-label="Inicio" title="Inicio" data-cursor="INICIO">
+   <button class="footer-back portal-hidden mag" id="portalBack" type="button" aria-label="Volver" title="Volver" data-cursor="VOLVER">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-   </a>
-   <div class="hunter-goal-meta miperfil-footer-meta">
-    <span class="goal-caption">Mi perfil · 360Preventa</span>
-    <span class="miperfil-footer-hint">Correo + celular (sin +57)</span>
+   </button>
+   <div class="hunter-goal-meta">
+    <span class="goal-caption" id="hunterGoalCaption">Mi perfil · avance</span>
+    <div class="hunter-goal-track" id="hunterGoalTrack" style="--goal-step:50%" role="progressbar" aria-label="Avance del proyecto" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><span class="hunter-goal-fill" id="hunterGoalFill"></span><span class="hunter-goal-ticks" aria-hidden="true"></span></div>
+    <span class="hunter-goal-bonus" id="hunterGoalBonus"><small>Estado</small>Anticipo</span>
    </div>
-   <a class="footer-chat-btn mag" href="https://wa.me/573226834084" target="_blank" rel="noopener" aria-label="WhatsApp" title="WhatsApp" data-cursor="CHAT">✉</a>
+   <a id="teamChatFloat" class="footer-chat-btn mag" href="https://wa.me/573226834084" target="_blank" rel="noopener" aria-label="WhatsApp" title="WhatsApp" data-cursor="CHAT">✉</a>
   </div>
  </footer>
 </div>
@@ -95,6 +96,6 @@
 <script src="/js/auth/client.js"></script>
 <script src="/js/shared/client-account.js?v=1"></script>
 <script src="/shared/js/global-nav.js?v=19"></script>
-<script src="/miperfil/miperfil.js?v=1"></script>
+<script src="/miperfil/miperfil.js?v=2"></script>
 </body>
 </html>

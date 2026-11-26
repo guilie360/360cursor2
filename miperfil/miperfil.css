@@ -1,6 +1,4 @@
-/* Mi perfil — chrome del panel, contenido cliente */
-.miperfil-mode .portal-wrap{padding-bottom:96px}
-.miperfil-head-user{color:var(--muted,#aaa);font-size:12px;letter-spacing:.04em;margin-right:8px}
+/* Mi perfil — mismo chrome que panel; solo contenido cliente */
 .miperfil-login{max-width:480px;margin:28px auto 40px}
 .miperfil-login-form{margin-top:22px;display:grid;gap:4px}
 .miperfil-login-form .btn{margin-top:10px;justify-self:start;min-width:160px}
@@ -18,10 +16,16 @@
   padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)
 }
 .miperfil-quote-row:last-child{border-bottom:0}
-.miperfil-footer .miperfil-footer-meta{flex:1;min-width:0}
-.miperfil-footer-hint{display:block;color:#888;font-size:11px;margin-top:2px}
-.miperfil-footer .footer-chat-btn{text-decoration:none;color:inherit;display:grid;place-items:center}
+/* Footer chat como <a>: misma caja que el botón del panel */
+#hunterGoalFooter #teamChatFloat.footer-chat-btn{
+  text-decoration:none;color:inherit;display:grid;place-items:center;
+  box-sizing:border-box;
+  border:1px solid rgba(255,255,255,.16);border-radius:12px;
+  background:rgba(255,255,255,.04);
+}
+#hunterGoalFooter #teamChatFloat.footer-chat-btn:hover{
+  background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.28);color:#fff
+}
 @media(max-width:720px){
   .miperfil-card-wide{grid-column:auto}
-  .miperfil-head-user{display:none}
 }
