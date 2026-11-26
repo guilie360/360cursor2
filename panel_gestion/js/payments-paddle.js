@@ -847,7 +847,8 @@
     var data = result.data || {};
     return {
       cobros: Number(data.cobros) || 0,
-      pedidos: Number(data.pedidos) || 0
+      pedidos: Number(data.pedidos) || 0,
+      authUsers: Number(data.auth_users) || 0
     };
   }
 
@@ -857,6 +858,15 @@
     var result = await client.rpc('panel_cobros_delete', { p_id: id });
     if (result.error) throw new Error(result.error.message || 'No se pudo eliminar el cobro');
     return true;
+  }
+
+  /** Borra pedido + cobros; si no quedan pedidos del email, también Auth Mi perfil. */
+  async function deletePedidoCascade(pedidoId) {
+    var client = getClient();
+    if (!client) throw new Error('Sin sesión de equipo');
+    var result = await client.rpc('panel_pedido_delete_cascade', { p_pedido_id: pedidoId });
+    if (result.error) throw new Error(result.error.message || 'No se pudo eliminar el showroom');
+    return result.data || {};
   }
 
   async function setCobroTestFlag(id, isTest) {
@@ -1556,7 +1566,16 @@
                   );
                 }).join(''))
               : '') +
-            '<p class="desc pay-auto-hint">1 showroom = 1 tarjeta. Anticipo, entrega y extras actualizan este mismo contenedor.</p>';
+            '<p class="desc pay-auto-hint">1 showroom = 1 tarjeta. Anticipo, entrega y extras actualizan este mismo contenedor.</p>' +
+            (g.pedido_id
+              ? ('<div class="quote-crm-row-actions" style="margin-top:12px">' +
+                  '<button type="button" class="btn" data-pay-delete-pedido="' + escapeHtml(g.pedido_id) + '"' +
+                    (email ? ' data-client-email="' + escapeHtml(email) + '"' : '') +
+                    ' data-client-name="' + escapeHtml(title) + '">' +
+                    'Borrar showroom + cuenta' +
+                  '</button>' +
+                '</div>')
+              : '');
 
           return clientCardHtml({
             title: title,
@@ -1571,7 +1590,7 @@
         '</div>';
 
       if (noteEl) {
-        noteEl.textContent = '1 showroom = 1 tarjeta (anticipo, entrega y extras). Desmarca “Ocultar pruebas” para ver sandbox.';
+        noteEl.textContent = '1 showroom = 1 tarjeta. Borrar pruebas o showroom también elimina la cuenta Mi perfil si no quedan pedidos.';
       }
     }
 
@@ -1617,13 +1636,15 @@
     }
     if (purgeTestsBtn) {
       purgeTestsBtn.addEventListener('click', async function () {
-        if (!window.confirm('¿Eliminar TODOS los cobros y pedidos marcados como prueba (incl. sandbox)?')) return;
+        if (!window.confirm('¿Eliminar TODAS las pruebas (cobros, pedidos y cuentas Mi perfil enlazadas)?')) return;
         purgeTestsBtn.disabled = true;
         if (statusEl) statusEl.textContent = 'Borrando pruebas…';
         try {
           var out = await deleteTestPays();
           if (statusEl) {
-            statusEl.textContent = 'Eliminados: ' + out.cobros + ' cobros · ' + out.pedidos + ' pedidos';
+            statusEl.textContent =
+              'Eliminados: ' + out.cobros + ' cobros · ' + out.pedidos + ' pedidos · ' +
+              out.authUsers + ' cuentas Mi perfil';
           }
           await refresh();
         } catch (err) {
@@ -1635,15 +1656,39 @@
     }
     if (ledgerEl) {
       ledgerEl.addEventListener('click', async function (e) {
+        var delPedidoBtn = e.target.closest('[data-pay-delete-pedido]');
         var delBtn = e.target.closest('[data-pay-delete]');
         var testBtn = e.target.closest('[data-pay-test]');
-        if (!delBtn && !testBtn) return;
+        if (!delPedidoBtn && !delBtn && !testBtn) return;
         e.preventDefault();
         e.stopPropagation();
-        var id = (delBtn || testBtn).getAttribute(delBtn ? 'data-pay-delete' : 'data-pay-test');
-        if (!id) return;
-        var row = (cache.cobros || []).find(function (r) { return r.id === id; });
         try {
+          if (delPedidoBtn) {
+            var pedId = delPedidoBtn.getAttribute('data-pay-delete-pedido');
+            var pedName = delPedidoBtn.getAttribute('data-client-name') || 'este showroom';
+            var pedEmail = delPedidoBtn.getAttribute('data-client-email') || '';
+            if (!pedId) return;
+            if (!window.confirm(
+              '¿Borrar “' + pedName + '”' + (pedEmail ? ' (' + pedEmail + ')' : '') +
+              '?\nSe eliminan cobros del showroom y la cuenta Mi perfil si no quedan más pedidos.'
+            )) return;
+            delPedidoBtn.disabled = true;
+            var cascade = await deletePedidoCascade(pedId);
+            var authOk = cascade && cascade.auth && cascade.auth.ok && cascade.auth.auth_user_id;
+            if (statusEl) {
+              statusEl.textContent = authOk
+                ? 'Showroom y cuenta Mi perfil eliminados.'
+                : 'Showroom eliminado.' +
+                  (cascade && cascade.auth && cascade.auth.reason === 'pedidos_restantes'
+                    ? ' La cuenta se mantiene (hay otros pedidos).'
+                    : '');
+            }
+            await refresh();
+            return;
+          }
+          var id = (delBtn || testBtn).getAttribute(delBtn ? 'data-pay-delete' : 'data-pay-test');
+          if (!id) return;
+          var row = (cache.cobros || []).find(function (r) { return r.id === id; });
           if (delBtn) {
             if (!window.confirm('¿Eliminar este cobro de Contabilidad?')) return;
             delBtn.disabled = true;
@@ -1658,6 +1703,7 @@
           await refresh();
         } catch (err) {
           if (statusEl) statusEl.textContent = err.message || 'No se pudo actualizar.';
+          if (delPedidoBtn) delPedidoBtn.disabled = false;
           if (delBtn) delBtn.disabled = false;
           if (testBtn) testBtn.disabled = false;
         }
