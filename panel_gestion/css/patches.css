@@ -445,52 +445,62 @@ body.hunter-mode .portal{min-height:0}
 
 /* Home: primarias Cotizar/Pagos/Contratos por profundidad negra (sin acento dorado) */
 .portal #portalHome .portal-home-intro{margin:4px 0 22px}
-.portal #portalHome .portal-title{
+.portal #portalHome .portal-title,
+.miperfil-mode #homeView .portal-title{
   margin:0;font:clamp(32px,4.6vw,48px)/1.05 Italiana,Georgia,serif;font-weight:400;color:#f0ebe3
 }
-.portal #portalHome .portal-grid{
+.portal #portalHome .portal-grid,
+.miperfil-mode #homeView .portal-grid{
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:0
 }
-.portal #portalHome .portal-card{
+.portal #portalHome .portal-card,
+.miperfil-mode #homeView .portal-card{
   min-height:168px;padding:22px;border-radius:16px;gap:12px;
   border:1px solid rgba(255,255,255,.08)
 }
-.portal #portalHome .portal-card .picon{
+.portal #portalHome .portal-card .picon,
+.miperfil-mode #homeView .portal-card .picon{
   width:44px;height:44px;border-radius:12px;color:#cfc9bd
 }
-.portal #portalHome .portal-card .picon svg{
+.portal #portalHome .portal-card .picon svg,
+.miperfil-mode #homeView .portal-card .picon svg{
   width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;
   stroke-linecap:round;stroke-linejoin:round
 }
-.portal #portalHome .portal-card b{font:24px/1.1 Italiana,Georgia,serif;font-weight:400}
-.portal #portalHome .portal-card small{font-size:12px;line-height:1.55;color:#a8a198}
-.portal #portalHome .portal-card--primary{
-  background:linear-gradient(180deg,#1a1a1a 0%,#0e0e0e 100%);
-  border-color:rgba(255,255,255,.12);
+.portal #portalHome .portal-card b,
+.miperfil-mode #homeView .portal-card b{font:24px/1.1 Italiana,Georgia,serif;font-weight:400}
+.portal #portalHome .portal-card small,
+.miperfil-mode #homeView .portal-card small{font-size:12px;line-height:1.55;color:#a8a198}
+.portal #portalHome .portal-card--primary,
+.miperfil-mode #homeView .portal-card--primary{
+  background:linear-gradient(180deg,#121212 0%,#0a0a0a 100%);
+  border-color:rgba(255,255,255,.10);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.04) inset,
+    0 18px 40px -24px rgba(0,0,0,.96),
+    0 6px 14px -10px rgba(0,0,0,.8);
+}
+.portal #portalHome .portal-card--primary .picon,
+.miperfil-mode #homeView .portal-card--primary .picon{
+  border-color:rgba(255,255,255,.12);background:rgba(0,0,0,.55);color:#eee
+}
+.portal #portalHome .portal-card--primary:hover,
+.miperfil-mode #homeView .portal-card--primary:hover{
+  background:linear-gradient(180deg,#181818 0%,#0e0e0e 100%)!important;
+  border-color:rgba(255,255,255,.16)!important;
   box-shadow:
     0 1px 0 rgba(255,255,255,.06) inset,
-    0 22px 48px -22px rgba(0,0,0,.95),
-    0 8px 18px -10px rgba(0,0,0,.85);
-}
-.portal #portalHome .portal-card--primary .picon{
-  border-color:rgba(255,255,255,.14);background:rgba(0,0,0,.45);color:#eee
-}
-.portal #portalHome .portal-card--primary:hover{
-  background:linear-gradient(180deg,#202020 0%,#121212 100%)!important;
-  border-color:rgba(255,255,255,.18)!important;
-  box-shadow:
-    0 1px 0 rgba(255,255,255,.08) inset,
-    0 28px 56px -20px rgba(0,0,0,.98),
-    0 12px 24px -12px rgba(0,0,0,.9)!important;
+    0 24px 48px -20px rgba(0,0,0,.98),
+    0 10px 20px -12px rgba(0,0,0,.9)!important;
   transform:translateY(-3px)
 }
 .portal #portalHome .portal-card--secondary{
-  background:linear-gradient(180deg,#141414 0%,#101010 100%);
+  background:linear-gradient(180deg,#101010 0%,#0a0a0a 100%);
   border-color:rgba(255,255,255,.06);
   box-shadow:none;opacity:.88
 }
 .portal #portalHome .portal-card--secondary:hover{
-  opacity:1;background:linear-gradient(180deg,#181818 0%,#121212 100%)!important;
+  opacity:1;background:linear-gradient(180deg,#141414 0%,#0e0e0e 100%)!important;
   border-color:rgba(255,255,255,.12)!important;color:#fff!important
 }
 /* Bloqueo temporal: Tareas / Hunter / Base de datos */
@@ -522,11 +532,14 @@ body.hunter-mode .portal{min-height:0}
 }
 .portal-lock-toast.is-on{opacity:1;transform:translateX(-50%) translateY(0)}
 @media(max-width:760px){
- .portal #portalHome .portal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .portal #portalHome .portal-grid,
+ .miperfil-mode #homeView .portal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:430px){
- .portal #portalHome .portal-grid{grid-template-columns:1fr}
- .portal #portalHome .portal-card{min-height:140px}
+ .portal #portalHome .portal-grid,
+ .miperfil-mode #homeView .portal-grid{grid-template-columns:1fr}
+ .portal #portalHome .portal-card,
+ .miperfil-mode #homeView .portal-card{min-height:140px}
 }
 
 /* ===== patch ===== */

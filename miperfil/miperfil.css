@@ -12,12 +12,16 @@
 .miperfil-error{color:#e5a0a0!important;min-height:18px}
 .miperfil-grid{margin-top:8px}
 .miperfil-mode .portal-card--soon{opacity:.55;cursor:not-allowed}
-.miperfil-mode .portal-card .picon{
-  width:36px;height:36px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.14);
-  border-radius:10px;margin-bottom:10px
+/* Neutraliza el lift más claro de base.css; el look dark vive en patches (#homeView). */
+.miperfil-mode #homeView .portal-card::before{opacity:0!important}
+.miperfil-mode .doc-card,
+.miperfil-mode .pay-project{
+  background:linear-gradient(180deg,#121212 0%,#0a0a0a 100%);
+  border-color:rgba(255,255,255,.10);
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset
 }
-.miperfil-mode .portal-card .picon svg{
-  width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round
+.miperfil-mode .pay-split-card{
+  background:#0a0a0a;border-color:rgba(255,255,255,.08)
 }
 .miperfil-page{padding-bottom:24px}
 .miperfil-info-form input,
