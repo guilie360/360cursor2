@@ -151,7 +151,7 @@
       { href: WA, label: 'Chatear con asesor', n: '03', external: true },
       { href: '/#demo', label: 'Ver demo', n: '04' }
     ];
-    links.push({ href: '/panel_gestion/', label: 'Ingresar', n: '05' });
+    links.push({ href: '/login/', label: 'Ingresar', n: '05' });
     return links;
   }
 
