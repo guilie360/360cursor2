@@ -1951,6 +1951,8 @@ html.has-cur .btn{
 .quote-crm-day:first-child{margin-top:2px}
 .panel-pay-paddle .quote-crm-row-time{
   flex:none;
+  min-width:7.25rem;
+  text-align:right;
   color:rgba(255,255,255,.38);
   font:500 12px/1 Manrope,Arial,sans-serif;
   letter-spacing:.02em;
@@ -1991,13 +1993,13 @@ html.has-cur .btn{
   list-style:none;
   display:flex;
   align-items:center;
-  justify-content:space-between;
   gap:12px;
   padding:14px 16px;
   cursor:pointer;
 }
 .panel-pay-paddle .quote-crm-row-summary::-webkit-details-marker{display:none}
 .panel-pay-paddle .quote-crm-row-title{
+  flex:1 1 auto;
   min-width:0;
   color:#f4f4f5;
   font:20px/1.2 Italiana,Georgia,serif;
@@ -2005,6 +2007,14 @@ html.has-cur .btn{
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
+}
+.panel-pay-paddle .quote-crm-row-trail{
+  display:inline-flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:14px;
+  flex:0 0 auto;
+  margin-left:auto;
 }
 .panel-pay-paddle .quote-crm-row-chevron{
   flex:none;
@@ -2169,15 +2179,17 @@ html.has-cur .btn{
 .pay-ledger-list{gap:8px}
 .pay-ledger-amount{
   flex:none;
+  min-width:5.75rem;
+  text-align:right;
   color:#f4f4f5;
   font:18px/1 Italiana,Georgia,serif;
+  font-variant-numeric:tabular-nums;
 }
 .pay-stage-dots{
   display:inline-flex;
   align-items:center;
   gap:5px;
   flex:none;
-  margin-left:2px;
 }
 .pay-stage-dot{
   width:8px;height:8px;border-radius:50%;

@@ -528,6 +528,29 @@
     );
   }
 
+  /** Nombre visible: nunca correo completo. */
+  function displayPersonName(row, ped) {
+    var name = String(
+      (ped && ped.customer_name) ||
+      (row && row.customer_name) ||
+      ''
+    ).trim();
+    if (name && name.indexOf('@') < 0) return name;
+    var proy = String(
+      (ped && ped.proyecto_label) ||
+      (row && row.proyecto_label) ||
+      ''
+    ).trim();
+    if (proy) return proy;
+    var email = String(
+      (ped && ped.customer_email) ||
+      (row && row.customer_email) ||
+      ''
+    ).trim();
+    if (email && email.indexOf('@') > 0) return email.split('@')[0];
+    return 'Cliente';
+  }
+
   function clientCardHtml(opts) {
     opts = opts || {};
     return (
@@ -535,10 +558,12 @@
         (opts.attrs || '') + '>' +
         '<summary class="quote-crm-row-summary">' +
           '<span class="quote-crm-row-title">' + escapeHtml(opts.title || 'Sin nombre') + '</span>' +
-          (opts.time ? '<span class="quote-crm-row-time">' + escapeHtml(opts.time) + '</span>' : '') +
-          '<span class="pay-ledger-amount">' + escapeHtml(opts.amount || '—') + '</span>' +
-          (opts.stageHtml || '') +
-          '<span class="quote-crm-row-chevron" aria-hidden="true"></span>' +
+          '<span class="quote-crm-row-trail">' +
+            (opts.time ? '<span class="quote-crm-row-time">' + escapeHtml(opts.time) + '</span>' : '') +
+            '<span class="pay-ledger-amount">' + escapeHtml(opts.amount || '—') + '</span>' +
+            (opts.stageHtml || '') +
+            '<span class="quote-crm-row-chevron" aria-hidden="true"></span>' +
+          '</span>' +
         '</summary>' +
         '<div class="quote-crm-row-body">' +
           (opts.bodyHtml || '') +
@@ -621,15 +646,16 @@
           lastDay = day;
           html += '<div class="quote-crm-day">' + escapeHtml(quoteDayLabel(r.created_at)) + '</div>';
         }
-        var title = String(r.customer_name || '').trim() || String(r.customer_email || '').trim() || 'Sin nombre';
+        var pedido = r.pedido_id ? pedidoById[r.pedido_id] : null;
+        var title = displayPersonName(r, pedido);
         var time = r.created_at ? new Date(r.created_at).toLocaleString('es-ES', {
           day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
         }) : '';
-        var pedido = r.pedido_id ? pedidoById[r.pedido_id] : null;
         var stage = payStageFromPedidoStatus(pedido && pedido.status);
         var body =
           '<div class="pay-meta-grid">' +
             (r.is_test ? '<div class="quote-crm-test-tag">prueba</div>' : '') +
+            metaRow('Cliente', escapeHtml(title)) +
             metaRow('Email', escapeHtml(r.customer_email || '—')) +
             metaRow('Teléfono', escapeHtml(r.customer_phone || '—')) +
             metaRow('País', escapeHtml(r.customer_country || '—')) +
@@ -1309,17 +1335,54 @@
       });
     }
 
-    /** Un contenedor por pedido: anticipo + entrega enlazados (no duplicar filas). */
+    /** Resuelve pedido para un cobro (incluye extras sin pedido_id). */
+    function resolvePedidoForCobro(r) {
+      if (r.pedido_id && cache.pedidos) {
+        var byId = cache.pedidos.find(function (p) { return p.id === r.pedido_id; });
+        if (byId) return byId;
+      }
+      var email = String(r.customer_email || '').trim().toLowerCase();
+      var label = String(r.proyecto_label || '').trim().toLowerCase();
+      if (!email || !cache.pedidos) return null;
+      var same = cache.pedidos.filter(function (p) {
+        return String(p.customer_email || '').trim().toLowerCase() === email;
+      });
+      if (!same.length) return null;
+      if (label) {
+        var matchLabel = same.find(function (p) {
+          return String(p.proyecto_label || '').trim().toLowerCase() === label;
+        });
+        if (matchLabel) return matchLabel;
+      }
+      // Un solo pedido de ese cliente → todos los cobros (extras) van ahí
+      if (same.length === 1) return same[0];
+      // Varios: el más reciente
+      return same.slice().sort(function (a, b) {
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      })[0];
+    }
+
+    /** 1 tarjeta por showroom/pedido: anticipo + entrega + extras. */
     function groupCobrosByPedido(rows) {
       var order = [];
       var map = {};
       (rows || []).forEach(function (r) {
-        var key = r.pedido_id ? ('p:' + r.pedido_id) : ('c:' + r.id);
+        var ped = resolvePedidoForCobro(r);
+        var key = ped
+          ? ('p:' + ped.id)
+          : ('s:' + String(r.customer_email || '').toLowerCase() + '|' + String(r.proyecto_label || '').toLowerCase());
         if (!map[key]) {
-          map[key] = { key: key, pedido_id: r.pedido_id || null, cobros: [] };
+          map[key] = {
+            key: key,
+            pedido_id: ped ? ped.id : (r.pedido_id || null),
+            pedido: ped || null,
+            cobros: []
+          };
           order.push(map[key]);
         }
         map[key].cobros.push(r);
+        if (!map[key].pedido && ped) map[key].pedido = ped;
+        if (!map[key].pedido_id && ped) map[key].pedido_id = ped.id;
       });
       order.forEach(function (g) {
         g.cobros.sort(function (a, b) {
@@ -1385,54 +1448,51 @@
         groups.map(function (g) {
           var cobros = g.cobros;
           var head = cobros[cobros.length - 1] || cobros[0];
-          var ped = null;
-          if (g.pedido_id && cache.pedidos) {
+          var ped = g.pedido || null;
+          if (!ped && g.pedido_id && cache.pedidos) {
             ped = cache.pedidos.find(function (p) { return p.id === g.pedido_id; }) || null;
           }
           var dots = ped
             ? payStageFromPedidoStatus(ped.status)
-            : (cobros.length === 1
-              ? payStageFromCobro(cobros[0])
-              : {
-                deposit: cobros.some(function (c) {
-                  var s = String(c.payment_stage || '');
-                  return isPaidCobro(c) && /deposit|anticipo/i.test(s);
-                }),
-                balance: cobros.some(function (c) {
-                  var s = String(c.payment_stage || '');
-                  return isPaidCobro(c) && /balance|entrega/i.test(s);
-                }),
-                label: 'Pagos del pedido'
-              });
+            : {
+              deposit: cobros.some(function (c) {
+                var s = String(c.payment_stage || (c.metadata && c.metadata.stage) || '');
+                return isPaidCobro(c) && /deposit|anticipo/i.test(s);
+              }),
+              balance: cobros.some(function (c) {
+                var s = String(c.payment_stage || (c.metadata && c.metadata.stage) || '');
+                return isPaidCobro(c) && /balance|entrega/i.test(s);
+              }),
+              label: 'Pagos del showroom'
+            };
           if (dots.deposit && dots.balance) dots.label = 'Anticipo y entrega pagados';
           else if (dots.deposit) dots.label = 'Anticipo pagado · entrega pendiente';
           else dots.label = dots.label || 'Anticipo pendiente';
 
           var depCobro = pickStageCobro(cobros, 'deposit');
           var balCobro = pickStageCobro(cobros, 'balance');
+          var extras = cobros.filter(function (c) {
+            return c !== depCobro && c !== balCobro;
+          });
           var paidSum = cobros.filter(isPaidCobro).reduce(function (s, r) {
             return s + (Number(r.amount_cents) || 0);
           }, 0);
-          var totalCents = ped && ped.quote_total_cents
+          var extraPaid = extras.filter(isPaidCobro).reduce(function (s, r) {
+            return s + (Number(r.amount_cents) || 0);
+          }, 0);
+          var baseCents = ped && ped.quote_total_cents
             ? Number(ped.quote_total_cents)
-            : paidSum || cobros.reduce(function (s, r) { return s + (Number(r.amount_cents) || 0); }, 0);
+            : ((Number(ped && ped.deposit_cents) || 0) + (Number(ped && ped.balance_cents) || 0)) ||
+              ((depCobro ? Number(depCobro.amount_cents) || 0 : 0) +
+                (balCobro ? Number(balCobro.amount_cents) || 0 : 0));
+          var totalCents = (baseCents || 0) + extraPaid;
+          if (!totalCents) totalCents = paidSum;
           var anyPaid = cobros.some(isPaidCobro);
           var anyOpen = cobros.some(isOpenCobro);
           var stateClass = anyPaid ? 'is-paid' : (anyOpen ? 'is-open' : 'is-other');
           var isTest = cobros.some(looksLikeTestPay) || (ped && looksLikeTestPay(ped));
-          var title = String(
-            (ped && ped.customer_name) ||
-            head.customer_name ||
-            (ped && ped.customer_email) ||
-            head.customer_email ||
-            'Proyecto'
-          ).trim();
+          var title = displayPersonName(head, ped);
           var email = String((ped && ped.customer_email) || head.customer_email || '').trim();
-          if (email && title.indexOf('@') < 0) {
-            /* keep name as title; email in body */
-          } else if (!title || title === 'Proyecto') {
-            title = email || 'Proyecto';
-          }
           var latestWhen = cobros.reduce(function (best, c) {
             var t = cobroWhen(c);
             if (!t) return best;
@@ -1471,35 +1531,32 @@
             );
           }
 
-          // Cobros sueltos sin stage claro
-          var extras = cobros.filter(function (c) {
-            return c !== depCobro && c !== balCobro;
-          });
-
           var body =
             (isTest ? '<div class="quote-crm-test-tag">prueba</div>' : '') +
             '<div class="pay-meta-grid">' +
+              metaRow('Cliente', escapeHtml(title)) +
               metaRow('Email', escapeHtml(email || '—')) +
-              metaRow('Proyecto', escapeHtml(proyecto)) +
+              metaRow('Showroom', escapeHtml(proyecto)) +
               metaRow('Pago', escapeHtml(dots.label)) +
-              metaRow('Total proyecto', moneyFromCents(totalCents)) +
-              (paidSum ? metaRow('Cobrado', moneyFromCents(paidSum)) : '') +
+              metaRow('Total showroom', moneyFromCents(baseCents || totalCents)) +
+              (extraPaid ? metaRow('Extras cobrados', moneyFromCents(extraPaid)) : '') +
+              (paidSum ? metaRow('Cobrado total', moneyFromCents(paidSum)) : '') +
             '</div>' +
             '<div class="eyebrow" style="margin:14px 0 8px">Anticipo</div>' +
             stageBlock('Anticipo', depCobro, !!dots.deposit) +
             '<div class="eyebrow" style="margin:14px 0 8px">Entrega</div>' +
             stageBlock('Entrega', balCobro, !!dots.balance) +
             (extras.length
-              ? ('<div class="eyebrow" style="margin:14px 0 8px">Otros</div>' +
+              ? ('<div class="eyebrow" style="margin:14px 0 8px">Pagos extra</div>' +
                 extras.map(function (c) {
                   return stageBlock(
-                    stageLabel(c.payment_stage || (c.metadata && c.metadata.stage) || 'Cobro'),
+                    stageLabel(c.payment_stage || (c.metadata && c.metadata.stage) || 'Extra') || 'Extra',
                     c,
                     isPaidCobro(c)
                   );
                 }).join(''))
               : '') +
-            '<p class="desc pay-auto-hint">Un proyecto = un contenedor. Anticipo y entrega actualizan los mismos puntos verdes.</p>';
+            '<p class="desc pay-auto-hint">1 showroom = 1 tarjeta. Anticipo, entrega y extras actualizan este mismo contenedor.</p>';
 
           return clientCardHtml({
             title: title,
@@ -1514,7 +1571,7 @@
         '</div>';
 
       if (noteEl) {
-        noteEl.textContent = 'Cada proyecto es un solo contenedor: anticipo y entrega se enlazan. Desmarca “Ocultar pruebas” para ver sandbox.';
+        noteEl.textContent = '1 showroom = 1 tarjeta (anticipo, entrega y extras). Desmarca “Ocultar pruebas” para ver sandbox.';
       }
     }
 
@@ -1641,7 +1698,7 @@
             },
             rows: rows.map(function (r) {
               var when = cobroWhen(r);
-              var client = String(r.customer_name || r.customer_email || 'Cobro').trim();
+              var client = displayPersonName(r, null);
               if (client.length > 28) client = client.slice(0, 27) + '…';
               return {
                 when: when ? new Date(when).toLocaleDateString('es-ES', {
