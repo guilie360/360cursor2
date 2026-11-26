@@ -186,11 +186,50 @@
     return data;
   }
 
-  function openCheckout(transactionId, email) {
+  function openCheckout(transactionId, email, stage) {
     var q = new URLSearchParams();
     q.set('txn', String(transactionId || ''));
     if (email) q.set('email', String(email));
+    if (stage) q.set('stage', String(stage));
     window.location.assign('/pagos/?' + q.toString());
+  }
+
+  async function stashDepositWelcome() {
+    if (!window.ClientAccount || typeof ClientAccount.stashWelcome !== 'function') return;
+    try {
+      var sb = client();
+      var session = await sb.auth.getSession();
+      var user = session && session.data && session.data.session && session.data.session.user;
+      if (!user) return;
+      var email = String(user.email || state.email || '').toLowerCase();
+      var prof = await sb.from('profiles')
+        .select('nombre_visible,nombre,telefono')
+        .eq('id', user.id)
+        .maybeSingle();
+      var name = String(
+        (prof.data && (prof.data.nombre_visible || prof.data.nombre)) ||
+        state.name ||
+        (email ? email.split('@')[0] : 'Cliente')
+      ).trim();
+      var phone = String(
+        (prof.data && prof.data.telefono) ||
+        (user.user_metadata && (user.user_metadata.telefono || user.user_metadata.phone)) ||
+        ''
+      );
+      var password = ClientAccount.phonePassword(phone);
+      ClientAccount.stashWelcome({
+        name: name,
+        email: email,
+        phone: phone,
+        password: password,
+        password_masked: ClientAccount.maskPassword(password || phone),
+        portal: '/miperfil/',
+        created_at: new Date().toISOString(),
+        stage: 'deposit'
+      });
+    } catch (e) {
+      console.warn('[pays] stash welcome', e);
+    }
   }
 
   async function payStage(pedidoId, stage, btn) {
@@ -200,10 +239,11 @@
     if (btn) btn.disabled = true;
     if (statusEl) statusEl.textContent = 'Preparando checkout…';
     try {
+      if (stage === 'deposit') await stashDepositWelcome();
       var data = await createCheckout(pedido, stage);
       if (!data.transaction_id) throw new Error('Sin transaction_id');
       if (statusEl) statusEl.textContent = 'Abriendo pago…';
-      openCheckout(data.transaction_id, state.email || pedido.customer_email);
+      openCheckout(data.transaction_id, state.email || pedido.customer_email, stage);
     } catch (err) {
       if (statusEl) statusEl.textContent = (err && err.message) || 'No se pudo iniciar el pago';
       if (btn) btn.disabled = false;

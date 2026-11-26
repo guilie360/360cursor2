@@ -115,32 +115,44 @@
     return data;
   }
 
-  function pagosCheckoutUrl(transactionId, email) {
+  function pagosCheckoutUrl(transactionId, email, opts) {
+    opts = opts || {};
     var q = new URLSearchParams();
     q.set('txn', String(transactionId || ''));
+    if (email) q.set('email', String(email));
+    if (opts.stage) q.set('stage', String(opts.stage));
+    return window.location.origin + '/pagos/?' + q.toString();
+  }
+
+  function pagoSuccessUrl(email, stage) {
+    var q = new URLSearchParams();
+    q.set('pago', 'ok');
+    if (stage) q.set('stage', String(stage));
     if (email) q.set('email', String(email));
     return window.location.origin + '/pagos/?' + q.toString();
   }
 
-  /** Abre el checkout en /pagos (URL limpia), no encima de /cotizar. */
-  async function openCheckout(transactionId, email) {
+  /** Abre el checkout en /pagos (URL limpia), no encima de /cotizar. opts.stage = deposit|balance */
+  async function openCheckout(transactionId, email, opts) {
+    opts = opts || {};
     if (!transactionId) throw new Error('Falta transaction_id');
     // Si ya estamos en /pagos, abrir overlay aquí.
     if (/\/pagos\/?/i.test(window.location.pathname)) {
       var Paddle = await loadPaddle();
+      var stageNow = opts.stage || new URLSearchParams(location.search).get('stage') || '';
       Paddle.Checkout.open({
         transactionId: transactionId,
         settings: {
           displayMode: 'overlay',
           variant: 'one-page',
           theme: 'dark',
-          successUrl: window.location.origin + '/pagos/?pago=ok'
+          successUrl: pagoSuccessUrl(email, stageNow)
         },
         customer: email ? { email: email } : undefined
       });
       return true;
     }
-    window.location.assign(pagosCheckoutUrl(transactionId, email));
+    window.location.assign(pagosCheckoutUrl(transactionId, email, opts));
     return true;
   }
 
@@ -286,10 +298,13 @@
           }
         }
         btn.disabled = true;
-        if (statusEl) statusEl.textContent = 'Creando tu acceso a Mi perfil…';
         try {
-          if (window.ClientAccount && typeof ClientAccount.ensureClientAccess === 'function') {
-            await ClientAccount.ensureClientAccess();
+          // Cuenta / tarjeta de bienvenida solo al anticipo (creación de acceso)
+          if (stage === 'deposit' && window.ClientAccount && typeof ClientAccount.ensureClientAccess === 'function') {
+            if (statusEl) statusEl.textContent = 'Creando tu acceso a Mi perfil…';
+            await ClientAccount.ensureClientAccess({
+              fields: { name: name, email: email, phone: phone }
+            });
           }
           if (statusEl) statusEl.textContent = 'Creando cobro Paddle…';
           var payload = {
@@ -307,7 +322,7 @@
           var data = await createCheckout(payload);
           if (data.pedido_id && host) host.setAttribute('data-pedido-id', data.pedido_id);
           if (statusEl) statusEl.textContent = 'Abriendo checkout… el IVA se calcula ahí si aplica.';
-          await openCheckout(data.transaction_id, email);
+          await openCheckout(data.transaction_id, email, { stage: stage });
           if (statusEl) statusEl.textContent = 'Checkout abierto. Al completar, el estado se actualizará automáticamente.';
         } catch (err) {
           if (statusEl) statusEl.textContent = err.message || 'No se pudo iniciar el pago.';
@@ -363,7 +378,7 @@
           var data = await createCheckout(payload);
           if (data.pedido_id) host.setAttribute('data-pedido-id', data.pedido_id);
           if (statusEl) statusEl.textContent = 'Abriendo checkout… el IVA se calcula ahí si aplica.';
-          await openCheckout(data.transaction_id, email);
+          await openCheckout(data.transaction_id, email, { stage: stage });
           if (statusEl) {
             statusEl.textContent = 'Checkout abierto. Al completar, el estado se actualizará automáticamente.';
           }

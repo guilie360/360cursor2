@@ -13,14 +13,14 @@
     return digits;
   }
 
-  /** Primeros 3 + **** + últimos 2 del celular-contraseña. */
+  /** Primeros 3 + ***** + últimos 2 del celular-contraseña (ej. 322*****84). */
   function maskPassword(rawOrDigits) {
     var digits = phonePassword(rawOrDigits);
-    if (!digits) return '****';
+    if (!digits) return '';
     if (digits.length <= 5) {
-      return digits.charAt(0) + '****' + digits.charAt(digits.length - 1);
+      return digits.charAt(0) + '*****' + digits.charAt(digits.length - 1);
     }
-    return digits.slice(0, 3) + '****' + digits.slice(-2);
+    return digits.slice(0, 3) + '*****' + digits.slice(-2);
   }
 
   function readOrderFields() {

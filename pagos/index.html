@@ -110,14 +110,15 @@
     </div>
   </main>
   <script src="/js/shared/config.js"></script>
-  <script src="/js/shared/client-account.js?v=2"></script>
-  <script src="/panel_gestion/js/payments-paddle.js?v=23"></script>
+  <script src="/js/shared/client-account.js?v=3"></script>
+  <script src="/panel_gestion/js/payments-paddle.js?v=24"></script>
   <script>
     (function () {
       var params = new URLSearchParams(location.search);
       var ok = params.get('pago') === 'ok';
       var txn = params.get('txn') || params.get('_ptxn') || '';
-      var email = params.get('email') || '';
+      var email = (params.get('email') || '').trim().toLowerCase();
+      var stage = String(params.get('stage') || '').toLowerCase();
       var title = document.getElementById('title');
       var copy = document.getElementById('copy');
       var actions = document.getElementById('actions');
@@ -129,17 +130,49 @@
         });
       }
 
-      function showWelcome() {
+      function resolveWelcome() {
         var w = (window.ClientAccount && ClientAccount.readWelcome && ClientAccount.readWelcome()) || null;
+        w = w ? Object.assign({}, w) : {};
+        if (!w.email && email) w.email = email;
+        if (!w.password_masked && (w.password || w.phone) && window.ClientAccount && ClientAccount.maskPassword) {
+          w.password_masked = ClientAccount.maskPassword(w.password || w.phone);
+        }
+        return w;
+      }
+
+      function showPaidThanks(kind) {
+        title.textContent = kind === 'balance' ? 'Entrega pagada' : 'Pago recibido';
+        copy.textContent = kind === 'balance'
+          ? 'Recibimos el 50% restante. Ya puedes seguir tu proyecto en Mi perfil.'
+          : 'Pago confirmado. Ya puedes seguir tu proyecto en Mi perfil.';
+        actions.innerHTML =
+          '<a class="btn primary" href="/miperfil/">Ir a Mi perfil</a>' +
+          '<a class="btn" href="/">Inicio</a>';
+      }
+
+      function showWelcome() {
+        var w = resolveWelcome();
+        var hasAccount = !!(w.email && (w.password_masked || w.password || w.phone));
+        // Sin datos de cuenta: no inventar tarjeta vacía
+        if (!hasAccount) {
+          showPaidThanks('deposit');
+          return;
+        }
+
         title.textContent = 'Esta es tu cuenta';
         copy.textContent = 'Guarda esta información. Con ella entras a Mi perfil para seguir tu proyecto.';
+
+        var masked = w.password_masked ||
+          (window.ClientAccount && ClientAccount.maskPassword
+            ? ClientAccount.maskPassword(w.password || w.phone)
+            : '');
 
         var cred = document.createElement('div');
         cred.className = 'cred';
         cred.innerHTML =
-          '<div><small>Nombre</small><b>' + esc(w && w.name ? w.name : 'Cliente') + '</b></div>' +
-          '<div><small>Correo</small><b>' + esc((w && w.email) || email || '—') + '</b></div>' +
-          '<div><small>Contraseña</small><b>' + esc((w && w.password_masked) || '***') + '</b></div>';
+          '<div><small>Nombre</small><b>' + esc(w.name || 'Cliente') + '</b></div>' +
+          '<div><small>Correo</small><b>' + esc(w.email || email || '—') + '</b></div>' +
+          '<div><small>Contraseña</small><b>' + esc(masked || '—') + '</b></div>';
         card.insertBefore(cred, actions);
 
         actions.innerHTML =
@@ -148,7 +181,7 @@
 
         var hint = document.createElement('p');
         hint.className = 'hint';
-        hint.textContent = 'La contraseña es tu celular sin +57. En la imagen solo se muestran los primeros 3 y los últimos 2 dígitos.';
+        hint.textContent = 'La contraseña es tu celular sin +57. Aquí solo se muestran los primeros 3 y los últimos 2 dígitos.';
         card.appendChild(hint);
 
         var dl = document.getElementById('dlCred');
@@ -156,7 +189,7 @@
           dl.addEventListener('click', function () {
             try {
               if (window.ClientAccount && ClientAccount.downloadCredentialCard) {
-                ClientAccount.downloadCredentialCard(w || undefined);
+                ClientAccount.downloadCredentialCard(w);
               }
             } catch (err) {
               alert((err && err.message) || 'No se pudo descargar la imagen');
@@ -166,29 +199,34 @@
       }
 
       if (ok) {
-        showWelcome();
+        // Credenciales solo en anticipo (creación de cuenta)
+        if (stage === 'balance' || stage === 'entrega') {
+          showPaidThanks('balance');
+        } else {
+          showWelcome();
+        }
         return;
       }
 
       if (!txn) {
         title.textContent = 'Pagos 360Preventa';
-        copy.textContent = 'Los cobros de anticipo y entrega se abren desde tu cotización.';
+        copy.textContent = 'Los cobros de anticipo y entrega se abren desde tu cotización o Mi perfil.';
         return;
       }
 
       title.textContent = 'Abriendo checkout…';
-      copy.textContent = 'Si el overlay no aparece, recarga esta página o vuelve al cotizador.';
+      copy.textContent = 'Si el overlay no aparece, recarga esta página o vuelve a intentarlo.';
 
       function open() {
         var api = window.PreventaPaddle;
         if (!api || typeof api.openCheckout !== 'function') {
           title.textContent = 'No se pudo cargar el checkout';
-          copy.textContent = 'Recarga con Ctrl+F5 o vuelve a intentarlo desde la cotización.';
+          copy.textContent = 'Recarga con Ctrl+F5 o vuelve a intentarlo.';
           return;
         }
-        Promise.resolve(api.openCheckout(txn, email)).catch(function (err) {
+        Promise.resolve(api.openCheckout(txn, email, { stage: stage || 'deposit' })).catch(function (err) {
           title.textContent = 'Error al abrir el pago';
-          copy.textContent = (err && err.message) || 'Inténtalo de nuevo desde la cotización.';
+          copy.textContent = (err && err.message) || 'Inténtalo de nuevo.';
         });
       }
 
