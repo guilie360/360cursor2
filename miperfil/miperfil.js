@@ -65,8 +65,26 @@
     throw new Error('No se pudo conectar con la cuenta.');
   }
 
+  function setClientName(name) {
+    var n = String(name || '').trim();
+    try {
+      if (n) document.body.dataset.clientName = n;
+      else delete document.body.dataset.clientName;
+    } catch (e) {}
+    try {
+      if (n) sessionStorage.setItem('boxiesClientName', n);
+      else sessionStorage.removeItem('boxiesClientName');
+    } catch (e2) {}
+    try {
+      if (window.BoxiesGlobalNav && typeof window.BoxiesGlobalNav.refresh === 'function') {
+        window.BoxiesGlobalNav.refresh();
+      }
+    } catch (e3) {}
+  }
+
   function showLogin() {
     setAuthChrome(false);
+    setClientName('');
     if (loginView) loginView.classList.remove('portal-hidden');
     if (homeView) homeView.classList.add('portal-hidden');
     setFooterProgress(0, 'Mi perfil · 360Preventa', 'Acceso', 'Cliente');
@@ -99,15 +117,19 @@
     setFooterProgress(35, 'Proyecto · en curso', 'Estado', statusLabel(st));
   }
 
-  async function loadHome(user) {
+  async function loadHome(user, profile) {
     showHome();
     var email = (user && user.email) || '';
+    var displayName = String(
+      (profile && (profile.nombre_visible || profile.nombre)) || ''
+    ).trim();
+    if (!displayName && email) displayName = email.split('@')[0];
+    setClientName(displayName);
 
     var welcomeTitle = $('welcomeTitle');
     var welcomeLead = $('welcomeLead');
     var params = new URLSearchParams(location.search || '');
-    var nameHint = email ? email.split('@')[0] : '';
-    if (welcomeTitle) welcomeTitle.textContent = nameHint ? ('Hola, ' + nameHint) : 'Hola';
+    if (welcomeTitle) welcomeTitle.textContent = displayName ? ('Hola, ' + displayName) : 'Hola';
     if (welcomeLead) {
       welcomeLead.textContent = params.get('bienvenida') === '1'
         ? 'Pago recibido. Este es tu espacio: aquí verás el avance de tu showroom.'
@@ -171,16 +193,13 @@
       var user = session && session.data && session.data.session && session.data.session.user;
       if (!user) return;
 
-      var prof = await sb.from('profiles').select('rol,nombre_visible').eq('id', user.id).maybeSingle();
+      var prof = await sb.from('profiles').select('rol,nombre_visible,nombre').eq('id', user.id).maybeSingle();
       var rol = String((prof.data && prof.data.rol) || '').toLowerCase();
       if (rol === 'admin' || rol === 'super_admin' || rol === 'hunter' || rol === 'asesor') {
         location.replace('/panel_gestion/');
         return;
       }
-      if (prof.data && prof.data.nombre_visible && $('welcomeTitle')) {
-        /* se pinta en loadHome */
-      }
-      await loadHome(user);
+      await loadHome(user, prof.data || null);
     } catch (err) {
       console.warn('[miperfil] boot', err);
       showLogin();
@@ -202,7 +221,9 @@
         var sb = client();
         var result = await sb.auth.signInWithPassword({ email: email, password: password });
         if (result.error) throw result.error;
-        await loadHome(result.data.user);
+        var user = result.data.user;
+        var prof = await sb.from('profiles').select('rol,nombre_visible,nombre').eq('id', user.id).maybeSingle();
+        await loadHome(user, prof.data || null);
       } catch (err) {
         if (errEl) errEl.textContent = (err && err.message) || 'No se pudo entrar. Revisa correo y celular.';
       }

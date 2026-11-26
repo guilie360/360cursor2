@@ -1,4 +1,10 @@
 /* Mi perfil — mismo chrome que panel; solo contenido cliente */
+.miperfil-mode #teamChatPopup .chat-bottom-tabs,
+.miperfil-mode #teamChatPopup .chat-recipient-panel,
+.miperfil-mode #chatRequestPayKey{display:none!important}
+.miperfil-mode #teamChatPopup .team-chat-message.is-mine{
+  margin-left:auto;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18)
+}
 .miperfil-login{max-width:480px;margin:28px auto 40px}
 .miperfil-login-form{margin-top:22px;display:grid;gap:4px}
 .miperfil-login-form .btn{margin-top:10px;justify-self:start;min-width:160px}

@@ -12,13 +12,16 @@
 
   var state = {
     messages: [],
+    clientMessages: [],
     ready: false,
     channel: null,
     pollTimer: null,
     userId: null,
     userName: '',
     userRol: '',
-    activeView: 'team', // team | clave | dm
+    activeView: 'team', // team | clave | dm | client
+    clientId: null,
+    clientName: '',
     awaitingPaymentsGate: false,
     clearedAt: { team: 0, clave: 0 } // per-account watermarks (ms)
   };
@@ -170,6 +173,19 @@
     return result.data || [];
   }
 
+  async function fetchClientMessages(clientId) {
+    var client = getClient();
+    if (!client || !clientId) return [];
+    var result = await client
+      .from('panel_team_messages')
+      .select('*')
+      .eq('thread', 'client:' + clientId)
+      .order('created_at', { ascending: true })
+      .limit(200);
+    if (result.error) throw new Error(result.error.message || 'No se pudo cargar el chat del cliente');
+    return result.data || [];
+  }
+
   function seenStorageKey(scope) {
     return 'boxiesChatSeenAt:' + (scope === 'clave' ? 'clave' : 'team');
   }
@@ -300,6 +316,21 @@
         '</div>';
     }
 
+    if (m.kind === 'client_chat') {
+      cls += ' is-client-chat';
+      var cName = meta.client_name || m.sender_name || 'Cliente';
+      var cId = meta.client_id || m.sender_id || '';
+      bodyHtml =
+        '<p><strong>' + escapeHtml(cName) + '</strong> · chat cliente</p>' +
+        '<p>' + escapeHtml(m.body || 'Quiere chatear contigo.') + '</p>';
+      if (isAdmin() && cId) {
+        actions =
+          '<div class="chat-msg-actions">' +
+            '<button type="button" class="btn" data-open-client-chat="' + escapeHtml(cId) + '" data-client-name="' + escapeHtml(cName) + '">Abrir chat</button>' +
+          '</div>';
+      }
+    }
+
     return (
       '<div class="' + cls + '" data-msg-id="' + escapeHtml(m.id) + '">' +
         '<strong>' + escapeHtml(m.sender_name || 'Equipo') +
@@ -319,15 +350,22 @@
     var directTab = $('chatDirectTab');
     var panel = $('chatRecipientPanel');
     var onClave = state.activeView === 'clave';
+    var onClient = state.activeView === 'client';
 
-    if (title) title.textContent = onClave ? 'Clave dinámica' : 'Equipo';
+    if (title) {
+      if (onClient) title.textContent = state.clientName ? ('Cliente · ' + state.clientName) : 'Chat cliente';
+      else if (onClave) title.textContent = 'Clave dinámica';
+      else title.textContent = 'Equipo';
+    }
     if (input) {
-      input.placeholder = onClave
-        ? 'Mensajes de Clave dinámica…'
-        : 'Escribe un mensaje…';
+      input.placeholder = onClient
+        ? 'Responder al cliente…'
+        : onClave
+          ? 'Mensajes de Clave dinámica…'
+          : 'Escribe un mensaje…';
       input.disabled = false;
     }
-    if (teamTab) teamTab.classList.toggle('active', !onClave && (!panel || panel.classList.contains('portal-hidden')));
+    if (teamTab) teamTab.classList.toggle('active', !onClave && !onClient && (!panel || panel.classList.contains('portal-hidden')));
     if (directTab) directTab.classList.toggle('active', !!(panel && !panel.classList.contains('portal-hidden')));
     ensureRequestButton();
   }
@@ -340,6 +378,18 @@
     }
     var box = $('teamChatMessages');
     if (!box) return;
+    if (state.activeView === 'client') {
+      var clientList = state.clientMessages || [];
+      if (!clientList.length) {
+        box.innerHTML = '<p class="desc">Todavía no hay mensajes con este cliente.</p>';
+      } else {
+        box.innerHTML = clientList.map(renderMessage).join('');
+        box.scrollTop = box.scrollHeight;
+      }
+      setChrome();
+      updateBadge();
+      return;
+    }
     var list = visibleMessages();
     if (!list.length) {
       box.innerHTML = state.activeView === 'clave'
@@ -355,7 +405,28 @@
 
   function openDmMode() {
     state.activeView = 'dm';
+    state.clientId = null;
     ensureRequestButton();
+  }
+
+  async function openClientChat(clientId, clientName) {
+    if (!isAdmin() || !clientId) return;
+    state.activeView = 'client';
+    state.clientId = clientId;
+    state.clientName = clientName || 'Cliente';
+    var panel = $('chatRecipientPanel');
+    if (panel) panel.classList.add('portal-hidden');
+    try {
+      state.clientMessages = await fetchClientMessages(clientId);
+    } catch (e) {
+      state.clientMessages = [];
+      console.warn('[TeamChat] client thread', e);
+    }
+    render();
+    openChatPopup();
+    setTimeout(function () {
+      try { $('teamChatInput') && $('teamChatInput').focus(); } catch (err) {}
+    }, 40);
   }
 
   function ensureRequestButton() {
@@ -378,6 +449,7 @@
     btn.textContent = 'Clave dinámica';
     btn.disabled = false;
     btn.title = 'Abrir el chat de Clave dinámica';
+    btn.style.display = state.activeView === 'client' ? 'none' : '';
     btn.style.display = '';
   }
 
@@ -396,6 +468,7 @@
 
   function openClaveView() {
     state.activeView = 'clave';
+    state.clientId = null;
     syncAppThread('clave');
     var panel = $('chatRecipientPanel');
     if (panel) panel.classList.add('portal-hidden');
@@ -409,6 +482,7 @@
 
   function openTeamView() {
     state.activeView = 'team';
+    state.clientId = null;
     syncAppThread('team');
     var panel = $('chatRecipientPanel');
     if (panel) panel.classList.add('portal-hidden');
@@ -441,6 +515,9 @@
     try {
       await loadClears();
       state.messages = await fetchMessages();
+      if (state.activeView === 'client' && state.clientId) {
+        try { state.clientMessages = await fetchClientMessages(state.clientId); } catch (e) {}
+      }
       state.ready = true;
       render();
       injectClaveInMemberList();
@@ -475,6 +552,19 @@
   async function sendText(text) {
     var client = getClient();
     if (!client) throw new Error('Sin sesión');
+    if (state.activeView === 'client' && state.clientId) {
+      var reply = await client.rpc('panel_client_chat_post', {
+        p_body: text,
+        p_client_id: state.clientId,
+        p_kind: 'text',
+        p_meta: {},
+        p_notify_admin: false
+      });
+      if (reply.error) throw new Error(reply.error.message || 'No se pudo enviar');
+      state.clientMessages = await fetchClientMessages(state.clientId);
+      render();
+      return;
+    }
     var result = await client.rpc('panel_chat_post', {
       p_body: text,
       p_thread: DB_THREAD,
@@ -487,6 +577,7 @@
   }
 
   function currentChatLabel() {
+    if (state.activeView === 'client') return state.clientName ? ('Cliente · ' + state.clientName) : 'Chat cliente';
     if (state.activeView === 'clave') return 'Clave dinámica';
     if (state.activeView === 'dm') {
       var title = $('chatPopupTitle');
@@ -510,6 +601,11 @@
       if (typeof window.clearActiveLocalChat === 'function') {
         window.clearActiveLocalChat();
       }
+      return;
+    }
+    if (state.activeView === 'client') {
+      state.clientMessages = [];
+      render();
       return;
     }
 
@@ -667,6 +763,15 @@
           }
           return;
         }
+        var openClient = e.target.closest('[data-open-client-chat]');
+        if (openClient) {
+          e.preventDefault();
+          openClientChat(
+            openClient.getAttribute('data-open-client-chat'),
+            openClient.getAttribute('data-client-name') || 'Cliente'
+          );
+          return;
+        }
         var approve = e.target.closest('[data-pay-approve]');
         var reject = e.target.closest('[data-pay-reject]');
         if (!approve && !reject) return;
@@ -759,6 +864,7 @@
     openClaveView: openClaveView,
     openTeamView: openTeamView,
     openDmMode: openDmMode,
+    openClientChat: openClientChat,
     clearCurrentChat: clearCurrentChat,
     finishPaymentsKeyCopy: finishPaymentsKeyCopy,
     verifyOtp: verifyOtp,

@@ -43,12 +43,39 @@
       document.body.getAttribute('data-app') === 'cotizador';
   }
 
+  function isMiperfil() {
+    if (document.body.classList.contains('miperfil-mode')) return true;
+    try {
+      return /^\/miperfil\/?$/i.test(location.pathname || '');
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function isClienteAuthed() {
+    return isMiperfil() && document.body.classList.contains('workspace-authenticated');
+  }
+
+  function clientDisplayName() {
+    try {
+      var fromBody = (document.body.dataset.clientName || '').trim();
+      if (fromBody) return fromBody;
+    } catch (e) {}
+    try {
+      return (sessionStorage.getItem('boxiesClientName') || '').trim();
+    } catch (e2) {
+      return '';
+    }
+  }
+
   function isPanelLoginScreen() {
     var login = document.getElementById('loginScreen');
     return !!(login && !login.classList.contains('portal-hidden'));
   }
 
   function isPanelAuthed() {
+    /* Mi perfil cliente tiene su propio menú */
+    if (isMiperfil()) return false;
     /* Pantalla de correo/contraseña = menú público */
     if (isPanelLoginScreen()) return false;
     if (document.body.classList.contains('workspace-authenticated')) return true;
@@ -100,6 +127,14 @@
 
   /** Links principales (FS va aparte, en el footer del menú) */
   function linksForContext() {
+    /* Mi perfil (cliente): Inicio, Chatear, Salir */
+    if (isClienteAuthed()) {
+      return [
+        { action: 'go-home', label: 'Inicio', n: '01' },
+        { action: 'client-chat', label: 'Chatear', n: '02' },
+        { action: 'logout', label: 'Salir', n: '03' }
+      ];
+    }
     /* Menú privado: solo con sesión de empresa (panel / cotizar interno) */
     if (isPanelAuthed()) {
       return [
@@ -182,16 +217,21 @@
     function renderLinks() {
       var wasOpen = panel.classList.contains('open');
       panel.innerHTML = '';
+      var caption = '360PREVENTA / NAVEGACIÓN';
+      if (isClienteAuthed()) caption = '360PREVENTA / MI PERFIL';
+      else if (isPanelAuthed()) caption = '360PREVENTA / PANEL';
       panel.appendChild(el('div', {
         className: 'menu-caption',
-        text: isPanelAuthed() ? '360PREVENTA / PANEL' : '360PREVENTA / NAVEGACIÓN'
+        text: caption
       }));
 
-      var role = isPanelAuthed() ? teamRole() : '';
-      if (role) {
+      var title = '';
+      if (isClienteAuthed()) title = clientDisplayName() || 'Cliente';
+      else if (isPanelAuthed()) title = teamRole();
+      if (title) {
         panel.appendChild(el('div', {
           className: 'menu-role-title',
-          text: role
+          text: title
         }));
       }
 
@@ -203,6 +243,7 @@
           type: 'button',
           'data-cursor': item.action === 'logout' ? 'SALIR'
             : item.action === 'panel-home' ? 'PANEL'
+            : item.action === 'client-chat' ? 'CHAT'
             : item.label.toUpperCase().split(' ')[0]
         }, item.label + ' <span>' + item.n + '</span>');
         btn.style.setProperty('--dl', delay);
@@ -210,6 +251,7 @@
         else if (item.action === 'go-home') btn.setAttribute('data-nav-go-home', '1');
         else if (item.action === 'go-demo') btn.setAttribute('data-nav-go-demo', '1');
         else if (item.action === 'panel-home') btn.setAttribute('data-nav-panel-home', '1');
+        else if (item.action === 'client-chat') btn.setAttribute('data-nav-client-chat', '1');
         else {
           btn.setAttribute('data-href', item.href);
           if (item.external) {
@@ -221,8 +263,8 @@
       });
       panel.appendChild(list);
 
-      /* Footer: pantalla completa (PC/tablet) */
-      if (canOfferFullscreen()) {
+      /* Footer: pantalla completa (PC/tablet) — no en Mi perfil cliente */
+      if (canOfferFullscreen() && !isClienteAuthed()) {
         var foot = el('div', { className: 'menu-panel-footer' });
         var fsBtn = el('button', {
           className: 'menu-fs-link',
@@ -234,7 +276,7 @@
         panel.appendChild(foot);
       }
 
-      document.body.classList.toggle('nav-panel-authed', isPanelAuthed());
+      document.body.classList.toggle('nav-panel-authed', isPanelAuthed() || isClienteAuthed());
       if (wasOpen) setOpen(true);
     }
 
@@ -257,8 +299,11 @@
       clearTeamSessionLocal();
       try { sessionStorage.removeItem('boxiesKeepFullscreen'); } catch (e0) {}
       try { sessionStorage.removeItem('boxiesFsUrl'); } catch (e1) {}
+      try { sessionStorage.removeItem('boxiesClientName'); } catch (e2) {}
+      try { delete document.body.dataset.clientName; } catch (e3) {}
 
-      var dest = '/panel_gestion/?signout=1';
+      var fromMiperfil = isMiperfil();
+      var dest = fromMiperfil ? '/miperfil/' : '/panel_gestion/?signout=1';
       var gone = false;
       function go() {
         if (gone) return;
@@ -267,6 +312,14 @@
       }
 
       try {
+        if (fromMiperfil && window.PlatformAuth && typeof window.PlatformAuth.getClient === 'function') {
+          var sb = window.PlatformAuth.getClient();
+          if (sb && sb.auth) {
+            Promise.resolve(sb.auth.signOut()).then(go, go);
+            setTimeout(go, 700);
+            return;
+          }
+        }
         if (window.PanelAuth && typeof window.PanelAuth.logout === 'function') {
           Promise.resolve(window.PanelAuth.logout()).then(go, go);
         } else {
@@ -276,6 +329,18 @@
         go();
       }
       setTimeout(go, 700);
+    }
+
+    function openClientChat() {
+      close();
+      try {
+        if (window.BoxiesClientChat && typeof window.BoxiesClientChat.open === 'function') {
+          window.BoxiesClientChat.open({ notify: true });
+          return;
+        }
+      } catch (e) {}
+      var floatBtn = document.getElementById('teamChatFloat');
+      if (floatBtn) floatBtn.click();
     }
 
     function doLogout() {
@@ -405,6 +470,12 @@
         goPanelHome();
         return;
       }
+      if (e.target.closest('[data-nav-client-chat]')) {
+        e.preventDefault();
+        e.stopPropagation();
+        openClientChat();
+        return;
+      }
       if (e.target.closest('[data-nav-fullscreen]')) {
         e.preventDefault();
         doFullscreen();
@@ -452,7 +523,7 @@
     renderLinks();
 
     var mo = new MutationObserver(function () { renderLinks(); });
-    mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    mo.observe(document.body, { attributes: true, attributeFilter: ['class', 'data-client-name', 'data-panel-role'] });
     document.addEventListener('fullscreenchange', renderLinks);
     document.addEventListener('webkitfullscreenchange', renderLinks);
     document.addEventListener('boxies:fullscreen', renderLinks);
