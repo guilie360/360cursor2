@@ -6,11 +6,43 @@
   margin-left:auto;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18)
 }
 .miperfil-login{max-width:480px;margin:28px auto 40px}
-.miperfil-login-form,.miperfil-info-form{margin-top:22px;display:grid;gap:4px;max-width:480px}
+.miperfil-login-form,.miperfil-info-form{margin-top:8px;display:grid;gap:4px;max-width:480px}
 .miperfil-login-form .btn,
 .miperfil-info-form .btn{margin-top:10px;justify-self:start;min-width:160px}
 .miperfil-error{color:#e5a0a0!important;min-height:18px}
-.miperfil-grid{margin-top:8px}
+.miperfil-grid{margin-top:0}
+/* Misma caja de título/subtítulo en home, info, docs y pagos (sin saltos al navegar). */
+.miperfil-mode .miperfil-page-head{
+  margin:4px 0 22px;
+  min-height:118px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  gap:0;
+}
+.miperfil-mode .miperfil-page-head .eyebrow{
+  margin:0;
+  min-height:14px;
+  line-height:1.2;
+  color:#aaa;
+  font-size:10px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+}
+.miperfil-mode .miperfil-page-head .portal-title{
+  margin:10px 0 8px;
+  font:clamp(32px,4.6vw,48px)/1.05 Italiana,Georgia,serif;
+  font-weight:400;
+  color:#f0ebe3;
+  min-height:1.1em;
+}
+.miperfil-mode .miperfil-page-head .miperfil-lead{
+  margin:0;
+  min-height:1.45em;
+  max-width:640px;
+  color:rgba(255,255,255,.55);
+  font:500 13px/1.45 Manrope,Arial,sans-serif;
+}
 .miperfil-mode .portal-card--soon{opacity:.55;cursor:not-allowed}
 /* Neutraliza el lift más claro de base.css; el look dark vive en patches (#homeView). */
 .miperfil-mode #homeView .portal-card::before{opacity:0!important}

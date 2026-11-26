@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
   const meta = {
     nombre: name || email.split("@")[0],
     nombres: name || "",
-    telefono: phoneRaw,
+    telefono: password,
     phone_password_hint: "celular_sin_prefijo",
   };
 
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
 
     const patch: Record<string, string> = {
       rol: "cliente",
-      telefono: phoneRaw || "",
+      telefono: password || "",
     };
     if (name) {
       patch.nombre_visible = name;
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
       id: userId,
       nombre: name || "",
       nombre_visible: name || email.split("@")[0],
-      telefono: phoneRaw || "",
+      telefono: password || "",
       rol: "cliente",
       etapa_nombre: "Revisando documentos",
       etapa_pct: 5,

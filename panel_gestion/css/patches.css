@@ -445,8 +445,7 @@ body.hunter-mode .portal{min-height:0}
 
 /* Home: primarias Cotizar/Pagos/Contratos por profundidad negra (sin acento dorado) */
 .portal #portalHome .portal-home-intro{margin:4px 0 22px}
-.portal #portalHome .portal-title,
-.miperfil-mode #homeView .portal-title{
+.portal #portalHome .portal-title{
   margin:0;font:clamp(32px,4.6vw,48px)/1.05 Italiana,Georgia,serif;font-weight:400;color:#f0ebe3
 }
 .portal #portalHome .portal-grid,

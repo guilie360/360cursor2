@@ -12,9 +12,9 @@
 <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
 <link rel="stylesheet" href="/shared/css/site-chrome.css?v=9">
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
-<link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel72">
-<link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel72">
-<link rel="stylesheet" href="/miperfil/miperfil.css?v=9">
+<link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel73">
+<link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel73">
+<link rel="stylesheet" href="/miperfil/miperfil.css?v=10">
 </head>
 <body class="portal-mode miperfil-mode">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat con admin">
@@ -54,10 +54,10 @@
   </section>
 
   <section id="homeView" class="miperfil-home portal-hidden">
-   <div class="portal-home-intro">
+   <div class="miperfil-page-head portal-home-intro">
     <div class="eyebrow">360PREVENTA · MI PERFIL</div>
     <h1 class="portal-title" id="welcomeTitle">Hola</h1>
-    <p class="desc" id="welcomeLead">Sigue el avance de tu proyecto.</p>
+    <p class="desc miperfil-lead" id="welcomeLead">Sigue el avance de tu proyecto.</p>
    </div>
    <div class="portal-grid miperfil-grid">
     <button type="button" class="portal-card portal-card--primary" data-miperfil-page="info">
@@ -79,9 +79,11 @@
   </section>
 
   <section id="infoView" class="miperfil-page portal-hidden">
-   <div class="eyebrow">360PREVENTA · MI PERFIL</div>
-   <h1 class="portal-title">Mi información</h1>
-   <p class="desc">Actualiza tus datos de acceso. La contraseña es tu celular sin +57.</p>
+   <div class="miperfil-page-head">
+    <div class="eyebrow">360PREVENTA · MI PERFIL</div>
+    <h1 class="portal-title">Mi información</h1>
+    <p class="desc miperfil-lead">Nombre, correo y teléfono.</p>
+   </div>
    <form id="infoForm" class="miperfil-info-form">
     <div class="field"><label for="infoName">Nombre</label><input id="infoName" type="text" autocomplete="name" required></div>
     <div class="field"><label for="infoEmail">Correo</label><input id="infoEmail" type="email" autocomplete="email" required></div>
@@ -92,16 +94,20 @@
   </section>
 
   <section id="docsView" class="miperfil-page portal-hidden">
-   <div class="eyebrow">360PREVENTA · DOCUMENTOS</div>
-   <h1 class="portal-title">Mis documentos</h1>
-   <p class="desc">Cotización guardada, contrato para firmar e invoice del anticipo.</p>
+   <div class="miperfil-page-head">
+    <div class="eyebrow">360PREVENTA · MI PERFIL</div>
+    <h1 class="portal-title">Mis documentos</h1>
+    <p class="desc miperfil-lead">Cotización, contrato e invoice.</p>
+   </div>
    <div id="docsList" class="docs-list" aria-live="polite"></div>
   </section>
 
   <section id="paysView" class="miperfil-page portal-hidden">
-   <div class="eyebrow">360PREVENTA · PAGOS</div>
-   <h1 class="portal-title">Pagos</h1>
-   <p class="desc">Paga la entrega de cada proyecto o solicita un cobro extra.</p>
+   <div class="miperfil-page-head">
+    <div class="eyebrow">360PREVENTA · MI PERFIL</div>
+    <h1 class="portal-title">Pagos</h1>
+    <p class="desc miperfil-lead">Entrega restante y cobros extra.</p>
+   </div>
    <div id="paysList" class="pays-list" aria-live="polite"></div>
   </section>
  </div>
@@ -131,6 +137,6 @@
 <script src="/miperfil/client-chat.js?v=3"></script>
 <script src="/miperfil/docs.js?v=2"></script>
 <script src="/miperfil/payments.js?v=3"></script>
-<script src="/miperfil/miperfil.js?v=9"></script>
+<script src="/miperfil/miperfil.js?v=10"></script>
 </body>
 </html>

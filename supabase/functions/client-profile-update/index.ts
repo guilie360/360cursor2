@@ -85,9 +85,10 @@ Deno.serve(async (req) => {
   }
   if (phoneRaw) {
     if (password.length < 6) {
-      return json(400, { error: "Celular inválido (mín. 6 dígitos sin +57)." });
+      return json(400, { error: "Celular inválido (mín. 6 dígitos)." });
     }
-    meta.telefono = phoneRaw;
+    // Guardar solo dígitos locales (sin +57 / 57).
+    meta.telefono = password;
     meta.phone_password_hint = "celular_sin_prefijo";
     authPatch.password = password;
   }
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
     profilePatch.nombre = name;
     profilePatch.nombre_visible = name;
   }
-  if (phoneRaw) profilePatch.telefono = phoneRaw;
+  if (phoneRaw) profilePatch.telefono = password;
   if (Object.keys(profilePatch).length) {
     await admin.from("profiles").update(profilePatch).eq("id", uid);
   }

@@ -180,16 +180,21 @@
     if ($('infoName')) $('infoName').value = displayName || '';
     if ($('infoEmail')) $('infoEmail').value = email || '';
     if ($('infoPhone')) {
-      $('infoPhone').value = String((profile && profile.telefono) || '').replace(/\D/g, '') ||
-        (window.ClientAccount && profile && profile.telefono
-          ? ClientAccount.phonePassword(profile.telefono)
-          : '');
-      var metaPhone = user && user.user_metadata && (user.user_metadata.telefono || user.user_metadata.phone);
-      if (!$('infoPhone').value && metaPhone) {
-        $('infoPhone').value = (window.ClientAccount
-          ? ClientAccount.phonePassword(metaPhone)
-          : String(metaPhone).replace(/\D/g, ''));
+      function phoneOnly(raw) {
+        if (window.ClientAccount && typeof ClientAccount.phonePassword === 'function') {
+          return ClientAccount.phonePassword(raw);
+        }
+        var digits = String(raw || '').replace(/\D/g, '');
+        if (digits.indexOf('57') === 0 && digits.length >= 12) digits = digits.slice(2);
+        else if (digits.indexOf('34') === 0 && digits.length >= 11) digits = digits.slice(2);
+        return digits;
       }
+      var phone = phoneOnly((profile && profile.telefono) || '');
+      if (!phone) {
+        var metaPhone = user && user.user_metadata && (user.user_metadata.telefono || user.user_metadata.phone);
+        phone = phoneOnly(metaPhone || '');
+      }
+      $('infoPhone').value = phone;
     }
 
     var sb = client();
