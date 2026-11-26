@@ -1,5 +1,5 @@
 /**
- * Base de datos (admin): cuentas cliente Mi perfil + pedidos/cotizaciones.
+ * Base de datos (admin): cuentas cliente — lista plegable, texto seleccionable.
  */
 (function () {
   var FN = '/functions/v1/admin-clients';
@@ -62,69 +62,69 @@
     return s || '—';
   }
 
-  function renderRows(clients) {
+  function copyable(value) {
+    var v = String(value == null ? '' : value);
+    if (!v) return '<span class="muted">—</span>';
+    return '<span class="db-copy" tabindex="0">' + escapeHtml(v) + '</span>';
+  }
+
+  function field(label, value) {
+    return (
+      '<div class="db-field">' +
+        '<span class="db-field-label">' + escapeHtml(label) + '</span>' +
+        copyable(value) +
+      '</div>'
+    );
+  }
+
+  function renderList(clients) {
     if (!clients || !clients.length) {
-      return '<tr><td colspan="6" class="muted">No hay cuentas cliente todavía.</td></tr>';
+      return '<p class="desc db-empty">Sin cuentas.</p>';
     }
-    return clients.map(function (c) {
+    return clients.map(function (c, i) {
       var ped = c.latest_pedido;
-      var pkg = escapeHtml(c.package_summary || 'Sin paquete');
+      var pkg = c.package_summary || 'Sin paquete';
       var money = ped
-        ? ('Total ' + moneyFromCents(ped.quote_total_cents) +
-          ' · Anticipo ' + moneyFromCents(ped.deposit_cents))
-        : (c.latest_cotizacion
-          ? ('Cotización ' + moneyFromCents(c.latest_cotizacion.total_cents))
-          : '—');
-      var pass = c.password_hint
-        ? '<code class="db-pass">' + escapeHtml(c.password_hint) + '</code>'
-        : '<span class="muted">—</span>';
-      var created = c.created_at
-        ? new Date(c.created_at).toLocaleString('es-ES')
-        : '—';
+        ? (moneyFromCents(ped.quote_total_cents) + ' · ant. ' + moneyFromCents(ped.deposit_cents))
+        : (c.latest_cotizacion ? moneyFromCents(c.latest_cotizacion.total_cents) : '');
+      var status = ped ? statusLabel(ped.status) : '';
+      var openAttr = i === 0 ? ' open' : '';
       return (
-        '<tr data-client-id="' + escapeHtml(c.id) + '">' +
-          '<td>' +
-            '<b>' + escapeHtml(c.name || 'Cliente') + '</b>' +
-            '<br><small class="muted">' + escapeHtml(created) + ' · ' + escapeHtml(c.rol || 'cliente') + '</small>' +
-          '</td>' +
-          '<td>' +
-            '<div>' + escapeHtml(c.email || '—') + '</div>' +
-            '<small class="muted">' + escapeHtml(c.telefono || 'sin teléfono') + '</small>' +
-          '</td>' +
-          '<td>' + pass + '<br><small class="muted">celular sin +57</small></td>' +
-          '<td>' +
-            '<div>' + pkg + '</div>' +
-            '<small class="muted">' + escapeHtml(money) +
-              (ped ? ' · ' + escapeHtml(statusLabel(ped.status)) : '') +
-            '</small>' +
-          '</td>' +
-          '<td><small>' + (c.pedidos_count || 0) + ' ped. · ' + (c.cotizaciones_count || 0) + ' cot.</small></td>' +
-          '<td>' +
-            '<button type="button" class="btn db-delete-btn" data-delete-client="' + escapeHtml(c.id) + '" data-client-email="' + escapeHtml(c.email || '') + '" data-client-name="' + escapeHtml(c.name || '') + '">Eliminar</button>' +
-          '</td>' +
-        '</tr>'
+        '<details class="db-account"' + openAttr + ' data-client-id="' + escapeHtml(c.id) + '">' +
+          '<summary>' +
+            '<span class="db-account-title">' + escapeHtml(c.name || c.email || 'Cliente') + '</span>' +
+            '<span class="db-account-meta">' + escapeHtml(c.email || '') + '</span>' +
+            '<span class="accordion-chevron">＋</span>' +
+          '</summary>' +
+          '<div class="db-account-body">' +
+            field('Nombre', c.name) +
+            field('Correo', c.email) +
+            field('Teléfono', c.telefono) +
+            field('Contraseña', c.password_hint) +
+            field('Paquete', pkg) +
+            field('Importe', money) +
+            field('Estado', status) +
+            '<div class="db-account-actions">' +
+              '<button type="button" class="btn db-delete-btn" data-delete-client="' + escapeHtml(c.id) + '" data-client-email="' + escapeHtml(c.email || '') + '" data-client-name="' + escapeHtml(c.name || '') + '">Eliminar</button>' +
+            '</div>' +
+          '</div>' +
+        '</details>'
       );
     }).join('');
   }
 
   async function loadList(root) {
-    var status = root.querySelector('#dbClientsStatus');
-    var body = root.querySelector('#dbClientsBody');
+    var list = root.querySelector('#dbClientsList');
     var countEl = root.querySelector('#dbClientsCount');
-    if (status) status.textContent = 'Cargando cuentas desde Supabase…';
+    if (list) list.innerHTML = '<p class="desc db-empty">…</p>';
     try {
       var data = await api({ action: 'list' });
       var clients = data.clients || [];
-      if (body) body.innerHTML = renderRows(clients);
+      if (list) list.innerHTML = renderList(clients);
       if (countEl) countEl.textContent = String(clients.length);
-      if (status) {
-        status.textContent = clients.length
-          ? ('Mostrando ' + clients.length + ' cuenta(s) cliente / prueba.')
-          : 'No hay cuentas cliente en Auth.';
-      }
     } catch (err) {
-      if (body) body.innerHTML = '<tr><td colspan="6" class="muted">' + escapeHtml(err.message || 'Error') + '</td></tr>';
-      if (status) status.textContent = err.message || 'No se pudo cargar.';
+      if (list) list.innerHTML = '<p class="desc db-empty">' + escapeHtml(err.message || 'Error') + '</p>';
+      if (countEl) countEl.textContent = '0';
     }
   }
 
@@ -133,56 +133,43 @@
     var email = btn.getAttribute('data-client-email') || '';
     var name = btn.getAttribute('data-client-name') || 'esta cuenta';
     if (!id) return;
-    var ok = window.confirm(
-      '¿Eliminar permanentemente “' + name + '” (' + email + ')?\n\n' +
-      'Se borran Auth, perfil, pedidos, cotizaciones, cobros y mensajes de chat.\n' +
-      'Esta acción no se puede deshacer.'
-    );
-    if (!ok) return;
+    if (!window.confirm('¿Eliminar “' + name + '” (' + email + ')?')) return;
     btn.disabled = true;
-    var status = root.querySelector('#dbClientsStatus');
-    if (status) status.textContent = 'Eliminando ' + email + '…';
     try {
       await api({ action: 'delete', user_id: id });
       await loadList(root);
     } catch (err) {
       alert(err.message || 'No se pudo eliminar');
       btn.disabled = false;
-      if (status) status.textContent = err.message || 'Error al eliminar';
     }
   }
 
   function mount(root) {
     if (!root) return;
     var host = root.querySelector('#panelDatabaseRoot') || root;
-    if (!host.querySelector('#dbClientsBody')) {
+    if (!host.querySelector('#dbClientsList')) {
       host.innerHTML =
-        '<div class="database-toolbar">' +
-          '<div class="database-toolbar-copy">' +
-            '<b>Cuentas cliente · Supabase</b>' +
-            '<small>Correo, contraseña (celular), paquete y pedidos. Solo admin.</small>' +
-          '</div>' +
-          '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
-            '<span class="status-pill" id="dbClientsCount">0</span>' +
-            '<button class="btn" type="button" id="dbClientsRefresh">Actualizar</button>' +
-          '</div>' +
-        '</div>' +
-        '<div id="dbClientsStatus" class="database-status" role="status">Cargando…</div>' +
-        '<div class="portal-table-wrap" style="margin-top:14px">' +
-          '<table class="portal-table db-clients-table">' +
-            '<thead><tr>' +
-              '<th>Nombre</th><th>Correo / Tel</th><th>Contraseña</th><th>Paquete / pedido</th><th>Regs</th><th></th>' +
-            '</tr></thead>' +
-            '<tbody id="dbClientsBody"><tr><td colspan="6" class="muted">Cargando…</td></tr></tbody>' +
-          '</table>' +
-        '</div>' +
-        '<p class="desc" style="margin-top:14px">La contraseña de Mi perfil es el celular sin +57. Eliminar limpia Auth + pedidos/cotizaciones de prueba.</p>';
+        '<details class="db-shell" open>' +
+          '<summary class="db-shell-summary">' +
+            '<span>Cuentas cliente</span>' +
+            '<span class="db-shell-right">' +
+              '<span class="status-pill" id="dbClientsCount">0</span>' +
+              '<button class="btn" type="button" id="dbClientsRefresh">Actualizar</button>' +
+              '<span class="accordion-chevron">＋</span>' +
+            '</span>' +
+          '</summary>' +
+          '<div class="db-shell-body" id="dbClientsList"></div>' +
+        '</details>';
     }
 
     var refresh = host.querySelector('#dbClientsRefresh');
     if (refresh && !refresh.dataset.bound) {
       refresh.dataset.bound = '1';
-      refresh.addEventListener('click', function () { loadList(host); });
+      refresh.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        loadList(host);
+      });
     }
     if (!host.dataset.deleteBound) {
       host.dataset.deleteBound = '1';
@@ -190,6 +177,7 @@
         var btn = e.target.closest('[data-delete-client]');
         if (!btn || !host.contains(btn)) return;
         e.preventDefault();
+        e.stopPropagation();
         deleteClient(host, btn);
       });
     }
@@ -211,7 +199,7 @@
       var badge = card.querySelector('.portal-lock-badge');
       if (badge) badge.remove();
       var small = card.querySelector('small');
-      if (small) small.textContent = 'Cuentas cliente, pedidos y limpieza de pruebas.';
+      if (small) small.textContent = 'Cuentas cliente.';
     } else {
       card.classList.add('portal-card--secondary', 'portal-card--locked');
       card.setAttribute('data-portal-locked', '1');
