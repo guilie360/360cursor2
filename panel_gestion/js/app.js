@@ -423,7 +423,7 @@ function openOrderModal(){
    customerName:$('customerName').value.trim(),
    customerEmail:$('customerEmail')?.value.trim()||'',
    proyectoLabel:'Showroom personalizado · '+type,
-   quoteSnapshot:{mode:'manual',total:q.total,area:q.area,floors:q.floors,type}
+   quoteSnapshot:enrichQuoteSnapshot({mode:'manual',total:q.total,area:q.area,floors:q.floors,type})
   });
  }catch(ePay){}
  $('orderModal').classList.remove('hidden');
@@ -445,224 +445,54 @@ function safeFileName(){
  const name=$('customerName').value.trim()||'Cliente';
  return name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'')||'Cliente';
 }
-async function buildSummaryCanvas(forPdf){
- await Promise.all([
-  document.fonts.load('400 52px Italiana'),
-  document.fonts.load('400 22px Manrope'),
-  document.fonts.load('700 22px Manrope')
- ]);
- const name=$('customerName').value.trim(),email=$('customerEmail').value.trim();
- const logo=new Image();
- const logoCandidates=['/panel_gestion/assets/logo-pdf.png','/panel_gestion/assets/logo.png','assets/logo-pdf.png','assets/logo.png'];
- await new Promise((resolve)=>{
-  let i=0;
-  const tryNext=()=>{
-   if(i>=logoCandidates.length){logo.removeAttribute('src');return resolve();}
-   logo.onload=()=>resolve();
-   logo.onerror=()=>{i+=1;tryNext();};
-   logo.src=logoCandidates[i++];
-  };
-  tryNext();
- });
-
- const css=getComputedStyle(document.documentElement),tk=(n,d)=>css.getPropertyValue(n).trim()||d;
- const T={
-  bg:'#0d0d0d',panel:'#151515',panelDeep:'#101010',line:'#39332b',
-  ink:tk('--ink','#f1eee8'),muted:tk('--muted','#b2a797'),
-  acc:tk('--accent','#c5a675'),gold:tk('--gold-soft','#d0b88f')
- };
- const SERIF='Italiana,Georgia,serif',SANS='Manrope,Arial,sans-serif';
- const rows=[...$('orderSummary').querySelectorAll('.order-detail-row,.price-line')].map(row=>({
+function captureQuotePdfPayload(){
+ const rows=[...($('orderSummary')?.querySelectorAll('.order-detail-row,.price-line')||[])].map(row=>({
   label:row.querySelector('span')?.textContent?.trim()||'',
   value:row.querySelector('strong')?.textContent?.trim()||''
  })).filter(r=>r.label||r.value);
-
- const W=1200,H=1697,pad=92,right=W-pad;
- const probe=document.createElement('canvas').getContext('2d');
- const wrap=(text,font,max)=>{
-  probe.font=font;const lines=[];let line='';
-  for(const word of String(text).split(/\s+/)){
-   const next=line?line+' '+word:word;
-   if(line&&probe.measureText(next).width>max){lines.push(line);line=word;}else line=next;
-  }
-  if(line)lines.push(line);
-  return lines.length?lines:[''];
+ return {
+  v:1,
+  rows,
+  totalText:String($('orderTotal')?.textContent||'').trim(),
+  customerName:String($('customerName')?.value||'').trim(),
+  customerEmail:String($('customerEmail')?.value||'').trim(),
+  createdAt:new Date().toISOString()
  };
- let fontSize=Math.max(15,22-Math.max(0,rows.length-12)*.42);
- let lineH=Math.round(fontSize*1.38);
- let rowPad=Math.max(8,22-Math.max(0,rows.length-12)*.7);
- let prep,contentHeight;
- const buildRows=()=>{
-  prep=rows.map(r=>({
-   L:wrap(r.label,`400 ${fontSize}px ${SANS}`,620),
-   V:wrap(r.value,`700 ${fontSize}px ${SANS}`,330)
-  }));
-  contentHeight=prep.reduce((sum,r)=>sum+Math.max(r.L.length,r.V.length)*lineH+rowPad,0);
- };
- buildRows();
- const headerBottom=405,footerHeight=245,available=H-headerBottom-footerHeight-100;
- while(contentHeight>available&&fontSize>14){
-  fontSize-=.5;lineH=Math.round(fontSize*1.34);rowPad=Math.max(6,rowPad-1);buildRows();
+}
+function enrichQuoteSnapshot(base){
+ const snap=Object.assign({},base||{});
+ try{ snap.pdf=captureQuotePdfPayload(); }catch(e){}
+ try{
+  if(typeof collectQuoteDraft==='function') snap.draft=collectQuoteDraft();
+ }catch(e2){}
+ return snap;
+}
+async function buildSummaryCanvas(forPdf){
+ if(!window.QuotePdf||typeof QuotePdf.buildSummaryCanvas!=='function'){
+  throw new Error('QuotePdf no cargado');
  }
- const rowsStart=headerBottom;
- const totalH=112,ctaH=62,ctaGap=22;
- const rowsEnd=rowsStart+contentHeight;
- const totalY=Math.max(rowsEnd+28,H-footerHeight-140);
- const ctaY=totalY+totalH+34;
- const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
- const c=canvas.getContext('2d');
- const rr=(x,y,w,h,r)=>{
-  c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);
-  c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);
-  c.arcTo(x,y,x+w,y,r);c.closePath();
- };
-
- // Fondo carbón sólido con iluminación ambiental discreta, sin imágenes ni texturas.
- c.fillStyle=T.bg;c.fillRect(0,0,W,H);
- const ambient=c.createRadialGradient(W*.78,90,20,W*.78,90,720);
- ambient.addColorStop(0,'rgba(205,178,138,.045)');
- ambient.addColorStop(.42,'rgba(205,178,138,.012)');
- ambient.addColorStop(1,'rgba(205,178,138,0)');
- c.fillStyle=ambient;c.fillRect(0,0,W,H);
- const lowerLight=c.createRadialGradient(W*.18,H*.82,10,W*.18,H*.82,560);
- lowerLight.addColorStop(0,'rgba(255,255,255,.018)');
- lowerLight.addColorStop(1,'rgba(255,255,255,0)');
- c.fillStyle=lowerLight;c.fillRect(0,0,W,H);
-
- // Superficie principal elevada mediante sombra exterior y borde fino.
- const cx=30,cy=30,cw=W-60,ch=H-60;
- c.save();c.shadowColor='rgba(0,0,0,.88)';c.shadowBlur=58;c.shadowOffsetY=22;
- const card=c.createLinearGradient(cx,cy,cx,cy+ch);
- card.addColorStop(0,'#1b1b1b');card.addColorStop(.48,'#151515');card.addColorStop(1,'#101010');
- rr(cx,cy,cw,ch,22);c.fillStyle=card;c.fill();c.restore();
- rr(cx,cy,cw,ch,22);c.strokeStyle='rgba(205,178,138,.20)';c.lineWidth=1.5;c.stroke();
-
- // Cabecera de marca: logo real si está disponible.
- let logoW=0;
- if(logo.naturalWidth){
-  const logoH=82;logoW=logoH*logo.naturalWidth/logo.naturalHeight;
-  c.save();c.shadowColor='rgba(0,0,0,.35)';c.shadowBlur=14;c.shadowOffsetY=4;
-  c.drawImage(logo,pad,70,logoW,logoH);c.restore();
-  logoW+=24;
- }
- c.textAlign='left';c.textBaseline='alphabetic';
- c.fillStyle=T.acc;c.font='700 15px '+SANS;c.letterSpacing='3px';
- c.fillText('360 SHOWROOM  ·  PROPUESTA COMERCIAL',pad+logoW,111);
- c.letterSpacing='0px';
- c.fillStyle=T.ink;c.font='400 58px '+SERIF;
- c.fillText('Resumen de tu showroom',pad,222);
- c.fillStyle=T.muted;c.font='400 22px '+SANS;
- c.fillText('Configuración y presupuesto personalizado',pad,266);
-
- // Datos del cliente en una superficie secundaria sutil.
- c.save();c.shadowColor='rgba(0,0,0,.52)';c.shadowBlur=26;c.shadowOffsetY=10;
- rr(pad,296,W-2*pad,82,13);c.fillStyle='#111111';c.fill();c.restore();
- rr(pad,296,W-2*pad,82,13);c.strokeStyle='rgba(205,178,138,.17)';c.lineWidth=1;c.stroke();
- c.fillStyle=T.gold;c.font='400 25px '+SERIF;c.textAlign='left';c.fillText(name,pad+22,330);
- c.fillStyle=T.muted;c.font='400 16px '+SANS;c.fillText(email,pad+22,355);
- c.textAlign='right';c.fillStyle='#918777';c.font='500 14px '+SANS;
- c.fillText(new Intl.DateTimeFormat('es-ES',{day:'2-digit',month:'long',year:'numeric'}).format(new Date()),right-22,345);
-
- // Separador editorial.
- c.strokeStyle='rgba(205,178,138,.45)';c.lineWidth=1.5;
- c.beginPath();c.moveTo(pad,397);c.lineTo(right,397);c.stroke();
-
- // Desglose: filas contenidas en una superficie continua, sin bandas negras exteriores.
- let y=rowsStart;
- prep.forEach((r,i)=>{
-  const n=Math.max(r.L.length,r.V.length),rh=n*lineH+rowPad;
-  if(i%2===0){
-   c.save();c.shadowColor='rgba(0,0,0,.48)';c.shadowBlur=16;c.shadowOffsetY=5;
-   rr(pad-12,y,W-2*pad+24,rh-3,9);c.fillStyle='rgba(255,255,255,.025)';c.fill();c.restore();
-  }
-  const baseline=y+Math.max(18,(rh-n*lineH)/2)+fontSize;
-  c.textAlign='left';c.fillStyle=T.muted;c.font=`400 ${fontSize}px ${SANS}`;
-  r.L.forEach((t,k)=>c.fillText(t,pad,baseline+k*lineH));
-  c.textAlign='right';c.fillStyle=T.ink;c.font=`700 ${fontSize}px ${SANS}`;
-  r.V.forEach((t,k)=>c.fillText(t,right,baseline+k*lineH));
-  c.strokeStyle='rgba(205,178,138,.13)';c.lineWidth=1;
-  c.beginPath();c.moveTo(pad,y+rh-2);c.lineTo(right,y+rh-2);c.stroke();
-  y+=rh;
+ const pdf=captureQuotePdfPayload();
+ return QuotePdf.buildSummaryCanvas({
+  name:pdf.customerName,
+  email:pdf.customerEmail,
+  totalText:pdf.totalText,
+  rows:pdf.rows,
+  date:pdf.createdAt
  });
-
- // Bloque de total con relieve, luz interior y acento champagne discreto.
- const totalYFinal=Math.min(Math.max(y+28,totalY),H-ctaH-ctaGap-totalH-90);
- const mid=totalYFinal+totalH/2;
- c.save();c.shadowColor='rgba(0,0,0,.76)';c.shadowBlur=34;c.shadowOffsetY=12;
- const totalGrad=c.createLinearGradient(pad,totalYFinal,right,totalYFinal+totalH);
- totalGrad.addColorStop(0,'#201e19');totalGrad.addColorStop(.55,'#191816');totalGrad.addColorStop(1,'#121212');
- rr(pad-12,totalYFinal,W-2*pad+24,totalH,15);c.fillStyle=totalGrad;c.fill();c.restore();
- rr(pad-12,totalYFinal,W-2*pad+24,totalH,15);
- c.strokeStyle='rgba(205,178,138,.48)';c.lineWidth=1.5;c.stroke();
- c.textAlign='left';c.fillStyle=T.ink;c.font='400 42px '+SERIF;
- c.fillText('Total estimado',pad+10,mid+14);
- c.textAlign='right';c.fillStyle=T.gold;c.font='400 54px '+SERIF;
- c.fillText($('orderTotal').textContent,right-10,mid+17);
-
- // Acciones clicables, con la misma estética oscura de la web.
- const bw=420,gap=28,lx=(W-(bw*2+gap))/2;
- const waMsg=`Hola, soy ${name}. Vi mi cotización de showroom en 360Preventa (total estimado ${$('orderTotal').textContent}) y quiero hablar con un asesor.`;
- const links=[
-  {x:lx,url:'https://360preventa.com'},
-  {x:lx+bw+gap,url:'https://wa.me/573226834084?text='+encodeURIComponent(waMsg)}
- ];
- const cta=(x,label)=>{
-  c.save();c.shadowColor='rgba(0,0,0,.72)';c.shadowBlur=24;c.shadowOffsetY=9;
-  const g=c.createLinearGradient(x,ctaY,x,ctaY+ctaH);
-  g.addColorStop(0,'#1b1b1b');g.addColorStop(1,'#0b0b0b');
-  rr(x,ctaY,bw,ctaH,13);c.fillStyle=g;c.fill();c.restore();
-  rr(x,ctaY,bw,ctaH,13);c.strokeStyle='rgba(205,178,138,.56)';c.lineWidth=1.5;c.stroke();
-  c.fillStyle='#eee8dd';c.font='700 17px '+SANS;c.textAlign='center';c.textBaseline='middle';
-  c.fillText(label,x+bw/2,ctaY+ctaH/2+1);c.textBaseline='alphabetic';
- };
- cta(links[0].x,'VER DEMO');cta(links[1].x,'CONTACTAR ASESOR');
- canvas._links=links.map(l=>({x:l.x,y:ctaY,w:bw,h:ctaH,url:l.url}));
-
- c.fillStyle='#8f887d';c.font='400 13px '+SANS;c.textAlign='center';
- c.fillText('360PREVENTA.COM  ·  SHOWROOM INMOBILIARIO',W/2,H-76);
- return canvas;
 }
 function downloadBlob(blob,filename){
+ if(window.QuotePdf&&typeof QuotePdf.downloadBlob==='function'){
+  return QuotePdf.downloadBlob(blob,filename);
+ }
  const url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
  setTimeout(()=>URL.revokeObjectURL(url),4000);
 }
-async function exportSummaryImage(){
- const name=$('customerName').value.trim();
- if(!name){$('confirmStatus').textContent='Por favor, ingresa tu nombre antes de descargar.';$('customerName').focus();return;}
- const canvas=await buildSummaryCanvas();
- canvas.toBlob(blob=>{
-  if(!blob){$('confirmStatus').textContent='No se pudo generar el PNG.';return;}
-  downloadBlob(blob,`Showroom_Cotizacion_${safeFileName()}.png`);
- },'image/png');
-}
 function createSinglePagePdf(jpegDataUrl,canvas){
- // Una sola página A4 con escala uniforme (nunca se estira). Los botones se convierten en enlaces clicables.
- const pageW=595.28,pageH=841.89,pxW=canvas.width,pxH=Math.round(pxW*pageH/pageW);
- const sc=Math.min(1,pxH/canvas.height),dw=canvas.width*sc,dh=canvas.height*sc,ox=(pxW-dw)/2,k=pageW/pxW;
- const slice=document.createElement('canvas');slice.width=pxW;slice.height=pxH;
- const ctx=slice.getContext('2d');
- ctx.fillStyle='#0d0d0d';ctx.fillRect(0,0,pxW,pxH);
- ctx.imageSmoothingQuality='high';ctx.drawImage(canvas,ox,0,dw,dh);
- const data=slice.toDataURL('image/jpeg',.96).split(',')[1],binary=atob(data),bytes=new Uint8Array(binary.length);
- for(let j=0;j<binary.length;j++)bytes[j]=binary.charCodeAt(j);
- const f=n=>n.toFixed(2),esc=u=>u.replace(/[()\\]/g,'\\$&');
- const links=(canvas._links||[]).map(l=>({r:[f((ox+l.x*sc)*k),f(pageH-(l.y+l.h)*sc*k),f((ox+(l.x+l.w)*sc)*k),f(pageH-l.y*sc*k)],url:l.url}));
- const enc=new TextEncoder(),chunks=[],offsets=[0];let length=0;
- const addBytes=b=>{chunks.push(b);length+=b.length;},addText=t=>addBytes(enc.encode(t));
- const content=`q\n${pageW} 0 0 ${pageH} 0 0 cm\n/Im0 Do\nQ`;
- const annots=links.length?` /Annots [${links.map((_,i)=>(6+i)+' 0 R').join(' ')}]`:'';
- addText('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
- offsets[1]=length;addText('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
- offsets[2]=length;addText('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
- offsets[3]=length;addText(`3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R${annots} >>\nendobj\n`);
- offsets[4]=length;addText(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${pxW} /Height ${pxH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bytes.length} >>\nstream\n`);addBytes(bytes);addText('\nendstream\nendobj\n');
- offsets[5]=length;addText(`5 0 obj\n<< /Length ${enc.encode(content).length} >>\nstream\n${content}\nendstream\nendobj\n`);
- links.forEach((l,i)=>{offsets[6+i]=length;addText(`${6+i} 0 obj\n<< /Type /Annot /Subtype /Link /Rect [${l.r.join(' ')}] /Border [0 0 0] /A << /S /URI /URI (${esc(l.url)}) >> >>\nendobj\n`);});
- const total=6+links.length,xref=length;addText(`xref\n0 ${total}\n0000000000 65535 f \n`);
- for(let i=1;i<total;i++)addText(String(offsets[i]).padStart(10,'0')+' 00000 n \n');
- addText(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
- return new Blob(chunks,{type:'application/pdf'});
+ if(!window.QuotePdf||typeof QuotePdf.createSinglePagePdf!=='function'){
+  throw new Error('QuotePdf no cargado');
+ }
+ return QuotePdf.createSinglePagePdf(jpegDataUrl,canvas);
 }
 
 $('shareQuote').addEventListener('click',()=>{
@@ -711,7 +541,7 @@ function activeQuotePayload(){
   total=Number(raw)||0;
  }
  const label=ctx.proyectoLabel||'Showroom 360Preventa';
- const snapshot=ctx.quoteSnapshot||{total,draft:typeof collectQuoteDraft==='function'?collectQuoteDraft():null};
+ const snapshot=enrichQuoteSnapshot(ctx.quoteSnapshot||{total});
  const testEl=$('quoteIsTest');
  return{
   customerName:$('customerName')?.value.trim()||'',
@@ -1181,7 +1011,7 @@ $('packageSelect').addEventListener('click',()=>{
    customerName:$('customerName').value.trim(),
    customerEmail:$('customerEmail')?.value.trim()||'',
    proyectoLabel:p.title,
-   quoteSnapshot:{mode:'package',package:activePackage,total:q.total,area}
+   quoteSnapshot:enrichQuoteSnapshot({mode:'package',package:activePackage,total:q.total,area})
   });
  }catch(ePay){}
  $('orderModal').classList.remove('hidden');
