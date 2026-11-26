@@ -101,7 +101,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const patch: Record<string, string> = { rol: "cliente" };
+    const patch: Record<string, string> = {
+      rol: "cliente",
+      telefono: phoneRaw || "",
+    };
     if (name) {
       patch.nombre_visible = name;
       patch.nombre = name;
@@ -145,7 +148,10 @@ Deno.serve(async (req) => {
       id: userId,
       nombre: name || "",
       nombre_visible: name || email.split("@")[0],
+      telefono: phoneRaw || "",
       rol: "cliente",
+      etapa_nombre: "Pedido recibido",
+      etapa_pct: 10,
       permisos: {
         editarProyecto: false,
         aplicarTemaProyecto: false,

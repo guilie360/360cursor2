@@ -1,4 +1,4 @@
-/* Mi perfil — mismo chrome que panel; solo contenido cliente */
+/* Mi perfil — chrome panel + home cards + info */
 .miperfil-mode #teamChatPopup .chat-bottom-tabs,
 .miperfil-mode #teamChatPopup .chat-recipient-panel,
 .miperfil-mode #chatRequestPayKey{display:none!important}
@@ -6,32 +6,21 @@
   margin-left:auto;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18)
 }
 .miperfil-login{max-width:480px;margin:28px auto 40px}
-.miperfil-login-form{margin-top:22px;display:grid;gap:4px}
-.miperfil-login-form .btn{margin-top:10px;justify-self:start;min-width:160px}
+.miperfil-login-form,.miperfil-info-form{margin-top:22px;display:grid;gap:4px;max-width:480px}
+.miperfil-login-form .btn,
+.miperfil-info-form .btn{margin-top:10px;justify-self:start;min-width:160px}
 .miperfil-error{color:#e5a0a0!important;min-height:18px}
 .miperfil-grid{margin-top:8px}
-.miperfil-card-wide{grid-column:1 / -1}
-.miperfil-card-top{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%}
-.miperfil-pill{
-  display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;
-  border:1px solid rgba(255,255,255,.14);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#ddd;flex:none
+.miperfil-mode .portal-card--soon{opacity:.55;cursor:not-allowed}
+.miperfil-mode .portal-card .picon{
+  width:36px;height:36px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.14);
+  border-radius:10px;margin-bottom:10px
 }
-.miperfil-quotes{margin-top:12px;width:100%}
-.miperfil-quote-row{
-  display:flex;justify-content:space-between;gap:14px;align-items:baseline;
-  padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)
+.miperfil-mode .portal-card .picon svg{
+  width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round
 }
-.miperfil-quote-row:last-child{border-bottom:0}
-/* Footer chat como <a>: misma caja que el botón del panel */
-#hunterGoalFooter #teamChatFloat.footer-chat-btn{
-  text-decoration:none;color:inherit;display:grid;place-items:center;
-  box-sizing:border-box;
-  border:1px solid rgba(255,255,255,.16);border-radius:12px;
-  background:rgba(255,255,255,.04);
-}
-#hunterGoalFooter #teamChatFloat.footer-chat-btn:hover{
-  background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.28);color:#fff
-}
-@media(max-width:720px){
-  .miperfil-card-wide{grid-column:auto}
+.miperfil-page{padding-bottom:24px}
+.miperfil-info-form input,
+.miperfil-login-form input{
+  -webkit-user-select:text!important;user-select:text!important;caret-color:auto!important;cursor:text!important
 }

@@ -1,6 +1,6 @@
 /**
- * Webhook Paddle → marca cobros/pedidos y liquida Hunter 50/50.
- * Secrets: PADDLE_WEBHOOK_SECRET (opcional en sandbox), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ * Webhook Paddle → marca cobros/pedidos, liquida Hunter 50/50 y email de confirmación.
+ * Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY (opcional), RESEND_FROM (opcional)
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -17,6 +17,70 @@ function json(status: number, body: Record<string, unknown>) {
     status,
     headers: { ...CORS, "Content-Type": "application/json" },
   });
+}
+
+function phonePassword(raw: string): string {
+  let digits = String(raw || "").replace(/\D/g, "");
+  if (digits.startsWith("57") && digits.length >= 12) digits = digits.slice(2);
+  else if (digits.startsWith("34") && digits.length >= 11) digits = digits.slice(2);
+  else if (digits.startsWith("0") && digits.length > 1) {
+    digits = digits.replace(/^0+/, "");
+  }
+  return digits;
+}
+
+function maskPassword(digits: string): string {
+  if (!digits) return "****";
+  if (digits.length <= 5) return digits.charAt(0) + "****" + digits.charAt(digits.length - 1);
+  return digits.slice(0, 3) + "****" + digits.slice(-2);
+}
+
+async function sendOrderEmail(opts: {
+  to: string;
+  name: string;
+  email: string;
+  passwordMasked: string;
+  proyecto: string;
+}) {
+  const apiKey = Deno.env.get("RESEND_API_KEY") || "";
+  if (!apiKey) {
+    console.warn("[paddle-webhook] RESEND_API_KEY no configurada; email omitido");
+    return { skipped: true };
+  }
+  const from = Deno.env.get("RESEND_FROM") || "360Preventa <onboarding@resend.dev>";
+  const subject = "Pedido confirmado · 360Preventa";
+  const html = `
+    <div style="font-family:Georgia,serif;background:#0b0b0b;color:#eee;padding:32px">
+      <p style="letter-spacing:.12em;text-transform:uppercase;color:#888;font:12px sans-serif">360Preventa</p>
+      <h1 style="font-weight:400;font-size:28px">Pedido confirmado</h1>
+      <p style="font:15px/1.5 sans-serif;color:#bbb">Hola ${opts.name || "cliente"}, recibimos tu anticipo${opts.proyecto ? ` de <strong style="color:#fff">${opts.proyecto}</strong>` : ""}.</p>
+      <p style="font:15px/1.5 sans-serif;color:#bbb">Tu cuenta en Mi perfil:</p>
+      <ul style="font:15px/1.7 sans-serif;color:#fff">
+        <li>Correo: <strong>${opts.email}</strong></li>
+        <li>Contraseña: <strong>${opts.passwordMasked}</strong> (celular sin +57; parcialmente oculta)</li>
+      </ul>
+      <p style="font:15px/1.5 sans-serif;color:#bbb">Entra en <a href="https://360preventa.com/miperfil" style="color:#fff">https://360preventa.com/miperfil</a> para seguir el avance de tu proyecto y monitorearlo.</p>
+    </div>
+  `;
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [opts.to],
+      subject,
+      html,
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    console.warn("[paddle-webhook] email fail", res.status, t);
+    return { ok: false, status: res.status };
+  }
+  return { ok: true };
 }
 
 Deno.serve(async (req) => {
@@ -36,9 +100,6 @@ Deno.serve(async (req) => {
   } catch {
     return json(400, { error: "JSON inválido." });
   }
-
-  // Nota: verificación HMAC completa se puede endurecer con PADDLE_WEBHOOK_SECRET.
-  // En sandbox aceptamos el evento y actualizamos por transaction id.
 
   const eventType = String(event.event_type || event.eventType || "");
   const data = (event.data || {}) as Record<string, unknown>;
@@ -86,6 +147,41 @@ Deno.serve(async (req) => {
               updated_at: new Date().toISOString(),
             })
             .eq("id", pedidoId);
+
+          // Email de confirmación + datos de cuenta
+          try {
+            const email = String(pedido.customer_email || "").trim().toLowerCase();
+            const name = String(pedido.customer_name || "").trim() || "cliente";
+            let passwordMasked = "****";
+            if (email) {
+              const lookup = await admin.rpc("lookup_auth_user_id", { p_email: email });
+              const uid = lookup.data ? String(lookup.data) : "";
+              if (uid) {
+                const { data: authUser } = await admin.auth.admin.getUserById(uid);
+                const meta = (authUser?.user?.user_metadata || {}) as Record<string, string>;
+                const phone = meta.telefono || meta.phone || "";
+                passwordMasked = maskPassword(phonePassword(phone));
+                await admin
+                  .from("profiles")
+                  .update({
+                    etapa_nombre: "En producción",
+                    etapa_pct: 50,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("id", uid)
+                  .eq("rol", "cliente");
+              }
+              await sendOrderEmail({
+                to: email,
+                name,
+                email,
+                passwordMasked,
+                proyecto: String(pedido.proyecto_label || ""),
+              });
+            }
+          } catch (mailErr) {
+            console.warn("[paddle-webhook] confirm mail", mailErr);
+          }
         } else if (stage === "balance") {
           await admin
             .from("panel_pedidos")

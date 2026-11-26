@@ -1,15 +1,18 @@
 /**
- * Mi perfil — espacio cliente (chrome del panel).
+ * Mi perfil — home panel-style + Mi información.
  */
 (function () {
   var loginView = document.getElementById('loginView');
   var homeView = document.getElementById('homeView');
+  var infoView = document.getElementById('infoView');
   var logoutBtn = document.getElementById('logoutBtn');
+  var portalBack = document.getElementById('portalBack');
   var errEl = document.getElementById('loginError');
   var goalCaption = document.getElementById('hunterGoalCaption');
   var goalBonus = document.getElementById('hunterGoalBonus');
   var goalTrack = document.getElementById('hunterGoalTrack');
   var goalFill = document.getElementById('hunterGoalFill');
+  var currentUser = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -20,6 +23,7 @@
 
   function setFooterProgress(pct, caption, bonusLabel, bonusValue) {
     var p = Math.max(0, Math.min(100, Number(pct) || 0));
+    p = Math.round(p / 5) * 5;
     if (goalTrack) {
       goalTrack.style.setProperty('--goal-step', p + '%');
       goalTrack.setAttribute('aria-valuenow', String(p));
@@ -27,30 +31,8 @@
     if (goalFill) goalFill.style.width = p + '%';
     if (goalCaption) goalCaption.textContent = caption || 'Mi perfil · avance';
     if (goalBonus) {
-      goalBonus.innerHTML = '<small>' + (bonusLabel || 'Estado') + '</small>' + (bonusValue || '—');
+      goalBonus.innerHTML = '<small>' + (bonusLabel || 'Etapa') + '</small>' + (bonusValue || '—');
     }
-  }
-
-  function money(cents) {
-    var n = Number(cents || 0) / 100;
-    try {
-      return new Intl.NumberFormat('es-ES', {
-        style: 'currency',
-        currency: 'EUR',
-        maximumFractionDigits: 0
-      }).format(n);
-    } catch (e) {
-      return n.toFixed(0) + ' €';
-    }
-  }
-
-  function statusLabel(s) {
-    s = String(s || '').toLowerCase();
-    if (s === 'pendiente_anticipo') return 'Pendiente de anticipo';
-    if (s === 'en_produccion' || s === 'pendiente_entrega') return 'En producción';
-    if (s === 'pagado') return 'Entregado / pagado';
-    if (s === 'cancelado') return 'Cancelado';
-    return s || 'Sin pedido aún';
   }
 
   function client() {
@@ -82,42 +64,60 @@
     } catch (e3) {}
   }
 
+  function hideAll() {
+    [loginView, homeView, infoView].forEach(function (el) {
+      if (el) el.classList.add('portal-hidden');
+    });
+  }
+
   function showLogin() {
     setAuthChrome(false);
     setClientName('');
+    hideAll();
     if (loginView) loginView.classList.remove('portal-hidden');
-    if (homeView) homeView.classList.add('portal-hidden');
+    if (portalBack) portalBack.classList.add('portal-hidden');
     setFooterProgress(0, 'Mi perfil · 360Preventa', 'Acceso', 'Cliente');
   }
 
   function showHome() {
     setAuthChrome(true);
-    if (loginView) loginView.classList.add('portal-hidden');
+    hideAll();
     if (homeView) homeView.classList.remove('portal-hidden');
+    if (portalBack) portalBack.classList.add('portal-hidden');
   }
 
-  function footerFromPedido(ped) {
-    var st = String((ped && ped.status) || '').toLowerCase();
-    if (!ped) {
-      setFooterProgress(0, 'Proyecto · sin pedido', 'Estado', 'Pendiente');
-      return;
+  function showInfo() {
+    setAuthChrome(true);
+    hideAll();
+    if (infoView) infoView.classList.remove('portal-hidden');
+    if (portalBack) portalBack.classList.remove('portal-hidden');
+  }
+
+  function applyStage(profile, ped) {
+    var pct = Number(profile && profile.etapa_pct);
+    if (!Number.isFinite(pct)) pct = 0;
+    var nombre = String((profile && profile.etapa_nombre) || '').trim();
+    if (!nombre && ped) {
+      var st = String(ped.status || '').toLowerCase();
+      if (st === 'en_produccion' || st === 'pendiente_entrega') {
+        nombre = 'En producción';
+        if (!pct) pct = 50;
+      } else if (st === 'pagado') {
+        nombre = 'Entregado';
+        if (!pct) pct = 100;
+      } else if (st === 'pendiente_anticipo') {
+        nombre = 'Anticipo pendiente';
+        if (!pct) pct = 5;
+      }
     }
-    if (st === 'pagado') {
-      setFooterProgress(100, 'Proyecto · entregado', 'Estado', 'Completo');
-      return;
-    }
-    if (st === 'en_produccion' || st === 'pendiente_entrega') {
-      setFooterProgress(50, 'Proyecto · en producción', 'Estado', 'Anticipo');
-      return;
-    }
-    if (st === 'pendiente_anticipo') {
-      setFooterProgress(25, 'Proyecto · anticipo', 'Estado', 'Pendiente');
-      return;
-    }
-    setFooterProgress(35, 'Proyecto · en curso', 'Estado', statusLabel(st));
+    if (!nombre) nombre = pct ? ('Avance ' + pct + '%') : 'Pedido';
+    setFooterProgress(pct, 'Proyecto · ' + nombre, 'Etapa', nombre);
+    var lead = $('welcomeLead');
+    if (lead) lead.textContent = nombre + (pct ? (' · ' + pct + '%') : '');
   }
 
   async function loadHome(user, profile) {
+    currentUser = user;
     showHome();
     var email = (user && user.email) || '';
     var displayName = String(
@@ -127,62 +127,34 @@
     setClientName(displayName);
 
     var welcomeTitle = $('welcomeTitle');
-    var welcomeLead = $('welcomeLead');
     var params = new URLSearchParams(location.search || '');
     if (welcomeTitle) welcomeTitle.textContent = displayName ? ('Hola, ' + displayName) : 'Hola';
-    if (welcomeLead) {
-      welcomeLead.textContent = params.get('bienvenida') === '1'
-        ? 'Pago recibido. Este es tu espacio: aquí verás el avance de tu showroom.'
-        : 'Aquí ves el estado de tu proyecto y los siguientes pasos.';
+    if (params.get('bienvenida') === '1' && $('welcomeLead')) {
+      $('welcomeLead').textContent = 'Pago recibido. Aquí monitoreas tu proyecto.';
+    }
+
+    if ($('infoName')) $('infoName').value = displayName || '';
+    if ($('infoEmail')) $('infoEmail').value = email || '';
+    if ($('infoPhone')) {
+      $('infoPhone').value = String((profile && profile.telefono) || '').replace(/\D/g, '') ||
+        (window.ClientAccount && profile && profile.telefono
+          ? ClientAccount.phonePassword(profile.telefono)
+          : '');
+      var metaPhone = user && user.user_metadata && (user.user_metadata.telefono || user.user_metadata.phone);
+      if (!$('infoPhone').value && metaPhone) {
+        $('infoPhone').value = (window.ClientAccount
+          ? ClientAccount.phonePassword(metaPhone)
+          : String(metaPhone).replace(/\D/g, ''));
+      }
     }
 
     var sb = client();
+    var ped = null;
     try {
-      var pedidos = await sb.from('panel_pedidos').select('*').order('created_at', { ascending: false }).limit(5);
-      var ped = (pedidos.data && pedidos.data[0]) || null;
-      if ($('pedidoStatus')) $('pedidoStatus').textContent = statusLabel(ped && ped.status);
-      if ($('pedidoLabel')) {
-        $('pedidoLabel').textContent = ped
-          ? (ped.proyecto_label || 'Showroom 360Preventa')
-          : 'Todavía no hay un pedido con este correo. Si acabas de cotizar, descarga el PDF o completa el anticipo.';
-      }
-      if ($('pedidoMoney')) {
-        $('pedidoMoney').textContent = ped
-          ? ('Total ' + money(ped.quote_total_cents || ped.total_cents) + ' · Anticipo ' + money(ped.deposit_cents))
-          : '';
-      }
-      footerFromPedido(ped);
-    } catch (e) {
-      if ($('pedidoLabel')) $('pedidoLabel').textContent = 'No se pudo cargar el pedido.';
-      setFooterProgress(0, 'Proyecto · sin datos', 'Estado', '—');
-    }
-
-    try {
-      var quotes = await sb
-        .from('panel_cotizaciones')
-        .select('id,customer_name,proyecto_label,total_euros,created_at')
-        .order('created_at', { ascending: false })
-        .limit(8);
-      var box = $('quotesList');
-      var rows = quotes.data || [];
-      if (!box) return;
-      if (!rows.length) {
-        box.textContent = 'Aún no hay cotizaciones guardadas con este correo.';
-      } else {
-        box.innerHTML = rows.map(function (q) {
-          return (
-            '<div class="miperfil-quote-row">' +
-              '<span>' + (q.proyecto_label || 'Cotización') +
-                '<br><small>' + new Date(q.created_at).toLocaleDateString('es-ES') + '</small>' +
-              '</span>' +
-              '<strong>' + (Number(q.total_euros) || 0).toLocaleString('es-ES') + ' €</strong>' +
-            '</div>'
-          );
-        }).join('');
-      }
-    } catch (e2) {
-      if ($('quotesList')) $('quotesList').textContent = 'No se pudieron cargar las cotizaciones.';
-    }
+      var pedidos = await sb.from('panel_pedidos').select('*').order('created_at', { ascending: false }).limit(1);
+      ped = (pedidos.data && pedidos.data[0]) || null;
+    } catch (e) {}
+    applyStage(profile || {}, ped);
   }
 
   async function boot() {
@@ -193,7 +165,7 @@
       var user = session && session.data && session.data.session && session.data.session.user;
       if (!user) return;
 
-      var prof = await sb.from('profiles').select('rol,nombre_visible,nombre').eq('id', user.id).maybeSingle();
+      var prof = await sb.from('profiles').select('rol,nombre_visible,nombre,telefono,etapa_nombre,etapa_pct').eq('id', user.id).maybeSingle();
       var rol = String((prof.data && prof.data.rol) || '').toLowerCase();
       if (rol === 'admin' || rol === 'super_admin' || rol === 'hunter' || rol === 'asesor') {
         location.replace('/panel_gestion/');
@@ -203,7 +175,6 @@
     } catch (err) {
       console.warn('[miperfil] boot', err);
       showLogin();
-      if (errEl) errEl.textContent = '';
     }
   }
 
@@ -222,10 +193,70 @@
         var result = await sb.auth.signInWithPassword({ email: email, password: password });
         if (result.error) throw result.error;
         var user = result.data.user;
-        var prof = await sb.from('profiles').select('rol,nombre_visible,nombre').eq('id', user.id).maybeSingle();
+        var prof = await sb.from('profiles').select('rol,nombre_visible,nombre,telefono,etapa_nombre,etapa_pct').eq('id', user.id).maybeSingle();
         await loadHome(user, prof.data || null);
       } catch (err) {
         if (errEl) errEl.textContent = (err && err.message) || 'No se pudo entrar. Revisa correo y celular.';
+      }
+    });
+  }
+
+  document.querySelectorAll('[data-miperfil-page]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (btn.disabled || btn.getAttribute('aria-disabled') === 'true') return;
+      var page = btn.getAttribute('data-miperfil-page');
+      if (page === 'info') showInfo();
+    });
+  });
+
+  if (portalBack) {
+    portalBack.addEventListener('click', function () {
+      showHome();
+    });
+  }
+
+  var infoForm = document.getElementById('infoForm');
+  if (infoForm) {
+    infoForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var status = $('infoStatus');
+      if (status) status.textContent = 'Guardando…';
+      try {
+        var sb = client();
+        var session = await sb.auth.getSession();
+        var token = session && session.data && session.data.session && session.data.session.access_token;
+        if (!token) throw new Error('Sesión expirada. Vuelve a entrar.');
+        var base = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) || '';
+        var anon = (typeof SUPABASE_ANON_KEY !== 'undefined' && SUPABASE_ANON_KEY) || '';
+        var res = await fetch(base.replace(/\/$/, '') + '/functions/v1/client-profile-update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: anon,
+            Authorization: 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            name: ($('infoName').value || '').trim(),
+            email: ($('infoEmail').value || '').trim().toLowerCase(),
+            phone: ($('infoPhone').value || '').trim()
+          })
+        });
+        var data = {};
+        try { data = await res.json(); } catch (e2) {}
+        if (!res.ok) throw new Error(data.error || 'No se pudo guardar');
+        setClientName(data.name || $('infoName').value);
+        if ($('welcomeTitle')) {
+          $('welcomeTitle').textContent = 'Hola, ' + (data.name || $('infoName').value || 'Cliente');
+        }
+        if (status) {
+          status.textContent = 'Guardado.';
+          status.classList.remove('miperfil-error');
+        }
+      } catch (err) {
+        if (status) {
+          status.textContent = (err && err.message) || 'Error al guardar';
+          status.classList.add('miperfil-error');
+        }
       }
     });
   }

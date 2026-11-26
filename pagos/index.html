@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pago · 360Preventa</title>
   <meta name="robots" content="noindex">
+  <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #0b0b0c;
@@ -21,10 +22,10 @@
       padding: 32px 20px;
       background: var(--bg);
       color: var(--fg);
-      font-family: Georgia, "Times New Roman", serif;
+      font-family: Manrope, system-ui, sans-serif;
     }
     .card {
-      width: min(440px, 100%);
+      width: min(480px, 100%);
       border: 1px solid var(--line);
       border-radius: 22px;
       padding: 36px;
@@ -32,7 +33,6 @@
     }
     .eyebrow {
       margin: 0 0 12px;
-      font-family: system-ui, sans-serif;
       font-size: 11px;
       letter-spacing: .14em;
       text-transform: uppercase;
@@ -40,19 +40,43 @@
     }
     h1 {
       margin: 0 0 12px;
-      font-size: clamp(1.6rem, 4vw, 2rem);
-      font-weight: 500;
+      font-family: Italiana, Georgia, serif;
+      font-size: clamp(1.6rem, 4vw, 2.1rem);
+      font-weight: 400;
       line-height: 1.15;
     }
     p {
-      margin: 0 0 28px;
+      margin: 0 0 18px;
       color: var(--muted);
-      font-family: system-ui, sans-serif;
       font-size: 15px;
       line-height: 1.5;
     }
+    .cred {
+      display: grid;
+      gap: 10px;
+      margin: 0 0 22px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(0,0,0,.28);
+    }
+    .cred div { display: grid; gap: 2px; }
+    .cred small {
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: #888;
+    }
+    .cred b {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      word-break: break-word;
+      -webkit-user-select: text;
+      user-select: text;
+    }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; }
-    a.btn {
+    a.btn, button.btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -60,31 +84,34 @@
       padding: 0 18px;
       border-radius: 999px;
       text-decoration: none;
-      font-family: system-ui, sans-serif;
       font-size: 14px;
       border: 1px solid var(--line);
       color: var(--fg);
       background: transparent;
+      cursor: pointer;
+      font-family: inherit;
     }
-    a.btn.primary {
+    a.btn.primary, button.btn.primary {
       background: #fff;
       color: #111;
       border-color: #fff;
     }
+    .hint { margin-top: 16px; font-size: 12px; color: #777; }
   </style>
 </head>
 <body>
-  <main class="card">
+  <main class="card" id="mainCard">
     <p class="eyebrow">360Preventa · Pagos</p>
     <h1 id="title">Abriendo checkout…</h1>
     <p id="copy">Un momento mientras preparamos el pago seguro con Paddle.</p>
-    <div class="actions">
+    <div class="actions" id="actions">
       <a class="btn primary" href="/cotizar">Volver al cotizador</a>
       <a class="btn" href="/">Inicio</a>
     </div>
   </main>
   <script src="/js/shared/config.js"></script>
-  <script src="/panel_gestion/js/payments-paddle.js?v=18"></script>
+  <script src="/js/shared/client-account.js?v=2"></script>
+  <script src="/panel_gestion/js/payments-paddle.js?v=23"></script>
   <script>
     (function () {
       var params = new URLSearchParams(location.search);
@@ -93,19 +120,53 @@
       var email = params.get('email') || '';
       var title = document.getElementById('title');
       var copy = document.getElementById('copy');
+      var actions = document.getElementById('actions');
+      var card = document.getElementById('mainCard');
+
+      function esc(s) {
+        return String(s || '').replace(/[&<>"']/g, function (c) {
+          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+        });
+      }
+
+      function showWelcome() {
+        var w = (window.ClientAccount && ClientAccount.readWelcome && ClientAccount.readWelcome()) || null;
+        title.textContent = 'Esta es tu cuenta';
+        copy.textContent = 'Guarda esta información. Con ella entras a Mi perfil para seguir tu proyecto.';
+
+        var cred = document.createElement('div');
+        cred.className = 'cred';
+        cred.innerHTML =
+          '<div><small>Nombre</small><b>' + esc(w && w.name ? w.name : 'Cliente') + '</b></div>' +
+          '<div><small>Correo</small><b>' + esc((w && w.email) || email || '—') + '</b></div>' +
+          '<div><small>Contraseña</small><b>' + esc((w && w.password_masked) || '***') + '</b></div>';
+        card.insertBefore(cred, actions);
+
+        actions.innerHTML =
+          '<a class="btn primary" id="goPerfil" href="/miperfil/?bienvenida=1">Ingresar</a>' +
+          '<button class="btn" type="button" id="dlCred">Descargar imagen</button>';
+
+        var hint = document.createElement('p');
+        hint.className = 'hint';
+        hint.textContent = 'La contraseña es tu celular sin +57. En la imagen solo se muestran los primeros 3 y los últimos 2 dígitos.';
+        card.appendChild(hint);
+
+        var dl = document.getElementById('dlCred');
+        if (dl) {
+          dl.addEventListener('click', function () {
+            try {
+              if (window.ClientAccount && ClientAccount.downloadCredentialCard) {
+                ClientAccount.downloadCredentialCard(w || undefined);
+              }
+            } catch (err) {
+              alert((err && err.message) || 'No se pudo descargar la imagen');
+            }
+          });
+        }
+      }
 
       if (ok) {
-        title.textContent = 'Pago recibido';
-        copy.textContent = 'Listo. Te llevamos a Mi perfil, donde verás el estado de tu proyecto.';
-        var actions = document.querySelector('.actions');
-        if (actions) {
-          actions.innerHTML =
-            '<a class="btn primary" href="/miperfil/?bienvenida=1">Ir a Mi perfil</a>' +
-            '<a class="btn" href="https://wa.me/573226834084" target="_blank" rel="noopener">Hablar con el equipo</a>';
-        }
-        setTimeout(function () {
-          window.location.replace('/miperfil/?bienvenida=1');
-        }, 1600);
+        showWelcome();
         return;
       }
 

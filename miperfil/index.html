@@ -12,9 +12,9 @@
 <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
 <link rel="stylesheet" href="/shared/css/site-chrome.css?v=9">
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
-<link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel67">
-<link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel67">
-<link rel="stylesheet" href="/miperfil/miperfil.css?v=3">
+<link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel69">
+<link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel69">
+<link rel="stylesheet" href="/miperfil/miperfil.css?v=4">
 </head>
 <body class="portal-mode miperfil-mode">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat con admin">
@@ -29,7 +29,6 @@
    <span class="portal-brand-copy">360Preventa<small>Mi perfil</small></span>
   </div>
   <div class="portal-head-right">
-   <input class="portal-search" id="globalSearch" type="search" placeholder="Buscar en tu espacio…" aria-label="Buscar en Mi perfil">
    <button class="btn portal-logout portal-logout-icon" id="logoutBtn" type="button" aria-label="Cerrar sesión" title="Cerrar sesión">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5M14 16l4-4-4-4M18 12H9"/></svg>
    </button>
@@ -40,7 +39,7 @@
   <section id="loginView" class="miperfil-login">
    <div class="eyebrow">360PREVENTA · CLIENTE</div>
    <h1 class="portal-title">Mi perfil</h1>
-   <p class="desc">Entra con el correo de tu cotización. La contraseña es tu celular, sin +57.</p>
+   <p class="desc">Correo de tu pedido. Contraseña = celular sin +57.</p>
    <form id="loginForm" class="miperfil-login-form">
     <div class="field"><label for="email">Correo</label><input id="email" type="email" autocomplete="username" required placeholder="correo@empresa.com"></div>
     <div class="field"><label for="password">Celular (sin +57)</label><input id="password" type="password" inputmode="numeric" autocomplete="current-password" required placeholder="3001234567"></div>
@@ -52,31 +51,38 @@
   <section id="homeView" class="miperfil-home portal-hidden">
    <div class="portal-home-intro">
     <h1 class="portal-title" id="welcomeTitle">Hola</h1>
-    <p class="desc" id="welcomeLead">Aquí ves el estado de tu proyecto y los siguientes pasos.</p>
+    <p class="desc" id="welcomeLead">Sigue el avance de tu proyecto.</p>
    </div>
-
    <div class="portal-grid miperfil-grid">
-    <article class="portal-card portal-card--primary">
-     <b>Cómo sigue</b>
-     <small>
-      Confirmamos tu anticipo y te asignamos producción.<br>
-      Te avisamos cuando el showroom esté listo para revisar.<br>
-      El 50% restante se paga al entregar.
-     </small>
-    </article>
-    <article class="portal-card portal-card--primary">
-     <div class="miperfil-card-top">
-      <b>Tu pedido</b>
-      <span class="miperfil-pill" id="pedidoStatus">—</span>
-     </div>
-     <small id="pedidoLabel">Cargando…</small>
-     <small id="pedidoMoney"></small>
-    </article>
-    <article class="portal-card portal-card--secondary miperfil-card-wide">
-     <b>Cotizaciones</b>
-     <div id="quotesList" class="miperfil-quotes desc">Cargando…</div>
-    </article>
+    <button type="button" class="portal-card portal-card--primary" data-miperfil-page="info">
+     <span class="picon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 19c1.8-3.2 4.2-4.5 7-4.5S17.2 15.8 19 19"/></svg></span>
+     <b>Mi información</b>
+     <small>Nombre, correo, teléfono y contraseña.</small>
+    </button>
+    <button type="button" class="portal-card portal-card--primary portal-card--soon" data-miperfil-page="docs" disabled aria-disabled="true">
+     <span class="picon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7V3z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
+     <b>Mis documentos</b>
+     <small>Próximamente: cotización, contrato e invoice.</small>
+    </button>
+    <button type="button" class="portal-card portal-card--primary portal-card--soon" data-miperfil-page="showrooms" disabled aria-disabled="true">
+     <span class="picon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 15l5-4 4 3 3-2 6 4"/></svg></span>
+     <b>Mis showrooms</b>
+     <small>Próximamente: miniaturas y archivos Drive.</small>
+    </button>
    </div>
+  </section>
+
+  <section id="infoView" class="miperfil-page portal-hidden">
+   <div class="eyebrow">360PREVENTA · MI PERFIL</div>
+   <h1 class="portal-title">Mi información</h1>
+   <p class="desc">Actualiza tus datos de acceso. La contraseña es tu celular sin +57.</p>
+   <form id="infoForm" class="miperfil-info-form">
+    <div class="field"><label for="infoName">Nombre</label><input id="infoName" type="text" autocomplete="name" required></div>
+    <div class="field"><label for="infoEmail">Correo</label><input id="infoEmail" type="email" autocomplete="email" required></div>
+    <div class="field"><label for="infoPhone">Teléfono / contraseña</label><input id="infoPhone" type="tel" inputmode="numeric" autocomplete="tel" required placeholder="3001234567"></div>
+    <button class="btn primary" type="submit">Guardar</button>
+    <p class="desc miperfil-error" id="infoStatus" aria-live="polite"></p>
+   </form>
   </section>
  </div>
 
@@ -87,8 +93,8 @@
    </button>
    <div class="hunter-goal-meta">
     <span class="goal-caption" id="hunterGoalCaption">Mi perfil · avance</span>
-    <div class="hunter-goal-track" id="hunterGoalTrack" style="--goal-step:50%" role="progressbar" aria-label="Avance del proyecto" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><span class="hunter-goal-fill" id="hunterGoalFill"></span><span class="hunter-goal-ticks" aria-hidden="true"></span></div>
-    <span class="hunter-goal-bonus" id="hunterGoalBonus"><small>Estado</small>Anticipo</span>
+    <div class="hunter-goal-track" id="hunterGoalTrack" style="--goal-step:10%" role="progressbar" aria-label="Avance del proyecto" aria-valuemin="0" aria-valuemax="100" aria-valuenow="10"><span class="hunter-goal-fill" id="hunterGoalFill"></span><span class="hunter-goal-ticks" aria-hidden="true"></span></div>
+    <span class="hunter-goal-bonus" id="hunterGoalBonus"><small>Etapa</small>—</span>
    </div>
    <button id="teamChatFloat" class="footer-chat-btn mag" type="button" aria-label="Abrir chat con admin" title="Chat con admin" data-cursor="CHAT">✉<span id="chatUnreadBadge" class="chat-unread-badge">0</span></button>
   </div>
@@ -99,9 +105,9 @@
 <script src="/js/shared/config.js"></script>
 <script src="/js/auth/storage-prefs.js"></script>
 <script src="/js/auth/client.js"></script>
-<script src="/js/shared/client-account.js?v=1"></script>
+<script src="/js/shared/client-account.js?v=2"></script>
 <script src="/shared/js/global-nav.js?v=20"></script>
 <script src="/miperfil/client-chat.js?v=1"></script>
-<script src="/miperfil/miperfil.js?v=3"></script>
+<script src="/miperfil/miperfil.js?v=4"></script>
 </body>
 </html>

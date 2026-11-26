@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
     const ids = users.map((u) => u.id);
     const { data: profiles } = await admin
       .from("profiles")
-      .select("id,rol,nombre,nombre_visible,created_at")
+      .select("id,rol,nombre,nombre_visible,telefono,etapa_nombre,etapa_pct,created_at")
       .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
 
     const profileById = new Map((profiles || []).map((p) => [p.id, p]));
@@ -185,8 +185,10 @@ Deno.serve(async (req) => {
           p?.nombre_visible || p?.nombre || meta.nombre || meta.nombres || email.split("@")[0],
         ),
         rol: userRol,
-        telefono: phoneRaw,
+        telefono: phoneRaw || String(p?.telefono || ""),
         password_hint: password || null,
+        etapa_nombre: String(p?.etapa_nombre || "") || null,
+        etapa_pct: Number(p?.etapa_pct || 0),
         created_at: u.created_at,
         pedidos_count: pedList.length,
         cotizaciones_count: quoteList.length,
@@ -230,6 +232,39 @@ Deno.serve(async (req) => {
     );
 
     return json(200, { ok: true, clients, count: clients.length });
+  }
+
+  if (action === "update_stage") {
+    const userId = String(body.user_id || body.id || "").trim();
+    if (!/^[0-9a-f-]{36}$/i.test(userId)) {
+      return json(400, { error: "user_id inválido." });
+    }
+    let pct = Math.round(Number(body.etapa_pct));
+    if (!Number.isFinite(pct)) pct = 0;
+    pct = Math.max(0, Math.min(100, pct));
+    pct = Math.round(pct / 5) * 5;
+    const nombre = String(body.etapa_nombre || "").trim().slice(0, 80);
+
+    const { data: targetProf } = await admin
+      .from("profiles")
+      .select("rol")
+      .eq("id", userId)
+      .maybeSingle();
+    const targetRol = String(targetProf?.rol || "usuario").toLowerCase();
+    if (TEAM_ROLES.has(targetRol)) {
+      return json(403, { error: "No aplica a cuentas del equipo." });
+    }
+
+    const { error: upErr } = await admin
+      .from("profiles")
+      .update({
+        etapa_pct: pct,
+        etapa_nombre: nombre || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+    if (upErr) return json(400, { error: upErr.message || "No se pudo guardar la etapa." });
+    return json(200, { ok: true, user_id: userId, etapa_pct: pct, etapa_nombre: nombre || null });
   }
 
   if (action === "delete") {

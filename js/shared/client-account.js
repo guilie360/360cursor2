@@ -1,14 +1,26 @@
 /**
  * Cuenta cliente (Mi perfil): email = usuario, celular (sin +57) = contraseña.
- * Se provisiona al pagar o descargar cotización.
+ * Se provisiona SOLO al pagar (no al descargar PDF).
  */
 (function (global) {
+  var WELCOME_KEY = 'boxiesClientWelcome';
+
   function phonePassword(raw) {
     var digits = String(raw || '').replace(/\D/g, '');
     if (digits.indexOf('57') === 0 && digits.length >= 12) digits = digits.slice(2);
     else if (digits.indexOf('34') === 0 && digits.length >= 11) digits = digits.slice(2);
     else if (digits.charAt(0) === '0' && digits.length > 1) digits = digits.replace(/^0+/, '');
     return digits;
+  }
+
+  /** Primeros 3 + **** + últimos 2 del celular-contraseña. */
+  function maskPassword(rawOrDigits) {
+    var digits = phonePassword(rawOrDigits);
+    if (!digits) return '****';
+    if (digits.length <= 5) {
+      return digits.charAt(0) + '****' + digits.charAt(digits.length - 1);
+    }
+    return digits.slice(0, 3) + '****' + digits.slice(-2);
   }
 
   function readOrderFields() {
@@ -39,6 +51,39 @@
 
   function anonKey() {
     return (typeof SUPABASE_ANON_KEY !== 'undefined' && SUPABASE_ANON_KEY) || '';
+  }
+
+  function stashWelcome(payload) {
+    try {
+      sessionStorage.setItem(WELCOME_KEY, JSON.stringify(payload || {}));
+    } catch (e) {}
+  }
+
+  function readWelcome() {
+    try {
+      var raw = sessionStorage.getItem(WELCOME_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearWelcome() {
+    try { sessionStorage.removeItem(WELCOME_KEY); } catch (e) {}
+  }
+
+  function welcomeFromFields(f) {
+    var password = phonePassword(f.phone);
+    return {
+      name: f.name || '',
+      email: f.email || '',
+      phone: f.phone || '',
+      password: password,
+      password_masked: maskPassword(password),
+      portal: '/miperfil/',
+      created_at: new Date().toISOString()
+    };
   }
 
   async function provision(fields) {
@@ -101,7 +146,7 @@
     return result.data;
   }
 
-  /** Provision + login. Usar antes de pagar o tras guardar cotización. */
+  /** Provision + login. Solo al pagar. */
   async function ensureClientAccess(opts) {
     opts = opts || {};
     var f = opts.fields || readOrderFields();
@@ -109,27 +154,107 @@
     if (err) throw new Error(err);
 
     var provisioned = await provision(f);
+    var welcome = welcomeFromFields(f);
+    welcome.user_id = (provisioned && provisioned.user_id) || null;
+    welcome.created = !!(provisioned && provisioned.created);
+    stashWelcome(welcome);
+
     var session = null;
     try {
       session = await signInWithPhonePassword(f);
     } catch (signErr) {
-      // Cuenta creada pero login falló: el portal sigue siendo usable con login manual
       console.warn('[ClientAccount] sign-in', signErr);
     }
     return {
       provisioned: provisioned,
       session: session,
       portalUrl: (provisioned && provisioned.portal) || '/miperfil/',
-      fields: f
+      fields: f,
+      welcome: welcome
     };
+  }
+
+  /** Imagen PNG con correo + contraseña enmascarada. */
+  function downloadCredentialCard(welcome) {
+    var w = welcome || readWelcome();
+    if (!w || !w.email) throw new Error('No hay datos de cuenta para descargar.');
+    var canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1350;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0b0b0b';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = 'rgba(255,255,255,.18)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(48, 48, canvas.width - 96, canvas.height - 96);
+
+    ctx.fillStyle = '#888';
+    ctx.font = '500 28px Manrope, Arial, sans-serif';
+    ctx.fillText('360PREVENTA · MI PERFIL', 96, 160);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '400 64px Italiana, Georgia, serif';
+    ctx.fillText('Tu cuenta', 96, 260);
+
+    ctx.fillStyle = '#aaa';
+    ctx.font = '400 28px Manrope, Arial, sans-serif';
+    wrapText(ctx, 'Guarda estos datos. Entras en 360preventa.com/miperfil', 96, 320, 880, 36);
+
+    drawField(ctx, 'Nombre', w.name || 'Cliente', 96, 460);
+    drawField(ctx, 'Correo', w.email, 96, 620);
+    drawField(ctx, 'Contraseña', w.password_masked || maskPassword(w.password || w.phone), 96, 780);
+
+    ctx.fillStyle = '#666';
+    ctx.font = '400 22px Manrope, Arial, sans-serif';
+    ctx.fillText('La contraseña es tu celular sin +57.', 96, 980);
+    ctx.fillText('https://360preventa.com/miperfil', 96, 1020);
+
+    var a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = '360Preventa_MiPerfil_cuenta.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  function drawField(ctx, label, value, x, y) {
+    ctx.fillStyle = '#777';
+    ctx.font = '600 22px Manrope, Arial, sans-serif';
+    ctx.fillText(String(label).toUpperCase(), x, y);
+    ctx.fillStyle = '#fff';
+    ctx.font = '500 40px Manrope, Arial, sans-serif';
+    ctx.fillText(String(value || '—'), x, y + 56);
+  }
+
+  function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+    var words = String(text).split(' ');
+    var line = '';
+    var yy = y;
+    for (var i = 0; i < words.length; i++) {
+      var test = line ? (line + ' ' + words[i]) : words[i];
+      if (ctx.measureText(test).width > maxWidth && line) {
+        ctx.fillText(line, x, yy);
+        line = words[i];
+        yy += lineHeight;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, x, yy);
   }
 
   global.ClientAccount = {
     phonePassword: phonePassword,
+    maskPassword: maskPassword,
     readOrderFields: readOrderFields,
     validateFields: validateFields,
     provision: provision,
     signInWithPhonePassword: signInWithPhonePassword,
-    ensureClientAccess: ensureClientAccess
+    ensureClientAccess: ensureClientAccess,
+    stashWelcome: stashWelcome,
+    readWelcome: readWelcome,
+    clearWelcome: clearWelcome,
+    welcomeFromFields: welcomeFromFields,
+    downloadCredentialCard: downloadCredentialCard
   };
 })(typeof window !== 'undefined' ? window : this);

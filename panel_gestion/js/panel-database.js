@@ -77,6 +77,15 @@
     );
   }
 
+  function pctButtons(selected, clientId) {
+    var html = '';
+    for (var p = 0; p <= 100; p += 5) {
+      var on = Number(selected) === p ? ' is-on' : '';
+      html += '<button type="button" class="db-pct-btn' + on + '" data-set-pct="' + p + '" data-client-id="' + escapeHtml(clientId) + '">' + p + '%</button>';
+    }
+    return html;
+  }
+
   function renderList(clients) {
     if (!clients || !clients.length) {
       return '<p class="desc db-empty">Sin cuentas.</p>';
@@ -88,12 +97,14 @@
         ? (moneyFromCents(ped.quote_total_cents) + ' · ant. ' + moneyFromCents(ped.deposit_cents))
         : (c.latest_cotizacion ? moneyFromCents(c.latest_cotizacion.total_cents) : '');
       var status = ped ? statusLabel(ped.status) : '';
+      var pct = Number(c.etapa_pct || 0);
+      var etapa = c.etapa_nombre || '';
       var openAttr = i === 0 ? ' open' : '';
       return (
         '<details class="db-account"' + openAttr + ' data-client-id="' + escapeHtml(c.id) + '">' +
           '<summary>' +
             '<span class="db-account-title">' + escapeHtml(c.name || c.email || 'Cliente') + '</span>' +
-            '<span class="db-account-meta">' + escapeHtml(c.email || '') + '</span>' +
+            '<span class="db-account-meta">' + escapeHtml(c.email || '') + (pct ? (' · ' + pct + '%') : '') + '</span>' +
             '<span class="accordion-chevron">＋</span>' +
           '</summary>' +
           '<div class="db-account-body">' +
@@ -104,6 +115,16 @@
             field('Paquete', pkg) +
             field('Importe', money) +
             field('Estado', status) +
+            '<details class="db-stage">' +
+              '<summary>Etapa del proyecto · ' + pct + '%</summary>' +
+              '<div class="db-stage-body">' +
+                '<label class="db-stage-name">Nombre de etapa' +
+                  '<input type="text" class="db-stage-input" data-stage-name="' + escapeHtml(c.id) + '" value="' + escapeHtml(etapa) + '" placeholder="Ej. En producción" maxlength="80">' +
+                '</label>' +
+                '<div class="db-pct-grid">' + pctButtons(pct, c.id) + '</div>' +
+                '<button type="button" class="btn primary db-stage-save" data-save-stage="' + escapeHtml(c.id) + '">Guardar etapa</button>' +
+              '</div>' +
+            '</details>' +
             '<div class="db-account-actions">' +
               '<button type="button" class="btn db-delete-btn" data-delete-client="' + escapeHtml(c.id) + '" data-client-email="' + escapeHtml(c.email || '') + '" data-client-name="' + escapeHtml(c.name || '') + '">Eliminar</button>' +
             '</div>' +
@@ -174,14 +195,56 @@
     if (!host.dataset.deleteBound) {
       host.dataset.deleteBound = '1';
       host.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-delete-client]');
-        if (!btn || !host.contains(btn)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        deleteClient(host, btn);
+        var del = e.target.closest('[data-delete-client]');
+        if (del && host.contains(del)) {
+          e.preventDefault();
+          e.stopPropagation();
+          deleteClient(host, del);
+          return;
+        }
+        var pctBtn = e.target.closest('[data-set-pct]');
+        if (pctBtn && host.contains(pctBtn)) {
+          e.preventDefault();
+          e.stopPropagation();
+          var wrap = pctBtn.closest('.db-pct-grid');
+          if (wrap) {
+            wrap.querySelectorAll('.db-pct-btn').forEach(function (b) { b.classList.remove('is-on'); });
+          }
+          pctBtn.classList.add('is-on');
+          return;
+        }
+        var save = e.target.closest('[data-save-stage]');
+        if (save && host.contains(save)) {
+          e.preventDefault();
+          e.stopPropagation();
+          saveStage(host, save);
+        }
       });
     }
     loadList(host);
+  }
+
+  async function saveStage(root, btn) {
+    var id = btn.getAttribute('data-save-stage');
+    if (!id) return;
+    var card = btn.closest('.db-account');
+    var nameInput = card && card.querySelector('[data-stage-name="' + id + '"]');
+    var on = card && card.querySelector('.db-pct-btn.is-on');
+    var pct = on ? Number(on.getAttribute('data-set-pct')) : 0;
+    var nombre = nameInput ? nameInput.value.trim() : '';
+    btn.disabled = true;
+    try {
+      await api({
+        action: 'update_stage',
+        user_id: id,
+        etapa_pct: pct,
+        etapa_nombre: nombre
+      });
+      await loadList(root);
+    } catch (err) {
+      alert(err.message || 'No se pudo guardar la etapa');
+      btn.disabled = false;
+    }
   }
 
   function unlockDatabaseCardForAdmin() {
