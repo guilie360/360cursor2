@@ -961,6 +961,23 @@
     }
   }
 
+  function consumeOpenClientChatQuery() {
+    try {
+      var params = new URLSearchParams(location.search || '');
+      var id = params.get('openClientChat');
+      if (!id || !isAdmin()) return;
+      var name = params.get('clientName') || 'Cliente';
+      rememberClientContact(id, name, new Date().toISOString());
+      openClientChat(id, name);
+      params.delete('openClientChat');
+      params.delete('clientName');
+      var next = location.pathname + (params.toString() ? '?' + params.toString() : '') + (location.hash || '');
+      history.replaceState({}, '', next);
+    } catch (e) {
+      console.warn('[TeamChat] openClientChat query', e);
+    }
+  }
+
   async function start() {
     bindUi();
     loadClientContacts();
@@ -968,6 +985,7 @@
     if (!ok) return;
     await reload();
     subscribe();
+    consumeOpenClientChatQuery();
   }
 
   window.BoxiesTeamChat = {

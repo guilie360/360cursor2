@@ -137,6 +137,39 @@
     }
   }
 
+  function pingAdminAlert(row) {
+    try {
+      if (!row || !row.id) return;
+      var base =
+        (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL
+          ? String(SUPABASE_URL).replace(/\/$/, '')
+          : '') + '/functions/v1/notify-admin-chat';
+      if (!base || base.indexOf('http') !== 0) return;
+      var headers = { 'Content-Type': 'application/json' };
+      if (typeof SUPABASE_ANON_KEY !== 'undefined' && SUPABASE_ANON_KEY) {
+        headers.apikey = SUPABASE_ANON_KEY;
+      }
+      var client = getClient();
+      Promise.resolve(client && client.auth.getSession())
+        .then(function (sess) {
+          var token =
+            sess && sess.data && sess.data.session && sess.data.session.access_token;
+          if (token) headers.Authorization = 'Bearer ' + token;
+          return fetch(base, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({
+              message_id: row.id,
+              client_id: row.sender_id || state.userId,
+              client_name: row.sender_name || state.userName || 'Cliente',
+              body: row.body || ''
+            })
+          });
+        })
+        .catch(function () {});
+    } catch (e) {}
+  }
+
   async function send(text, notifyAdmin) {
     var client = getClient();
     if (!client) throw new Error('Sin sesión');
@@ -150,6 +183,7 @@
       p_notify_admin: !!notifyAdmin
     });
     if (result.error) throw new Error(result.error.message || 'No se pudo enviar');
+    pingAdminAlert(result.data);
     await reload();
     markRead();
     return result.data;
