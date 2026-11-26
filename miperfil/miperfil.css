@@ -1,0 +1,27 @@
+/* Mi perfil — chrome del panel, contenido cliente */
+.miperfil-mode .portal-wrap{padding-bottom:96px}
+.miperfil-head-user{color:var(--muted,#aaa);font-size:12px;letter-spacing:.04em;margin-right:8px}
+.miperfil-login{max-width:480px;margin:28px auto 40px}
+.miperfil-login-form{margin-top:22px;display:grid;gap:4px}
+.miperfil-login-form .btn{margin-top:10px;justify-self:start;min-width:160px}
+.miperfil-error{color:#e5a0a0!important;min-height:18px}
+.miperfil-grid{margin-top:8px}
+.miperfil-card-wide{grid-column:1 / -1}
+.miperfil-card-top{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%}
+.miperfil-pill{
+  display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#ddd;flex:none
+}
+.miperfil-quotes{margin-top:12px;width:100%}
+.miperfil-quote-row{
+  display:flex;justify-content:space-between;gap:14px;align-items:baseline;
+  padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)
+}
+.miperfil-quote-row:last-child{border-bottom:0}
+.miperfil-footer .miperfil-footer-meta{flex:1;min-width:0}
+.miperfil-footer-hint{display:block;color:#888;font-size:11px;margin-top:2px}
+.miperfil-footer .footer-chat-btn{text-decoration:none;color:inherit;display:grid;place-items:center}
+@media(max-width:720px){
+  .miperfil-card-wide{grid-column:auto}
+  .miperfil-head-user{display:none}
+}

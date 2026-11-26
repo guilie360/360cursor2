@@ -13,6 +13,10 @@
   # Paddle return / payment confirmation
   RewriteRule ^pagos/?$ pagos/index.html [L]
 
+  # Espacio del cliente (Mi perfil)
+  RewriteRule ^miperfil/?$ miperfil/index.html [L]
+  RewriteRule ^miperfil/(.+)$ miperfil/$1 [L]
+
   # V5.4 — legacy CMS hosts retired; only /boxies remains
   RewriteRule ^admin2(/.*)?$ /boxies/ [R=301,L]
   RewriteRule ^admin(/.*)?$ /boxies/ [R=301,L]
@@ -26,7 +30,7 @@
   RewriteRule ^ - [L]
 
   # App folders that are not project slugs
-  RewriteRule ^(auth|boxies|landing|login|cotizar|cotizador|pagos|panel_gestion|css|js|supabase|assets|images)(/|$) - [L]
+  RewriteRule ^(auth|boxies|landing|login|cotizar|cotizador|pagos|miperfil|panel_gestion|css|js|supabase|assets|images)(/|$) - [L]
 
   # Social crawlers need server-rendered Open Graph meta per slug (WhatsApp, etc.)
   RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|FacebookBot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|Discordbot|TelegramBot|Applebot|Googlebot|bingbot) [NC]
