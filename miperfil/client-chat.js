@@ -274,6 +274,7 @@
     close: closePopup,
     toggle: toggle,
     reload: reload,
+    send: send,
     start: start
   };
 

@@ -6,8 +6,10 @@
   var homeView = document.getElementById('homeView');
   var infoView = document.getElementById('infoView');
   var docsView = document.getElementById('docsView');
+  var paysView = document.getElementById('paysView');
   var logoutBtn = document.getElementById('logoutBtn');
   var portalBack = document.getElementById('portalBack');
+  var payHeaderBtn = document.getElementById('payHeaderBtn');
   var errEl = document.getElementById('loginError');
   var goalCaption = document.getElementById('hunterGoalCaption');
   var goalBonus = document.getElementById('hunterGoalBonus');
@@ -66,14 +68,22 @@
   }
 
   function hideAll() {
-    [loginView, homeView, infoView, docsView].forEach(function (el) {
+    [loginView, homeView, infoView, docsView, paysView].forEach(function (el) {
       if (el) el.classList.add('portal-hidden');
     });
+  }
+
+  function setPayHeader(on) {
+    try {
+      if (window.BoxiesMiPerfilPays) BoxiesMiPerfilPays.setHeaderVisible(!!on);
+      else if (payHeaderBtn) payHeaderBtn.classList.toggle('portal-hidden', !on);
+    } catch (e) {}
   }
 
   function showLogin() {
     setAuthChrome(false);
     setClientName('');
+    setPayHeader(false);
     hideAll();
     if (loginView) loginView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.add('portal-hidden');
@@ -82,6 +92,7 @@
 
   function showHome() {
     setAuthChrome(true);
+    setPayHeader(true);
     hideAll();
     if (homeView) homeView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.add('portal-hidden');
@@ -89,6 +100,7 @@
 
   function showInfo() {
     setAuthChrome(true);
+    setPayHeader(true);
     hideAll();
     if (infoView) infoView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.remove('portal-hidden');
@@ -96,6 +108,7 @@
 
   function showDocs() {
     setAuthChrome(true);
+    setPayHeader(true);
     hideAll();
     if (docsView) docsView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.remove('portal-hidden');
@@ -106,6 +119,22 @@
       }
     } catch (e) {}
   }
+
+  function showPays() {
+    setAuthChrome(true);
+    setPayHeader(true);
+    hideAll();
+    if (paysView) paysView.classList.remove('portal-hidden');
+    if (portalBack) portalBack.classList.remove('portal-hidden');
+    try {
+      if (window.BoxiesMiPerfilPays) {
+        BoxiesMiPerfilPays.bind();
+        BoxiesMiPerfilPays.load();
+      }
+    } catch (e) {}
+  }
+
+  window.BoxiesMiPerfilShowPays = showPays;
 
   function applyStage(profile, ped) {
     var pct = Number(profile && profile.etapa_pct);
@@ -290,6 +319,10 @@
     showHome();
     try { window.scrollTo(0, 0); } catch (e) {}
   };
+
+  try {
+    if (window.BoxiesMiPerfilPays) BoxiesMiPerfilPays.bind();
+  } catch (ePay) {}
 
   boot();
 })();

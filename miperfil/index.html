@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
 <link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel70">
 <link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel70">
-<link rel="stylesheet" href="/miperfil/miperfil.css?v=6">
+<link rel="stylesheet" href="/miperfil/miperfil.css?v=7">
 </head>
 <body class="portal-mode miperfil-mode">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat con admin">
@@ -29,6 +29,7 @@
    <span class="portal-brand-copy">360Preventa<small>Mi perfil</small></span>
   </div>
   <div class="portal-head-right">
+   <button class="btn miperfil-pay-btn portal-hidden" id="payHeaderBtn" type="button">Pagos</button>
    <button class="btn portal-logout portal-logout-icon" id="logoutBtn" type="button" aria-label="Cerrar sesión" title="Cerrar sesión">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5M14 16l4-4-4-4M18 12H9"/></svg>
    </button>
@@ -91,6 +92,13 @@
    <p class="desc">Cotización guardada, contrato para firmar e invoice del anticipo.</p>
    <div id="docsList" class="docs-list" aria-live="polite"></div>
   </section>
+
+  <section id="paysView" class="miperfil-page portal-hidden">
+   <div class="eyebrow">360PREVENTA · PAGOS</div>
+   <h1 class="portal-title">Pagos</h1>
+   <p class="desc">Paga la entrega de cada proyecto o solicita un cobro extra.</p>
+   <div id="paysList" class="pays-list" aria-live="polite"></div>
+  </section>
  </div>
 
  <footer class="hunter-goal-footer" id="hunterGoalFooter" aria-label="Progreso de tu proyecto">
@@ -115,8 +123,9 @@
 <script src="/js/shared/client-account.js?v=2"></script>
 <script src="/js/shared/quote-pdf.js?v=1"></script>
 <script src="/shared/js/global-nav.js?v=21"></script>
-<script src="/miperfil/client-chat.js?v=1"></script>
+<script src="/miperfil/client-chat.js?v=2"></script>
 <script src="/miperfil/docs.js?v=2"></script>
-<script src="/miperfil/miperfil.js?v=6"></script>
+<script src="/miperfil/payments.js?v=1"></script>
+<script src="/miperfil/miperfil.js?v=7"></script>
 </body>
 </html>
