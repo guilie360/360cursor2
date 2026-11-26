@@ -13,7 +13,6 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const TEAM_ROLES = new Set(["hunter", "admin", "super_admin", "asesor"]);
 const HUNTER_RATE = 0.08;
 
 function json(status: number, body: Record<string, unknown>) {
@@ -62,6 +61,8 @@ Deno.serve(async (req) => {
   const admin = createClient(supabaseUrl, serviceKey);
   let userId: string | null = null;
 
+  // Sesión opcional: equipo, cliente o anónimo pueden crear checkout.
+  // (Antes se bloqueaba a rol cliente tras el auto-login del cotizador.)
   if (authHeader.toLowerCase().startsWith("bearer ")) {
     const userClient = createClient(supabaseUrl, anonKey || serviceKey, {
       global: { headers: { Authorization: authHeader } },
@@ -69,20 +70,8 @@ Deno.serve(async (req) => {
     const { data: userData } = await userClient.auth.getUser();
     if (userData?.user) {
       userId = userData.user.id;
-      const { data: profile } = await admin
-        .from("profiles")
-        .select("rol")
-        .eq("id", userId)
-        .maybeSingle();
-      const rol = String(profile?.rol || "");
-      if (!TEAM_ROLES.has(rol)) {
-        return json(403, { error: "Sin permiso para crear cobros." });
-      }
     }
   }
-
-  // Público (cotizador): permitido crear checkout sin sesión de equipo.
-  // Equipo: también permitido con JWT.
 
   let body: Record<string, unknown>;
   try {
