@@ -8,6 +8,7 @@
   var infoView = document.getElementById('infoView');
   var docsView = document.getElementById('docsView');
   var paysView = document.getElementById('paysView');
+  var showroomsView = document.getElementById('showroomsView');
   var logoutBtn = document.getElementById('logoutBtn');
   var portalBack = document.getElementById('portalBack');
   var payHeaderBtn = document.getElementById('payHeaderBtn');
@@ -82,7 +83,7 @@
   }
 
   function hideViews() {
-    [homeView, infoView, docsView, paysView].forEach(function (el) {
+    [homeView, infoView, docsView, paysView, showroomsView].forEach(function (el) {
       if (el) el.classList.add('portal-hidden');
     });
   }
@@ -155,6 +156,21 @@
       if (window.BoxiesMiPerfilPays) {
         BoxiesMiPerfilPays.bind();
         BoxiesMiPerfilPays.load();
+      }
+    } catch (e) {}
+  }
+
+  function showShowrooms() {
+    setAuthChrome(true);
+    setPayHeader(true);
+    hideViews();
+    setPageHead('Mis showrooms', 'Miniaturas y carpeta Drive.');
+    if (showroomsView) showroomsView.classList.remove('portal-hidden');
+    if (portalBack) portalBack.classList.remove('portal-hidden');
+    try {
+      if (window.BoxiesMiPerfilShowrooms) {
+        BoxiesMiPerfilShowrooms.bind();
+        BoxiesMiPerfilShowrooms.load();
       }
     } catch (e) {}
   }
@@ -284,6 +300,7 @@
       var page = btn.getAttribute('data-miperfil-page');
       if (page === 'info') showInfo();
       else if (page === 'docs') showDocs();
+      else if (page === 'showrooms') showShowrooms();
     });
   });
 

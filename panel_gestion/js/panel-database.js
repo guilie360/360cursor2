@@ -134,6 +134,24 @@
                 '<button type="button" class="btn primary db-stage-save" data-save-contrato="' + escapeHtml(c.id) + '">Guardar contrato</button>' +
               '</div>' +
             '</details>' +
+            '<details class="db-stage">' +
+              '<summary>Showroom + Drive (Mis showrooms)</summary>' +
+              '<div class="db-stage-body">' +
+                '<label class="db-stage-name">URL del showroom' +
+                  '<input type="url" class="db-stage-input" data-showroom-url="' + escapeHtml(c.id) + '" value="' + escapeHtml((ped && ped.showroom_url) || '') + '" placeholder="https://360preventa.com/…" maxlength="2000">' +
+                '</label>' +
+                '<label class="db-stage-name">Miniatura (cover)' +
+                  '<input type="url" class="db-stage-input" data-showroom-thumb="' + escapeHtml(c.id) + '" value="' + escapeHtml((ped && ped.showroom_thumb_url) || '') + '" placeholder="https://…/cover.jpg" maxlength="2000">' +
+                '</label>' +
+                '<label class="db-stage-name">Carpeta Drive' +
+                  '<input type="url" class="db-stage-input" data-drive-folder="' + escapeHtml(c.id) + '" value="' + escapeHtml((ped && ped.drive_folder_url) || '') + '" placeholder="https://drive.google.com/…" maxlength="2000">' +
+                '</label>' +
+                (ped && ped.id
+                  ? '<input type="hidden" data-showroom-pedido="' + escapeHtml(c.id) + '" value="' + escapeHtml(ped.id) + '">'
+                  : '') +
+                '<button type="button" class="btn primary db-stage-save" data-save-showrooms="' + escapeHtml(c.id) + '">Guardar showroom</button>' +
+              '</div>' +
+            '</details>' +
             '<div class="db-account-actions">' +
               '<button type="button" class="btn db-delete-btn" data-delete-client="' + escapeHtml(c.id) + '" data-client-email="' + escapeHtml(c.email || '') + '" data-client-name="' + escapeHtml(c.name || '') + '">Eliminar</button>' +
             '</div>' +
@@ -234,6 +252,13 @@
           e.preventDefault();
           e.stopPropagation();
           saveContratoUrl(host, saveContrato);
+          return;
+        }
+        var saveShowrooms = e.target.closest('[data-save-showrooms]');
+        if (saveShowrooms && host.contains(saveShowrooms)) {
+          e.preventDefault();
+          e.stopPropagation();
+          saveShowroomsUrls(host, saveShowrooms);
         }
       });
     }
@@ -279,6 +304,31 @@
       await loadList(root);
     } catch (err) {
       alert(err.message || 'No se pudo guardar el contrato');
+      btn.disabled = false;
+    }
+  }
+
+  async function saveShowroomsUrls(root, btn) {
+    var id = btn.getAttribute('data-save-showrooms');
+    if (!id) return;
+    var card = btn.closest('.db-account');
+    var showroom = card && card.querySelector('[data-showroom-url="' + id + '"]');
+    var thumb = card && card.querySelector('[data-showroom-thumb="' + id + '"]');
+    var drive = card && card.querySelector('[data-drive-folder="' + id + '"]');
+    var ped = card && card.querySelector('[data-showroom-pedido="' + id + '"]');
+    btn.disabled = true;
+    try {
+      await api({
+        action: 'update_showrooms',
+        user_id: id,
+        pedido_id: ped ? ped.value : '',
+        showroom_url: showroom ? showroom.value.trim() : '',
+        showroom_thumb_url: thumb ? thumb.value.trim() : '',
+        drive_folder_url: drive ? drive.value.trim() : ''
+      });
+      await loadList(root);
+    } catch (err) {
+      alert(err.message || 'No se pudo guardar el showroom');
       btn.disabled = false;
     }
   }

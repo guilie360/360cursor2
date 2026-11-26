@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
     const { data: pedidos } = await admin
       .from("panel_pedidos")
       .select(
-        "id,customer_name,customer_email,proyecto_label,quote_total_cents,deposit_cents,balance_cents,status,quote_snapshot,contrato_url,is_test,created_at",
+        "id,customer_name,customer_email,proyecto_label,quote_total_cents,deposit_cents,balance_cents,status,quote_snapshot,contrato_url,showroom_url,showroom_thumb_url,drive_folder_url,is_test,created_at",
       )
       .order("created_at", { ascending: false })
       .limit(300);
@@ -201,6 +201,9 @@ Deno.serve(async (req) => {
             deposit_cents: latestPed.deposit_cents,
             balance_cents: latestPed.balance_cents,
             contrato_url: latestPed.contrato_url || null,
+            showroom_url: latestPed.showroom_url || null,
+            showroom_thumb_url: latestPed.showroom_thumb_url || null,
+            drive_folder_url: latestPed.drive_folder_url || null,
             is_test: !!latestPed.is_test,
             created_at: latestPed.created_at,
             summary: packageSummary(
@@ -311,6 +314,71 @@ Deno.serve(async (req) => {
     });
   }
 
+  if (action === "update_showrooms") {
+    const userId = String(body.user_id || body.id || "").trim();
+    if (!/^[0-9a-f-]{36}$/i.test(userId)) {
+      return json(400, { error: "user_id inválido." });
+    }
+    function cleanUrl(raw: unknown, label: string): string {
+      const url = String(raw || "").trim().slice(0, 2000);
+      if (url && !/^https?:\/\//i.test(url)) {
+        throw new Error(`La URL de ${label} debe empezar por http(s)://`);
+      }
+      return url;
+    }
+    let showroomUrl = "";
+    let thumbUrl = "";
+    let driveUrl = "";
+    try {
+      showroomUrl = cleanUrl(body.showroom_url, "showroom");
+      thumbUrl = cleanUrl(body.showroom_thumb_url, "miniatura");
+      driveUrl = cleanUrl(body.drive_folder_url, "Drive");
+    } catch (e) {
+      return json(400, { error: e instanceof Error ? e.message : "URL inválida." });
+    }
+
+    const { data: targetUser } = await admin.auth.admin.getUserById(userId);
+    const email = String(targetUser?.user?.email || "").trim().toLowerCase();
+    if (!email) return json(404, { error: "Cliente sin correo." });
+
+    let pedId = String(body.pedido_id || "").trim();
+    if (!/^[0-9a-f-]{36}$/i.test(pedId)) {
+      const { data: ped } = await admin
+        .from("panel_pedidos")
+        .select("id")
+        .eq("customer_email", email)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      pedId = ped?.id || "";
+    }
+    if (!pedId) {
+      return json(404, { error: "Este cliente aún no tiene pedido." });
+    }
+
+    const { error: upErr } = await admin
+      .from("panel_pedidos")
+      .update({
+        showroom_url: showroomUrl || null,
+        showroom_thumb_url: thumbUrl || null,
+        drive_folder_url: driveUrl || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", pedId)
+      .eq("customer_email", email);
+    if (upErr) {
+      return json(400, { error: upErr.message || "No se pudo guardar el showroom." });
+    }
+    return json(200, {
+      ok: true,
+      user_id: userId,
+      pedido_id: pedId,
+      showroom_url: showroomUrl || null,
+      showroom_thumb_url: thumbUrl || null,
+      drive_folder_url: driveUrl || null,
+    });
+  }
+
   if (action === "delete") {
     const userId = String(body.user_id || body.id || "").trim();
     if (!/^[0-9a-f-]{36}$/i.test(userId)) {
@@ -366,5 +434,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  return json(400, { error: "Acción no soportada. Usa list, update_stage, update_contrato o delete." });
+  return json(400, {
+    error: "Acción no soportada. Usa list, update_stage, update_contrato, update_showrooms o delete.",
+  });
 });

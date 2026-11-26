@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
 <link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel73">
 <link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel73">
-<link rel="stylesheet" href="/miperfil/miperfil.css?v=12">
+<link rel="stylesheet" href="/miperfil/miperfil.css?v=13">
 </head>
 <body class="portal-mode miperfil-mode miperfil-login-open">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat con admin">
@@ -83,10 +83,10 @@
      <b>Mis documentos</b>
      <small>Cotización, contrato e invoice del anticipo.</small>
     </button>
-    <button type="button" class="portal-card portal-card--primary portal-card--soon" data-miperfil-page="showrooms" disabled aria-disabled="true">
+    <button type="button" class="portal-card portal-card--primary" data-miperfil-page="showrooms">
      <span class="picon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 15l5-4 4 3 3-2 6 4"/></svg></span>
      <b>Mis showrooms</b>
-     <small>Próximamente: miniaturas y archivos Drive.</small>
+     <small>Miniaturas y carpeta Drive de tu proyecto.</small>
     </button>
    </div>
   </section>
@@ -107,6 +107,10 @@
 
   <section id="paysView" class="miperfil-page portal-hidden">
    <div id="paysList" class="pays-list" aria-live="polite"></div>
+  </section>
+
+  <section id="showroomsView" class="miperfil-page portal-hidden">
+   <div id="showroomsRoot" class="showrooms-root" aria-live="polite"></div>
   </section>
  </div>
 
@@ -135,6 +139,7 @@
 <script src="/miperfil/client-chat.js?v=3"></script>
 <script src="/miperfil/docs.js?v=2"></script>
 <script src="/miperfil/payments.js?v=3"></script>
-<script src="/miperfil/miperfil.js?v=12"></script>
+<script src="/miperfil/showrooms.js?v=1"></script>
+<script src="/miperfil/miperfil.js?v=13"></script>
 </body>
 </html>
