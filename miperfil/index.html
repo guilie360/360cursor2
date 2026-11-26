@@ -14,15 +14,39 @@
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
 <link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel73">
 <link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel73">
-<link rel="stylesheet" href="/miperfil/miperfil.css?v=11">
+<link rel="stylesheet" href="/miperfil/miperfil.css?v=12">
 </head>
-<body class="portal-mode miperfil-mode">
+<body class="portal-mode miperfil-mode miperfil-login-open">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat con admin">
  <div class="chat-popup-head"><h3 id="chatPopupTitle">Chat con 360Preventa</h3><div class="chat-popup-actions"><button class="chat-popup-close" id="teamChatPopupClose" type="button" aria-label="Cerrar chat">×</button></div></div>
  <div id="teamChatMessages" class="team-chat-messages" aria-live="polite"></div>
  <form id="teamChatForm" class="team-chat-form"><textarea id="teamChatInput" rows="2" placeholder="Escribe al admin…" required></textarea><button class="btn primary" type="submit">Enviar</button></form>
 </div>
-<div class="portal" id="portal">
+
+<section class="login-screen" id="loginScreen">
+ <div class="login-card">
+  <button type="button" class="login-home-logo mag" data-href="/" aria-label="Volver a 360Preventa" data-cursor="INICIO">
+   <img src="/panel_gestion/assets/logo.png" alt="360Preventa">
+  </button>
+  <h1 class="login-wordmark">BOXIES</h1>
+  <p class="login-subtitle"><strong>360PREVENTA</strong> · MI PERFIL</p>
+  <form id="loginForm">
+   <div class="login-field">
+    <label for="loginEmail">Correo electrónico</label>
+    <input id="loginEmail" type="email" autocomplete="username" required placeholder="correo@empresa.com">
+   </div>
+   <div class="login-field">
+    <label for="loginPassword">Celular</label>
+    <input id="loginPassword" type="password" inputmode="numeric" autocomplete="current-password" required placeholder="3001234567">
+   </div>
+   <button class="login-submit mag" type="submit" data-cursor="ENTRAR">Iniciar sesión</button>
+   <div class="login-error" id="loginError" aria-live="polite"></div>
+  </form>
+  <div class="login-foot">Acceso privado para clientes 360Preventa</div>
+ </div>
+</section>
+
+<div class="portal portal-hidden" id="portal">
  <header class="portal-head"><div class="portal-head-inner">
   <div class="portal-brand">
    <img class="portal-brand-logo" id="portalLogo" alt="Logo 360Preventa" src="/panel_gestion/assets/logo.png">
@@ -41,21 +65,11 @@
  </div></header>
 
  <div class="portal-wrap">
-  <!-- Cabecera fija: misma posición en todas las pantallas; solo cambia el texto. -->
   <div class="miperfil-page-head" id="miperfilPageHead">
    <div class="eyebrow" id="miperfilEyebrow">360PREVENTA · MI PERFIL</div>
-   <h1 class="portal-title" id="miperfilTitle">Mi perfil</h1>
-   <p class="desc miperfil-lead" id="miperfilLead">Correo y celular.</p>
+   <h1 class="portal-title" id="miperfilTitle">Hola</h1>
+   <p class="desc miperfil-lead" id="miperfilLead">Sigue el avance de tu proyecto.</p>
   </div>
-
-  <section id="loginView" class="miperfil-login">
-   <form id="loginForm" class="miperfil-login-form">
-    <div class="field"><label for="email">Correo</label><input id="email" type="email" autocomplete="username" required placeholder="correo@empresa.com"></div>
-    <div class="field"><label for="password">Celular</label><input id="password" type="password" inputmode="numeric" autocomplete="current-password" required placeholder="3001234567"></div>
-    <button class="btn" type="submit">Entrar</button>
-    <p class="desc miperfil-error" id="loginError" aria-live="polite"></p>
-   </form>
-  </section>
 
   <section id="homeView" class="miperfil-home portal-hidden">
    <div class="portal-grid miperfil-grid">
@@ -121,6 +135,6 @@
 <script src="/miperfil/client-chat.js?v=3"></script>
 <script src="/miperfil/docs.js?v=2"></script>
 <script src="/miperfil/payments.js?v=3"></script>
-<script src="/miperfil/miperfil.js?v=11"></script>
+<script src="/miperfil/miperfil.js?v=12"></script>
 </body>
 </html>

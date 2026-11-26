@@ -5,9 +5,14 @@
 .miperfil-mode #teamChatPopup .team-chat-message.is-mine{
   margin-left:auto;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18)
 }
-.miperfil-login{max-width:480px;margin:0}
-.miperfil-login-form,.miperfil-info-form{margin-top:0;display:grid;gap:4px;max-width:480px}
-.miperfil-login-form .btn,
+/* Login BOXIES: misma card que panel; portal oculto hasta autenticar */
+.miperfil-mode.miperfil-login-open #portal{display:none!important}
+.miperfil-mode #loginScreen.login-screen{z-index:20}
+.miperfil-mode #loginScreen .login-error{
+  min-height:18px;margin-top:12px;color:#e5a0a0;
+  font:500 12px/1.35 Manrope,Arial,sans-serif;text-align:left
+}
+.miperfil-info-form{margin-top:0;display:grid;gap:4px;max-width:480px}
 .miperfil-info-form .btn{margin-top:10px;justify-self:start;min-width:160px}
 .miperfil-error{color:#e5a0a0!important;min-height:18px}
 .miperfil-grid{margin-top:0}
@@ -59,8 +64,7 @@
 .miperfil-mode #homeView,
 .miperfil-mode #infoView,
 .miperfil-mode #docsView,
-.miperfil-mode #paysView,
-.miperfil-mode #loginView{
+.miperfil-mode #paysView{
   margin:0!important;
   padding:0!important;
 }

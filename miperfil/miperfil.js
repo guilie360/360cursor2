@@ -2,7 +2,8 @@
  * Mi perfil — home panel-style + Mi información.
  */
 (function () {
-  var loginView = document.getElementById('loginView');
+  var loginScreen = document.getElementById('loginScreen');
+  var portalEl = document.getElementById('portal');
   var homeView = document.getElementById('homeView');
   var infoView = document.getElementById('infoView');
   var docsView = document.getElementById('docsView');
@@ -32,6 +33,9 @@
   function setAuthChrome(on) {
     document.body.classList.toggle('workspace-authenticated', !!on);
     document.body.classList.toggle('nav-panel-authed', !!on);
+    document.body.classList.toggle('miperfil-login-open', !on);
+    if (loginScreen) loginScreen.classList.toggle('portal-hidden', !!on);
+    if (portalEl) portalEl.classList.toggle('portal-hidden', !on);
   }
 
   function setFooterProgress(pct, caption, bonusLabel, bonusValue) {
@@ -77,8 +81,8 @@
     } catch (e3) {}
   }
 
-  function hideAll() {
-    [loginView, homeView, infoView, docsView, paysView].forEach(function (el) {
+  function hideViews() {
+    [homeView, infoView, docsView, paysView].forEach(function (el) {
       if (el) el.classList.add('portal-hidden');
     });
   }
@@ -94,17 +98,16 @@
     setAuthChrome(false);
     setClientName('');
     setPayHeader(false);
-    hideAll();
-    setPageHead('Mi perfil', 'Correo y celular.', '360PREVENTA · MI PERFIL');
-    if (loginView) loginView.classList.remove('portal-hidden');
+    hideViews();
     if (portalBack) portalBack.classList.add('portal-hidden');
     setFooterProgress(0, 'Mi perfil · 360Preventa', 'Acceso', 'Cliente');
+    try { $('loginEmail') && $('loginEmail').focus(); } catch (e) {}
   }
 
   function showHome() {
     setAuthChrome(true);
     setPayHeader(true);
-    hideAll();
+    hideViews();
     var name = '';
     try { name = document.body.dataset.clientName || sessionStorage.getItem('boxiesClientName') || ''; } catch (e0) {}
     setPageHead(name ? ('Hola, ' + name) : 'Hola', homeLeadText);
@@ -120,7 +123,7 @@
   function showInfo() {
     setAuthChrome(true);
     setPayHeader(true);
-    hideAll();
+    hideViews();
     setPageHead('Mi información', 'Nombre, correo y teléfono.');
     if (infoView) infoView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.remove('portal-hidden');
@@ -129,7 +132,7 @@
   function showDocs() {
     setAuthChrome(true);
     setPayHeader(true);
-    hideAll();
+    hideViews();
     setPageHead('Mis documentos', 'Cotización, contrato e invoice.');
     if (docsView) docsView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.remove('portal-hidden');
@@ -144,7 +147,7 @@
   function showPays() {
     setAuthChrome(true);
     setPayHeader(true);
-    hideAll();
+    hideViews();
     setPageHead('Pagos', 'Entrega restante y cobros extra.');
     if (paysView) paysView.classList.remove('portal-hidden');
     if (portalBack) portalBack.classList.remove('portal-hidden');
@@ -250,8 +253,8 @@
     form.addEventListener('submit', async function (e) {
       e.preventDefault();
       if (errEl) errEl.textContent = '';
-      var email = ($('email').value || '').trim().toLowerCase();
-      var phone = ($('password').value || '').trim();
+      var email = ($('loginEmail').value || '').trim().toLowerCase();
+      var phone = ($('loginPassword').value || '').trim();
       var password = (window.ClientAccount && ClientAccount.phonePassword)
         ? ClientAccount.phonePassword(phone)
         : phone.replace(/\D/g, '');
@@ -267,6 +270,13 @@
       }
     });
   }
+
+  document.querySelectorAll('.login-home-logo[data-href]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var href = btn.getAttribute('data-href') || '/';
+      location.href = href;
+    });
+  });
 
   document.querySelectorAll('[data-miperfil-page]').forEach(function (btn) {
     btn.addEventListener('click', function () {
