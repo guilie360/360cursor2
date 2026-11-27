@@ -6,6 +6,7 @@
   'use strict';
 
   var stage = document.getElementById('scrollStage');
+  var section = document.getElementById('servicio') || stage;
   var cv = document.getElementById('scrollCv');
   if (!stage || !cv) return;
 
@@ -87,8 +88,13 @@
     document.documentElement.classList.toggle('scroll-story-active', !!on);
     document.body.classList.toggle('scroll-story-active', !!on);
   }
+  /* Ancla = #servicio (section). Nunca usar offsetTop del sticky inner (~0). */
+  function sectionTop() {
+    return Math.round(section.getBoundingClientRect().top + (scrollY || window.pageYOffset || 0));
+  }
   function nearStageEntry() {
-    return scrollY >= Math.max(48, stage.offsetTop - 8);
+    var top = sectionTop();
+    return (scrollY || 0) >= Math.max(80, top - 12);
   }
 
   function resize() {
@@ -211,8 +217,10 @@
       return;
     }
     mode = 'exp'; freeEntered = false; setStoryUi(true); unlockPage();
-    scrollTo({ top: stage.offsetTop, left: 0, behavior: 'instant' });
-    document.documentElement.scrollTop = stage.offsetTop;
+    var top = sectionTop();
+    scrollTo({ top: top, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = top;
+    document.body.scrollTop = top;
     lockPage(); arrivedAt = performance.now(); showStop(cur);
   }
 
@@ -240,7 +248,13 @@
     var now = performance.now(), gap = now - lastWheel; lastWheel = now;
     if (mode === 'free') return;
     if (mode !== 'exp') {
-      if (e.deltaY > 0 && nearStageEntry()) { e.preventDefault(); enterExp(); }
+      /* Solo interceptar al llegar a #servicio y con frames listos; nunca en la portada. */
+      if (e.deltaY > 0 && nearStageEntry() && framesReady) {
+        e.preventDefault();
+        enterExp();
+      } else if (e.deltaY > 0 && nearStageEntry() && !framesReady) {
+        ensureFrames();
+      }
       return;
     }
     e.preventDefault();
@@ -255,9 +269,11 @@
     if (mode !== 'exp') {
       if (ty0 == null) return;
       var dy0 = ty0 - e.touches[0].clientY;
-      if (dy0 > 45 && nearStageEntry()) {
+      if (dy0 > 45 && nearStageEntry() && framesReady) {
         e.preventDefault();
         if (!tDone) { tDone = true; enterExp(); }
+      } else if (dy0 > 45 && nearStageEntry() && !framesReady) {
+        ensureFrames();
       }
       return;
     }
@@ -270,7 +286,7 @@
   function onKey(e) {
     if (document.body.classList.contains('demo-open')) return;
     if (mode !== 'exp') {
-      if (['ArrowDown', 'PageDown', ' '].indexOf(e.key) !== -1 && nearStageEntry()) {
+      if (['ArrowDown', 'PageDown', ' '].indexOf(e.key) !== -1 && nearStageEntry() && framesReady) {
         e.preventDefault(); enterExp();
       }
       return;
@@ -282,13 +298,14 @@
 
   function onScroll() {
     if (mode === 'page') {
-      if (nearStageEntry()) enterExp();
+      if (nearStageEntry() && framesReady) enterExp();
+      else if (nearStageEntry() && !framesReady) ensureFrames();
       return;
     }
     if (mode !== 'free') return;
-    var st = stage.offsetTop;
+    var st = sectionTop();
     if (scrollY > st + innerHeight * 0.35) freeEntered = true;
-    if (freeEntered && scrollY <= st + 4) enterExp();
+    if (freeEntered && scrollY <= st + 4 && framesReady) enterExp();
   }
 
   function loadAll() {
