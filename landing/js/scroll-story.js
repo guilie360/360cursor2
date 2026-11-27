@@ -81,7 +81,8 @@
   var stillA = 0, stillIdx = -1, stillRaf = 0;
   var cur = 0, busy = false, arrivedAt = 0, lastWheel = 0;
   var mode = 'page', freeEntered = false, curT = 0, hintTimer = 0;
-  var framesReady = false, loading = false;
+  var framesReady = false, entryReady = false, loading = false, loadPromise = null;
+  var ignoreScrollEnter = false;
 
   function frameUrl(name) { return CDN + '/' + dirName + '/' + name; }
   function setStoryUi(on) {
@@ -92,15 +93,21 @@
   function sectionTop() {
     return Math.round(section.getBoundingClientRect().top + (scrollY || window.pageYOffset || 0));
   }
-  function nearStageEntry() {
-    var top = sectionTop();
-    return (scrollY || 0) >= Math.max(80, top - 12);
+  function viewportSize() {
+    var vv = window.visualViewport;
+    return {
+      w: Math.max(1, Math.round((vv && vv.width) || innerWidth || document.documentElement.clientWidth || 1)),
+      h: Math.max(1, Math.round((vv && vv.height) || innerHeight || document.documentElement.clientHeight || 1))
+    };
   }
 
   function resize() {
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = cv.width = Math.round(innerWidth * dpr);
-    H = cv.height = Math.round(innerHeight * dpr);
+    var vp = viewportSize();
+    W = cv.width = Math.round(vp.w * dpr);
+    H = cv.height = Math.round(vp.h * dpr);
+    cv.style.width = vp.w + 'px';
+    cv.style.height = vp.h + 'px';
     lastKey = '';
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
@@ -188,6 +195,7 @@
   }
 
   function go(dir) {
+    if (!framesReady) { ensureFrames(); return; }
     if (dir < 0 && cur === 0) { leaveToIntro(); return; }
     var next = cur + dir;
     if (next < 0) return;
@@ -210,31 +218,53 @@
     })(t0);
   }
 
-  function enterExp() {
-    if (mode === 'exp') return;
-    if (!framesReady) {
-      ensureFrames().then(function () { if (nearStageEntry()) enterExp(); });
-      return;
-    }
-    mode = 'exp'; freeEntered = false; setStoryUi(true); unlockPage();
+  function parkAtSection() {
     var top = sectionTop();
     scrollTo({ top: top, left: 0, behavior: 'instant' });
     document.documentElement.scrollTop = top;
     document.body.scrollTop = top;
-    lockPage(); arrivedAt = performance.now(); showStop(cur);
+  }
+
+  function enterExp() {
+    if (mode === 'exp') return;
+    if (!entryReady) {
+      stage.classList.add('is-loading');
+      ensureFrames().then(function () { enterExp(); });
+      return;
+    }
+    mode = 'exp';
+    freeEntered = false;
+    setStoryUi(true);
+    parkAtSection();
+    lockPage();
+    requestAnimationFrame(function () {
+      resize();
+      arrivedAt = performance.now();
+      showStop(cur);
+      if (!framesReady) stage.classList.add('is-loading');
+      else stage.classList.remove('is-loading');
+    });
   }
 
   function leaveToIntro() {
+    ignoreScrollEnter = true;
     mode = 'page'; freeEntered = false; busy = false; hideTexts();
     cur = 0; curT = stops[0].t; stillA = 0; stillIdx = -1; lastKey = '';
-    setStoryUi(false); unlockPage();
-    scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    setStoryUi(false); unlockPage(); stage.classList.remove('is-loading');
+    scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
     try { history.replaceState(null, '', '#inicio'); } catch (e) {}
+    requestAnimationFrame(function () {
+      resize();
+      ignoreScrollEnter = false;
+    });
     render();
   }
 
   function exitToDemo() {
     mode = 'free'; freeEntered = false; hideTexts(); setStoryUi(false); unlockPage();
+    stage.classList.remove('is-loading');
     var fin = document.getElementById('demo');
     if (fin) {
       var top = Math.round(fin.getBoundingClientRect().top + scrollY);
@@ -242,18 +272,27 @@
       try { history.replaceState(null, '', '#demo'); } catch (e) {}
       fin.classList.add('in');
     }
+    requestAnimationFrame(resize);
+  }
+
+  /* Desde portada: un gesto abajo = lock al stage (igual que un hold). */
+  function requestEnterFromPage() {
+    if (mode !== 'page') return;
+    if (!entryReady) {
+      stage.classList.add('is-loading');
+      ensureFrames().then(function () { if (mode === 'page') enterExp(); });
+      return;
+    }
+    enterExp();
   }
 
   function onWheel(e) {
     var now = performance.now(), gap = now - lastWheel; lastWheel = now;
     if (mode === 'free') return;
-    if (mode !== 'exp') {
-      /* Solo interceptar al llegar a #servicio y con frames listos; nunca en la portada. */
-      if (e.deltaY > 0 && nearStageEntry() && framesReady) {
+    if (mode === 'page') {
+      if (e.deltaY > 0) {
         e.preventDefault();
-        enterExp();
-      } else if (e.deltaY > 0 && nearStageEntry() && !framesReady) {
-        ensureFrames();
+        requestEnterFromPage();
       }
       return;
     }
@@ -266,14 +305,12 @@
   function onTouchStart(e) { ty0 = e.touches[0].clientY; tDone = false; }
   function onTouchMove(e) {
     if (mode === 'free') return;
-    if (mode !== 'exp') {
+    if (mode === 'page') {
       if (ty0 == null) return;
       var dy0 = ty0 - e.touches[0].clientY;
-      if (dy0 > 45 && nearStageEntry() && framesReady) {
+      if (dy0 > 36) {
         e.preventDefault();
-        if (!tDone) { tDone = true; enterExp(); }
-      } else if (dy0 > 45 && nearStageEntry() && !framesReady) {
-        ensureFrames();
+        if (!tDone) { tDone = true; requestEnterFromPage(); }
       }
       return;
     }
@@ -285,27 +322,44 @@
 
   function onKey(e) {
     if (document.body.classList.contains('demo-open')) return;
-    if (mode !== 'exp') {
-      if (['ArrowDown', 'PageDown', ' '].indexOf(e.key) !== -1 && nearStageEntry() && framesReady) {
-        e.preventDefault(); enterExp();
+    if (mode === 'page') {
+      if (['ArrowDown', 'PageDown', ' '].indexOf(e.key) !== -1) {
+        e.preventDefault();
+        requestEnterFromPage();
       }
       return;
     }
+    if (mode !== 'exp') return;
     if (busy || performance.now() - arrivedAt < 300) return;
     if (['ArrowDown', 'PageDown', ' ', 'ArrowRight'].indexOf(e.key) !== -1) { e.preventDefault(); go(1); }
     else if (['ArrowUp', 'PageUp', 'ArrowLeft'].indexOf(e.key) !== -1) { e.preventDefault(); go(-1); }
   }
 
   function onScroll() {
+    if (ignoreScrollEnter) return;
     if (mode === 'page') {
-      if (nearStageEntry() && framesReady) enterExp();
-      else if (nearStageEntry() && !framesReady) ensureFrames();
+      /* Barra de scroll: cualquier bajada desde portada entra al lock. */
+      if ((scrollY || 0) > 8) requestEnterFromPage();
       return;
     }
     if (mode !== 'free') return;
     var st = sectionTop();
     if (scrollY > st + innerHeight * 0.35) freeEntered = true;
-    if (freeEntered && scrollY <= st + 4 && framesReady) enterExp();
+    if (freeEntered && scrollY <= st + 4) {
+      mode = 'page';
+      requestEnterFromPage();
+    }
+  }
+
+  function loadOne(i) {
+    return new Promise(function (res) {
+      if (imgs[i] && imgs[i].complete && imgs[i].naturalWidth) { res(imgs[i]); return; }
+      var im = new Image();
+      im.decoding = 'async';
+      im.onload = im.onerror = function () { res(im); };
+      im.src = frameUrl('f_' + String(i + 1).padStart(4, '0') + '.webp');
+      imgs[i] = im;
+    });
   }
 
   function loadAll() {
@@ -315,14 +369,10 @@
         while (active < MAX && next < TOTAL) {
           (function (i) {
             next++; active++;
-            var im = new Image();
-            im.decoding = 'async';
-            im.onload = im.onerror = function () {
+            loadOne(i).then(function () {
               active--; done++;
               if (done === TOTAL) res(); else pump();
-            };
-            im.src = frameUrl('f_' + String(i + 1).padStart(4, '0') + '.webp');
-            imgs[i] = im;
+            });
           })(next);
         }
       }
@@ -331,20 +381,25 @@
   }
 
   function ensureFrames() {
-    if (framesReady) return Promise.resolve();
-    if (loading) {
-      return new Promise(function (res) {
-        var t = setInterval(function () {
-          if (framesReady) { clearInterval(t); res(); }
-        }, 80);
-      });
-    }
+    if (framesReady && entryReady) return Promise.resolve();
+    if (loadPromise) return loadPromise;
     loading = true;
     stage.classList.add('is-loading');
     loadStills();
-    return loadAll().then(function () {
-      framesReady = true; loading = false; stage.classList.remove('is-loading');
+    loadPromise = loadOne(0).then(function () {
+      entryReady = true;
+      render();
+      /* El resto sigue en background; ya se puede entrar al lock. */
+      return loadAll();
+    }).then(function () {
+      framesReady = true;
+      entryReady = true;
+      loading = false;
+      loadPromise = null;
+      stage.classList.remove('is-loading');
+      if (mode === 'exp') render();
     });
+    return loadPromise;
   }
 
   window.BoxiesScrollStory = {
@@ -359,12 +414,16 @@
 
   resize();
   addEventListener('resize', resize);
+  if (window.visualViewport) {
+    visualViewport.addEventListener('resize', resize);
+    visualViewport.addEventListener('scroll', resize);
+  }
   addEventListener('wheel', onWheel, { passive: false });
   addEventListener('touchstart', onTouchStart, { passive: true });
   addEventListener('touchmove', onTouchMove, { passive: false });
   addEventListener('keydown', onKey);
   addEventListener('scroll', onScroll, { passive: true });
-  if ('requestIdleCallback' in window) requestIdleCallback(function () { ensureFrames(); }, { timeout: 2500 });
-  else setTimeout(function () { ensureFrames(); }, 1200);
+  /* Precarga primer frame ya; el resto en idle. */
+  ensureFrames();
   render();
 })();

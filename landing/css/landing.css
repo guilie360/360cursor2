@@ -41,10 +41,27 @@ body:has(.page-transit.on) .fullscreen-toggle{
 .scroll-hint::after{content:"";display:block;height:34px;width:1px;margin:13px auto 0;background:linear-gradient(var(--bronze),transparent);animation:lineMove 1.8s infinite}
 
 /* SCROLL STORY — solo #servicio (portada y demo intactos) */
-html.scroll-story-lock,body.scroll-story-lock{overflow:hidden;overscroll-behavior:none}
-.scroll-stage{position:relative;height:100vh;height:100svh;background:#0a0a0a}
-.scroll-stage-inner{position:sticky;top:0;height:100svh;overflow:hidden;touch-action:none}
-.scroll-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+html.scroll-story-lock,body.scroll-story-lock{
+  overflow:hidden!important;
+  overscroll-behavior:none;
+  touch-action:none;
+  height:100%;
+}
+.scroll-stage{position:relative;height:100vh;height:100svh;height:100dvh;background:#0a0a0a}
+.scroll-stage-inner{position:sticky;top:0;height:100svh;height:100dvh;overflow:hidden;touch-action:none}
+/* Pin fullscreen: el section sigue en flujo como spacer; el inner cubre el viewport */
+html.scroll-story-lock .scroll-stage-inner,
+body.scroll-story-lock .scroll-stage-inner{
+  position:fixed;
+  inset:0;
+  z-index:40;
+  width:100%;
+  height:100%;
+  height:100dvh;
+  min-height:100svh;
+  max-height:100%;
+}
+.scroll-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
 .scroll-shade,.scroll-scrim{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:2}
 .scroll-shade{background:linear-gradient(to top,rgba(0,0,0,.66),rgba(0,0,0,0) 48%);transition:opacity .5s}
 .scroll-scrim{background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,.18) 55%,rgba(0,0,0,.4));transition:opacity .9s}
