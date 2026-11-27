@@ -14,7 +14,8 @@
 <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
 <link rel="stylesheet" href="/shared/css/site-chrome.css?v=8">
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
-<link rel="stylesheet" href="/landing/css/landing.css?v=quote32">
+<link rel="preconnect" href="https://boxies.b-cdn.net" crossorigin>
+<link rel="stylesheet" href="/landing/css/landing.css?v=story1">
 </head>
 <body>
 <div class="page-transit" id="pageTransit" aria-hidden="true">
@@ -35,17 +36,15 @@
   </div>
   <div class="scroll-hint">Desliza para descubrir</div>
 </section>
-<section class="experience" id="servicio">
-  <div class="experience-sticky">
-    <div class="progress" id="progress"><span class="active"></span><span></span><span></span><span></span><span></span></div>
-    <div class="sequence">
-      <article class="message"><div class="message-number">01 / EL POTENCIAL</div><h2>El valor de un inmueble está en lo que puede llegar a ser.</h2><p>Apartamentos, estudios, colivings y edificios con potencial por desarrollar.</p><div class="message-line"></div></article>
-      <article class="message"><div class="message-number">02 / LA PERCEPCIÓN</div><h2>El potencial no siempre se entiende.</h2><p>Mientras el proyecto no esté terminado, compradores, socios e inversionistas tienen que imaginar el resultado.</p><div class="message-line"></div></article>
-      <article class="message"><div class="message-number">03 / EL SHOWROOM</div><h2>Un showroom virtual anticipa el resultado.</h2><p>El inmueble terminado, diseñado y amoblado, representado antes de ejecutarlo.</p><div class="message-line"></div></article>
-      <article class="message"><div class="message-number">04 / EL ACCESO</div><h2>Todo el proyecto en un solo enlace.</h2><p>Cada espacio se explora desde cualquier dispositivo y se comparte por WhatsApp, redes o correo.</p><div class="message-line"></div></article>
-      <article class="message"><div class="message-number">05 / LA EVALUACIÓN</div><h2>Evaluar antes de que se haga realidad.</h2><p>Quien debe decidir puede explorar el proyecto a su ritmo, sin una presentación presencial ni esperar hasta la entrega final.</p><div class="message-line"></div></article>
-    </div>
-    <div class="experience-label">360PREVENTA — UNA NUEVA FORMA DE PRESENTAR</div>
+<section class="scroll-stage" id="servicio">
+  <div class="scroll-stage-inner" id="scrollStage">
+    <canvas id="scrollCv" aria-hidden="true"></canvas>
+    <div class="scroll-shade" id="scrollShade"></div>
+    <div class="scroll-scrim" id="scrollScrim"></div>
+    <div id="scrollMsgs" class="scroll-msgs" aria-live="polite"></div>
+    <div class="scroll-hint-story" id="scrollHintStory">Desliza<i></i></div>
+    <div class="scroll-dots" id="scrollDots" aria-hidden="true"></div>
+    <div class="scroll-stage-loading" aria-hidden="true">Cargando experiencia…</div>
   </div>
 </section>
 <section class="final" id="demo">
@@ -89,6 +88,7 @@
 <script src="/shared/js/fullscreen-persist.js?v=9"></script>
 <script src="/shared/js/nav-no-status.js?v=2"></script>
 <script src="/shared/js/global-nav.js?v=23"></script>
-<script src="/landing/js/landing.js?v=quote21"></script>
+<script src="/landing/js/scroll-story.js?v=1"></script>
+<script src="/landing/js/landing.js?v=story1"></script>
 </body>
 </html>

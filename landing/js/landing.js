@@ -16,20 +16,18 @@ if('scrollRestoration' in history) history.scrollRestoration='manual';
     }
   }catch(e){}
 })();
-const exp=$('.experience'),sticky=$('.experience-sticky'),msgs=$$('.message'),dots=$$('.progress span'),prog=$('#progress'),
-      intro=$('.intro-content'),hint=$('.scroll-hint'),hl=$('.header-logo'),N=msgs.length;
+const intro=$('.intro-content'),hint=$('.scroll-hint'),hl=$('.header-logo');
+const storyActive=()=>!!document.body.classList.contains('scroll-story-active')||!!window.BoxiesScrollStory?.isLocked?.();
 
-/* Títulos: cada palabra sube desde una máscara */
-msgs.forEach(m=>{const h=m.querySelector('h2');
-  h.innerHTML=h.textContent.trim().split(/\s+/).map((w,i)=>`<span class="w"><span style="--d:${i*55}ms">${w}</span></span>`).join(' ')});
-
-/* Progreso de scroll con inercia suave (el scroll nativo no se toca) */
-const tgt={intro:0,exp:0},cur={intro:0,exp:0};let raf=0;
+/* Portada: fade del intro (la animación de servicio vive en scroll-story.js) */
+const tgt={intro:0},cur={intro:0};let raf=0;
 function read(){
+  if(storyActive()){
+    if(hl){hl.style.opacity='1';hl.style.pointerEvents='auto';hl.style.transform='none'}
+    return;
+  }
   const vh=innerHeight;
   tgt.intro=clamp(scrollY/(vh*.7));
-  const sc=exp.offsetHeight-vh;
-  tgt.exp=sc>0?clamp(-exp.getBoundingClientRect().top/sc):0;
   if(!raf)raf=requestAnimationFrame(tick);
 }
 function tick(){
@@ -38,37 +36,18 @@ function tick(){
   render();raf=busy?requestAnimationFrame(tick):0;
 }
 function render(){
+  if(!intro||!hint||!hl) return;
   const pi=cur.intro,hv=ss(.55,1,pi);
   intro.style.opacity=1-ss(0,.8,pi);
   intro.style.transform=`translateY(${-90*pi}px) scale(${1-.06*pi})`;
   hint.style.opacity=1-ss(0,.25,pi);
   hl.style.opacity=hv;hl.style.transform=`translateY(${-12*(1-hv)}px)`;hl.style.pointerEvents=hv>.5?'auto':'none';
-  const p=cur.exp,f=p*N;
-  sticky.style.setProperty('--z',(1.04+.08*p).toFixed(4));
-  sticky.style.setProperty('--ty',((.5-p)*40).toFixed(1)+'px');
-  msgs.forEach((m,i)=>{
-    const t=f-i,inn=i===0?1:ss(-.14,.14,t),out=i===N-1?0:ss(.86,1.14,t),o=inn*(1-out);
-    m.style.opacity=o.toFixed(3);
-    const sp=(1-inn)-out,ab=Math.abs(sp);
-    m.style.setProperty('--s',sp.toFixed(3));
-    m.style.transform=reduce
-      ?`translateY(${(sp*70).toFixed(1)}px) scale(${(.965+.035*o).toFixed(4)})`
-      :`translate3d(0,${(sp*70).toFixed(1)}px,0) rotateX(${(ab*8).toFixed(2)}deg) scale(${(.965+.035*o).toFixed(4)})`;
-    m.style.filter=(reduce||ab<.03)?'none':`blur(${(ab*5).toFixed(2)}px)`;
-    m.style.pointerEvents=o>.5?'auto':'none';
-    m.classList.toggle('on',o>.55);
-  });
-  const idx=clamp(Math.floor(f),0,N-1);
-  dots.forEach((d,j)=>d.classList.toggle('active',j===idx));
-  prog.style.setProperty('--prog',(clamp(f-.5,0,N-1)/(N-1)).toFixed(4));
 }
 addEventListener('scroll',read,{passive:true});addEventListener('resize',read);read();
 
-/* Salto de sección sin scrub visual del scroll-story */
 function snapScrollState(){
   read();
   cur.intro=tgt.intro;
-  cur.exp=tgt.exp;
   if(raf){cancelAnimationFrame(raf);raf=0;}
   render();
 }
@@ -94,16 +73,32 @@ function hideTransit(){
   transit.setAttribute('aria-hidden','true');
 }
 function goToSection(id,{updateHash=true,fromLoad=false}={}){
+  if(id==='inicio'){
+    if(window.BoxiesScrollStory?.leaveToIntro) window.BoxiesScrollStory.leaveToIntro();
+    else scrollTo({top:0,left:0,behavior:'instant'});
+    if(updateHash){try{history.replaceState(null,'','#inicio')}catch(e){}}
+    snapScrollState();
+    return;
+  }
+  if(id==='servicio'){
+    if(window.BoxiesScrollStory?.enterExp) window.BoxiesScrollStory.enterExp();
+    else {
+      const el=document.getElementById('servicio');
+      if(el) scrollTo({top:sectionTop(el),left:0,behavior:'instant'});
+    }
+    if(updateHash){try{history.replaceState(null,'','#servicio')}catch(e){}}
+    return;
+  }
   const el=document.getElementById(id);
   if(!el) return;
   if(transitBusy && !fromLoad) return;
+  if(window.BoxiesScrollStory?.isLocked?.()) window.BoxiesScrollStory.exitToDemo?.();
   transitBusy=true;
   showTransit();
   const run=()=>{
     prepareFinalAtJump();
     const top=sectionTop(el);
     scrollTo({top,left:0,behavior:'instant'});
-    // Algunos navegadores corrigen el ancla después; forzar posición y estado.
     document.documentElement.scrollTop=top;
     document.body.scrollTop=top;
     snapScrollState();
@@ -121,7 +116,6 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
       else setTimeout(done, fromLoad ? 220 : 280);
     });
   };
-  // Dejar que el overlay pinte un frame antes del salto.
   requestAnimationFrame(()=>setTimeout(run, fromLoad ? 40 : 90));
 }
 window.BoxiesGoToSection=goToSection;
@@ -211,7 +205,7 @@ if('IntersectionObserver' in window){new IntersectionObserver((es,o)=>es.forEach
 else fin.classList.add('in');
 
 /* Luz que sigue al cursor en las tarjetas */
-$$('.showroom,.message').forEach(c=>c.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect();c.style.setProperty('--mx',e.clientX-r.left+'px');c.style.setProperty('--my',e.clientY-r.top+'px')}));
+$$('.showroom').forEach(c=>c.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect();c.style.setProperty('--mx',e.clientX-r.left+'px');c.style.setProperty('--my',e.clientY-r.top+'px')}));
 
 /* Botones magnéticos + cursor propio (solo escritorio) */
 if(fine){
