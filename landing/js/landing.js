@@ -44,11 +44,23 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
   const el=document.getElementById(id);
   if(!el) return;
   if(transitBusy && !fromLoad) return;
-  if(id==='inicio'||id==='scrollStage'){
-    if(window.BoxiesScrollStory?.relock) window.BoxiesScrollStory.relock();
+  if(id==='inicio'){
+    if(window.BoxiesScrollStory?.leaveToIntro) window.BoxiesScrollStory.leaveToIntro();
     else scrollTo({top:0,left:0,behavior:'instant'});
     if(updateHash){
       try{history.replaceState(null,'','#inicio')}catch(e){}
+    }
+    return;
+  }
+  if(id==='servicio'||id==='scrollStage'){
+    const stageEl=document.getElementById('scrollStage');
+    if(stageEl && window.BoxiesScrollStory?.enterExp){
+      window.BoxiesScrollStory.enterExp();
+    } else if(stageEl){
+      scrollTo({top:sectionTop(stageEl),left:0,behavior:'instant'});
+    }
+    if(updateHash){
+      try{history.replaceState(null,'','#servicio')}catch(e){}
     }
     return;
   }
@@ -136,8 +148,12 @@ function bootHashJump(){
   }catch(e){}
   if(!raw) return;
   const id=raw.startsWith('demo-') ? 'demo' : raw;
-  if(id==='inicio'||id==='scrollStage'){
+  if(id==='inicio'){
     goToSection('inicio',{updateHash:true,fromLoad:true});
+    return;
+  }
+  if(id==='servicio'||id==='scrollStage'){
+    goToSection('servicio',{updateHash:true,fromLoad:true});
     return;
   }
   if(!document.getElementById(id)) return;
@@ -159,7 +175,7 @@ if(fin){
 }
 
 /* Luz que sigue al cursor en las tarjetas */
-$$('.showroom,.scroll-demo-card').forEach(c=>c.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect();c.style.setProperty('--mx',e.clientX-r.left+'px');c.style.setProperty('--my',e.clientY-r.top+'px')}));
+$$('.showroom').forEach(c=>c.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect();c.style.setProperty('--mx',e.clientX-r.left+'px');c.style.setProperty('--my',e.clientY-r.top+'px')}));
 
 /* Botones magnéticos + cursor propio (solo escritorio) */
 if(fine){
@@ -168,7 +184,7 @@ if(fine){
     b.addEventListener('pointerleave',()=>b.style.transform='');
   });
   document.documentElement.classList.add('has-cur');
-  $$('.showroom,.scroll-demo-card').forEach(a=>a.dataset.cursor=a.dataset.cursor||'EXPLORAR');
+  $$('.showroom').forEach(a=>a.dataset.cursor=a.dataset.cursor||'EXPLORAR');
   const c=document.createElement('div');c.className='cur';const lb=document.createElement('span');c.appendChild(lb);
   const d=document.createElement('div');d.className='cur-dot';
   document.body.append(c,d);

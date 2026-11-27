@@ -98,11 +98,12 @@
   let busy = false;
   let arrivedAt = 0;
   let lastWheel = 0;
-  let mode = 'exp';
+  let mode = 'intro';
   let freeEntered = false;
   let curT = 0;
   let hintTimer = 0;
   let dirName = folder();
+  let framesReady = false;
 
   function frameUrl(name) {
     return frameRoot + '/' + dirName + '/' + name;
@@ -195,10 +196,19 @@
     drawFrame(curT);
   }
 
+  function setHeaderOn(on) {
+    const hl = document.getElementById('headerLogo');
+    if (hl) hl.classList.toggle('is-on', !!on);
+  }
+
+  function stageScrollTop() {
+    return Math.max(0, Math.round(stage.getBoundingClientRect().top + scrollY));
+  }
+
   function hideTexts() {
     clearTimeout(hintTimer);
     msgEls.forEach((el) => el && el.classList.remove('on'));
-    ['scrollShade', 'scrollScrim', 'scrollDemo', 'scrollHint'].forEach((id) => {
+    ['scrollShade', 'scrollScrim', 'scrollHint'].forEach((id) => {
       const el = $(id);
       if (el) el.classList.remove('on');
     });
@@ -209,29 +219,30 @@
     msgEls.forEach((el, i) => el && el.classList.toggle('on', i === k));
     const shade = $('scrollShade');
     const scrim = $('scrollScrim');
-    const demo = $('scrollDemo');
     const hint = $('scrollHint');
-    if (shade) shade.classList.toggle('on', !!st.title);
+    if (shade) shade.classList.toggle('on', !!st.title || !!st.final);
     if (scrim) scrim.classList.toggle('on', !!st.final);
-    if (demo) demo.classList.toggle('on', !!st.final);
     dotEls.forEach((d, i) => d.classList.toggle('on', i === k));
     clearTimeout(hintTimer);
-    if (!st.final && hint) {
+    if (hint) {
       hintTimer = setTimeout(
         () => {
-          if (!busy) hint.classList.add('on');
+          if (!busy && mode === 'exp') hint.classList.add('on');
         },
-        k === 0 ? 400 : 1400
+        k === 0 ? 400 : 1200
       );
     }
     try {
-      if (st.final) history.replaceState(null, '', '#demo');
-      else if (k === 0) history.replaceState(null, '', '#inicio');
+      if (k === 0) history.replaceState(null, '', '#servicio');
     } catch (e) {}
     render();
   }
 
   function go(dir) {
+    if (dir < 0 && cur === 0) {
+      leaveToIntro();
+      return;
+    }
     const next = cur + dir;
     if (next < 0) return;
     if (next >= stops.length) {
@@ -268,7 +279,8 @@
         arrivedAt = performance.now();
         curT = stops[to].t;
         showStop(to);
-        if (to > 0) fadeStill(to);
+        if (to > 0 && !stops[to].final) fadeStill(to);
+        else if (stops[to].final && to > 0) fadeStill(to);
       }
     })(t0);
   }
@@ -282,10 +294,44 @@
     document.body.classList.remove('scroll-story-lock');
   }
 
+  function enterExp() {
+    if (mode === 'exp') return;
+    mode = 'exp';
+    freeEntered = false;
+    setHeaderOn(true);
+    unlockPage();
+    scrollTo({ top: stageScrollTop(), left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = stageScrollTop();
+    lockPage();
+    arrivedAt = performance.now();
+    showStop(cur);
+  }
+
+  function leaveToIntro() {
+    mode = 'intro';
+    freeEntered = false;
+    busy = false;
+    hideTexts();
+    cur = 0;
+    curT = stops[0].t;
+    stillA = 0;
+    stillIdx = -1;
+    lastKey = '';
+    unlockPage();
+    setHeaderOn(false);
+    scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    try {
+      history.replaceState(null, '', '#inicio');
+    } catch (e) {}
+    render();
+  }
+
   function exitFree() {
     mode = 'free';
     freeEntered = false;
+    hideTexts();
     unlockPage();
+    setHeaderOn(true);
     const fin = document.getElementById('demo');
     if (fin) {
       const top = Math.round(fin.getBoundingClientRect().top + scrollY);
@@ -294,17 +340,11 @@
         history.replaceState(null, '', '#demo');
       } catch (e) {}
       fin.classList.add('in');
-    } else {
-      scrollTo({ top: innerHeight, behavior: 'smooth' });
     }
   }
 
   function relock() {
-    mode = 'exp';
-    freeEntered = false;
-    lockPage();
-    scrollTo({ top: 0, behavior: 'instant' });
-    arrivedAt = performance.now();
+    enterExp();
   }
 
   function onWheel(e) {
@@ -312,6 +352,13 @@
     const gap = now - lastWheel;
     lastWheel = now;
     if (mode === 'free') return;
+    if (mode === 'intro') {
+      if (e.deltaY > 0 && scrollY + innerHeight >= stage.offsetTop + 8) {
+        e.preventDefault();
+        enterExp();
+      }
+      return;
+    }
     e.preventDefault();
     if (busy || now - arrivedAt < COOLDOWN || gap < GAP || Math.abs(e.deltaY) < 4) return;
     go(e.deltaY > 0 ? 1 : -1);
@@ -325,6 +372,18 @@
   }
   function onTouchMove(e) {
     if (mode === 'free') return;
+    if (mode === 'intro') {
+      if (ty0 === null) return;
+      const dy = ty0 - e.touches[0].clientY;
+      if (dy > 45 && scrollY + innerHeight >= stage.offsetTop - 20) {
+        e.preventDefault();
+        if (!tDone) {
+          tDone = true;
+          enterExp();
+        }
+      }
+      return;
+    }
     e.preventDefault();
     if (tDone || busy || ty0 === null || performance.now() - arrivedAt < COOLDOWN) return;
     const dy = ty0 - e.touches[0].clientY;
@@ -336,6 +395,13 @@
 
   function onKey(e) {
     if (document.body.classList.contains('demo-open')) return;
+    if (mode === 'intro') {
+      if (['ArrowDown', 'PageDown', ' '].includes(e.key)) {
+        e.preventDefault();
+        enterExp();
+      }
+      return;
+    }
     if (mode !== 'exp' || busy || performance.now() - arrivedAt < 300) return;
     if (['ArrowDown', 'PageDown', ' ', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
@@ -347,9 +413,19 @@
   }
 
   function onScroll() {
+    if (mode === 'intro') {
+      if (scrollY >= stage.offsetTop - 2) enterExp();
+      setHeaderOn(scrollY > innerHeight * 0.45);
+      return;
+    }
     if (mode !== 'free') return;
-    if (scrollY > innerHeight * 0.3) freeEntered = true;
-    if (freeEntered && scrollY <= 1) relock();
+    const st = stageScrollTop();
+    if (scrollY > st + innerHeight * 0.35) freeEntered = true;
+    if (freeEntered && scrollY <= st + 4) relock();
+    if (scrollY < st - innerHeight * 0.4) {
+      mode = 'intro';
+      setHeaderOn(false);
+    }
   }
 
   function loadAll() {
@@ -380,24 +456,15 @@
     });
   }
 
-  function bindDemoCards() {
-    const demo = $('scrollDemo');
-    if (!demo) return;
-    demo.querySelectorAll('[data-showroom]').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const key = btn.getAttribute('data-showroom');
-        const real = document.querySelector('.showroom[data-showroom="' + key + '"]');
-        if (real) real.click();
-      });
-    });
-  }
-
   window.BoxiesScrollStory = {
     go: go,
     relock: relock,
+    enterExp: enterExp,
+    leaveToIntro: leaveToIntro,
     exitFree: exitFree,
-    isLocked: () => mode === 'exp'
+    isLocked: () => mode === 'exp',
+    mode: () => mode,
+    framesReady: () => framesReady
   };
 
   mqPortrait.addEventListener('change', () => {
@@ -409,10 +476,11 @@
     dirName = folder();
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     scrollTo(0, 0);
-    lockPage();
+    mode = 'intro';
+    unlockPage();
+    setHeaderOn(false);
     resize();
     loadStills();
-    bindDemoCards();
     addEventListener('resize', resize);
     addEventListener('wheel', onWheel, { passive: false });
     addEventListener('touchstart', onTouchStart, { passive: true });
@@ -420,11 +488,12 @@
     addEventListener('keydown', onKey);
     addEventListener('scroll', onScroll, { passive: true });
     await loadAll();
+    framesReady = true;
     if (loader) {
       loader.classList.add('is-done');
       setTimeout(() => loader.remove(), 600);
     }
     lastKey = '';
-    showStop(0);
+    render();
   })();
 })();

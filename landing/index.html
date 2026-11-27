@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
 <link rel="stylesheet" href="/shared/css/site-chrome.css?v=8">
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
-<link rel="stylesheet" href="/landing/css/landing.css?v=scroll1">
+<link rel="stylesheet" href="/landing/css/landing.css?v=scroll2">
 </head>
 <body>
 <div class="page-transit" id="pageTransit" aria-hidden="true">
@@ -29,24 +29,20 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/></svg>
 </button>
 <main>
-<section class="scroll-stage" id="scrollStage" aria-label="Experiencia 360Preventa">
+<section class="intro" id="inicio">
+  <div class="intro-content">
+    <img class="intro-logo" src="/landing/assets/logo.png" alt="Logo 360Preventa">
+    <h1>360PREVENTA</h1>
+    <div class="intro-subtitle">Real estate experience</div>
+  </div>
+  <div class="intro-scroll-hint">Desliza para descubrir</div>
+</section>
+
+<section class="scroll-stage" id="scrollStage" data-section="servicio" aria-label="Experiencia 360Preventa">
   <canvas id="scrollCv" aria-hidden="true"></canvas>
   <div class="scroll-shade" id="scrollShade"></div>
   <div class="scroll-scrim" id="scrollScrim"></div>
-  <div class="scroll-brand">360preventa</div>
   <div id="scrollMsgs" class="scroll-msgs" aria-live="polite"></div>
-  <div class="scroll-demo" id="scrollDemo">
-    <div>
-      <p class="scroll-demo-eyebrow">Explora la experiencia</p>
-      <h2>Una nueva forma de experimentar un inmueble.</h2>
-      <p class="scroll-demo-sub">Selecciona un showroom y descubre cómo funciona.</p>
-    </div>
-    <div class="scroll-demo-cards">
-      <button type="button" class="scroll-demo-card" data-showroom="apartamento" data-cursor="EXPLORAR"><span>01</span>Apartamento</button>
-      <button type="button" class="scroll-demo-card" data-showroom="estudio" data-cursor="EXPLORAR"><span>02</span>Estudio</button>
-      <button type="button" class="scroll-demo-card" data-showroom="coliving" data-cursor="EXPLORAR"><span>03</span>Coliving</button>
-    </div>
-  </div>
   <div class="scroll-hint" id="scrollHint">Desliza<i></i></div>
   <div class="scroll-dots" id="scrollDots" aria-hidden="true"></div>
 </section>
@@ -95,7 +91,7 @@
 <script src="/shared/js/fullscreen-persist.js?v=9"></script>
 <script src="/shared/js/nav-no-status.js?v=2"></script>
 <script src="/shared/js/global-nav.js?v=23"></script>
-<script src="/landing/js/scroll-story.js?v=1"></script>
-<script src="/landing/js/landing.js?v=scroll1"></script>
+<script src="/landing/js/scroll-story.js?v=2"></script>
+<script src="/landing/js/landing.js?v=scroll2"></script>
 </body>
 </html>
