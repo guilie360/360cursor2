@@ -9191,15 +9191,12 @@ var ExperienciaCanvas = (function () {
           ' stroke-width="' + esc(String(strokeW)) + '"' +
           ' vector-effect="non-scaling-stroke"></polygon>'
         );
-        if (isSel) {
+        if (isSel && !trazo) {
           m.polygon.forEach(function (p, idx) {
-            var vCls = 'builder-exp-hs-vertex' + (trazo ? ' is-trazo' : '') +
-              (idx === 0 && trazo ? ' is-close-origin' : '');
             svgParts.push(
-              '<circle class="' + vCls + '" data-exp-hs-vertex="' + esc(m.id) + '"' +
+              '<circle class="builder-exp-hs-vertex" data-exp-hs-vertex="' + esc(m.id) + '"' +
               ' data-exp-hs-vi="' + idx + '"' +
-              ' cx="' + Number(p.x) + '" cy="' + Number(p.y) + '"' +
-              ' r="' + (idx === 0 && trazo ? '1.35' : '1.1') + '"></circle>'
+              ' cx="' + Number(p.x) + '" cy="' + Number(p.y) + '" r="1.1"></circle>'
             );
           });
         }
@@ -9245,12 +9242,13 @@ var ExperienciaCanvas = (function () {
         }
         committed.forEach(function (p, idx) {
           var first = idx === 0;
+          var r = trazoDraft ? (first ? '0.32' : '0.22') : (first ? '1.45' : '1.05');
           svgParts.push(
             '<circle class="builder-exp-hs-draft-vertex' + (trazoDraft ? ' is-trazo' : '') +
               (first ? ' is-close-origin' : '') + '"' +
             (first && committed.length >= 3 ? ' data-exp-hs-draft-close="1"' : '') +
             ' cx="' + Number(p.x) + '" cy="' + Number(p.y) + '"' +
-            ' r="' + (first ? '1.45' : '1.05') + '"></circle>'
+            ' r="' + r + '"></circle>'
           );
         });
       }
@@ -9300,7 +9298,7 @@ var ExperienciaCanvas = (function () {
       var created = ExperienciaEngine.addSceneHotspotMask(
         state, sceneId, pts, { style: style }
       );
-      if (created) canvas().selectedHotspotId = created.id;
+      if (created && style !== 'trazo') canvas().selectedHotspotId = created.id;
       paintHotspotsStage();
       paintInspector();
       persist();
