@@ -56,11 +56,12 @@ html.scroll-story-lock,body.scroll-story-lock{overflow:hidden;overscroll-behavio
 .scroll-msg.on{opacity:1;transform:none;transition:opacity .9s .3s,transform .9s .3s}
 .scroll-msg h2{font:400 clamp(28px,5vw,58px)/1.1 var(--serif);text-shadow:0 2px 24px rgba(0,0,0,.4)}
 .scroll-msg small{display:block;margin-top:14px;font-size:clamp(10px,1.4vw,13px);letter-spacing:.3em;text-transform:uppercase;color:rgba(242,239,233,.62)}
-.scroll-hint{position:absolute;left:0;right:0;bottom:24px;z-index:5;text-align:center;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(242,239,233,.62);opacity:0;transition:opacity .6s;pointer-events:none}
-.scroll-hint.on{opacity:1}
+.scroll-hint{position:absolute;left:0;right:0;bottom:24px;z-index:5;text-align:center;font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:rgba(242,239,233,.62);opacity:0;visibility:hidden;transition:opacity .6s;pointer-events:none}
+.scroll-story-active .scroll-hint.on{opacity:1;visibility:visible}
 .scroll-hint i{display:block;width:1px;height:30px;margin:8px auto 0;background:linear-gradient(rgba(242,239,233,.62),transparent);animation:scrollHintPulse 1.8s ease-in-out infinite}
 @keyframes scrollHintPulse{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
-.scroll-dots{position:absolute;right:16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:5}
+.scroll-dots{position:absolute;right:16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:5;opacity:0;visibility:hidden;pointer-events:none}
+.scroll-story-active .scroll-dots{opacity:1;visibility:visible}
 .scroll-dots b{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.28);transition:all .4s}
 .scroll-dots b.on{background:#fff;height:18px;border-radius:3px}
 .w{display:inline-block;overflow:hidden;vertical-align:top;padding:.07em 0;margin:-.07em 0}

@@ -294,14 +294,26 @@
     document.body.classList.remove('scroll-story-lock');
   }
 
+  function setStoryUi(on) {
+    document.documentElement.classList.toggle('scroll-story-active', !!on);
+    document.body.classList.toggle('scroll-story-active', !!on);
+  }
+
+  function nearStageEntry() {
+    /* Solo cuando el intro ya casi salió de pantalla — no al primer pixel de rueda. */
+    return scrollY >= Math.max(24, stage.offsetTop - 12);
+  }
+
   function enterExp() {
     if (mode === 'exp') return;
+    if (!framesReady) return;
     mode = 'exp';
     freeEntered = false;
     setHeaderOn(true);
+    setStoryUi(true);
     unlockPage();
-    scrollTo({ top: stageScrollTop(), left: 0, behavior: 'instant' });
-    document.documentElement.scrollTop = stageScrollTop();
+    scrollTo({ top: stage.offsetTop, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = stage.offsetTop;
     lockPage();
     arrivedAt = performance.now();
     showStop(cur);
@@ -317,6 +329,7 @@
     stillA = 0;
     stillIdx = -1;
     lastKey = '';
+    setStoryUi(false);
     unlockPage();
     setHeaderOn(false);
     scrollTo({ top: 0, left: 0, behavior: 'smooth' });
@@ -330,6 +343,7 @@
     mode = 'free';
     freeEntered = false;
     hideTexts();
+    setStoryUi(false);
     unlockPage();
     setHeaderOn(true);
     const fin = document.getElementById('demo');
@@ -353,7 +367,7 @@
     lastWheel = now;
     if (mode === 'free') return;
     if (mode === 'intro') {
-      if (e.deltaY > 0 && scrollY + innerHeight >= stage.offsetTop + 8) {
+      if (e.deltaY > 0 && nearStageEntry()) {
         e.preventDefault();
         enterExp();
       }
@@ -375,7 +389,7 @@
     if (mode === 'intro') {
       if (ty0 === null) return;
       const dy = ty0 - e.touches[0].clientY;
-      if (dy > 45 && scrollY + innerHeight >= stage.offsetTop - 20) {
+      if (dy > 45 && nearStageEntry()) {
         e.preventDefault();
         if (!tDone) {
           tDone = true;
@@ -396,9 +410,12 @@
   function onKey(e) {
     if (document.body.classList.contains('demo-open')) return;
     if (mode === 'intro') {
-      if (['ArrowDown', 'PageDown', ' '].includes(e.key)) {
+      if (['ArrowDown', 'PageDown', ' '].includes(e.key) && nearStageEntry()) {
         e.preventDefault();
         enterExp();
+      } else if (['ArrowDown', 'PageDown', ' '].includes(e.key)) {
+        e.preventDefault();
+        scrollTo({ top: Math.min(stage.offsetTop, scrollY + innerHeight * 0.9), behavior: 'smooth' });
       }
       return;
     }
@@ -414,17 +431,18 @@
 
   function onScroll() {
     if (mode === 'intro') {
-      if (scrollY >= stage.offsetTop - 2) enterExp();
+      if (nearStageEntry()) enterExp();
       setHeaderOn(scrollY > innerHeight * 0.45);
       return;
     }
     if (mode !== 'free') return;
-    const st = stageScrollTop();
+    const st = stage.offsetTop;
     if (scrollY > st + innerHeight * 0.35) freeEntered = true;
     if (freeEntered && scrollY <= st + 4) relock();
-    if (scrollY < st - innerHeight * 0.4) {
+    if (scrollY < st - innerHeight * 0.5) {
       mode = 'intro';
-      setHeaderOn(false);
+      setStoryUi(false);
+      setHeaderOn(scrollY > innerHeight * 0.45);
     }
   }
 
@@ -478,6 +496,7 @@
     scrollTo(0, 0);
     mode = 'intro';
     unlockPage();
+    setStoryUi(false);
     setHeaderOn(false);
     resize();
     loadStills();
@@ -487,13 +506,19 @@
     addEventListener('touchmove', onTouchMove, { passive: false });
     addEventListener('keydown', onKey);
     addEventListener('scroll', onScroll, { passive: true });
-    await loadAll();
-    framesReady = true;
+    /* Portada visible de inmediato; frames cargan en segundo plano. */
     if (loader) {
       loader.classList.add('is-done');
-      setTimeout(() => loader.remove(), 600);
+      setTimeout(function () {
+        try {
+          loader.remove();
+        } catch (e) {}
+      }, 400);
     }
     lastKey = '';
     render();
+    await loadAll();
+    framesReady = true;
+    if (mode === 'intro' && nearStageEntry()) enterExp();
   })();
 })();
