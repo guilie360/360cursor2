@@ -3,3 +3,8 @@ supabase/.management-token*
 .env.*
 node_modules/
 .vscode/
+# Landing scroll frames (~74MB) — host on Bunny CDN, not git
+landing/assets/scroll/frames-cel/
+landing/assets/scroll/frames-pc/
+landing/assets/*.mp4
+landing/assets/VIDEO*.mp4
