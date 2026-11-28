@@ -26,7 +26,7 @@
   /* v2 = frames de VIDEO FINAL PARA LANGIND (ruta nueva para evitar cache del CapCut viejo) */
   var CDN = 'https://boxies.b-cdn.net/landing/scroll/v2';
   /* Frame 0 hi-res: puerta cerrada (evita el webp pixelado del CDN) */
-  var ENTRY_POSTER = '/landing/assets/magnific_pasted-image-2026-11-21-22.27_LwIgaLmswO.png';
+  var ENTRY_POSTER = '/landing/assets/door-closed.png';
 
   var HOLDS = [
     { t: 0.0 },
@@ -236,13 +236,25 @@
     })(t0);
   }
 
+  function syncPoster() {
+    var el = $('scrollPoster');
+    if (!el) return;
+    var f = Math.max(0, curT * FPS);
+    /* Visible en reveal y mientras el story está en la puerta cerrada */
+    var show = (mode === 'reveal' || mode === 'exp' || mode === 'land') && f < 0.85;
+    el.classList.toggle('is-on', !!show);
+  }
+
   function drawFrame(t) {
     var f = Math.max(0, Math.min(TOTAL - 1, t * FPS));
     var rr = Math.round(f);
     if (Math.abs(f - rr) < 0.02) f = rr;
     var i0 = Math.floor(f), a = f - i0, i1 = Math.min(TOTAL - 1, i0 + 1);
     var key = i0 + ':' + Math.round(a * 20) + ':' + W + 'x' + H + ':' + stillIdx + ':' + Math.round(stillA * 50);
-    if (key === lastKey) return;
+    if (key === lastKey) {
+      syncPoster();
+      return;
+    }
     lastKey = key;
     ctx.globalAlpha = 1;
     ctx.fillStyle = '#0a0a0a';
@@ -251,6 +263,7 @@
     if (a > 0.03 && i1 !== i0) cover(imgs[i1], a);
     if (stillIdx > 0 && stillA > 0) cover(stills[stillIdx], stillA);
     ctx.globalAlpha = 1;
+    syncPoster();
   }
   function render() { drawFrame(curT); }
 
