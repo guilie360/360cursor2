@@ -200,6 +200,7 @@ function bootHashJump(){
       sessionStorage.removeItem('boxiesFsView');
       sessionStorage.removeItem('boxiesMenuScrollY');
     }
+    if(window.BoxiesPageTransit?.claimLanding) window.BoxiesPageTransit.claimLanding();
     if(window.BoxiesPageTransit?.consumePending) fromMenu=!!window.BoxiesPageTransit.consumePending();
     else if(sessionStorage.getItem('boxiesTransitPending')==='1'){
       fromMenu=true;

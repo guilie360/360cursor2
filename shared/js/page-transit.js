@@ -7,9 +7,12 @@
 
   var LOGO = '/landing/assets/logo.png';
   var MIN_MS = 520;
+  var MAX_MS = 4000;
   var el = null;
   var busy = false;
   var hideTimer = 0;
+  var shownAt = 0;
+  var landingOwns = false;
 
   function ensure() {
     el = document.getElementById('pageTransit') || document.getElementById('boxiesPageTransit');
@@ -19,7 +22,7 @@
     el.className = 'page-transit';
     el.setAttribute('aria-hidden', 'true');
     el.innerHTML = '<img src="' + LOGO + '" alt="" class="page-transit-logo">';
-    document.body.appendChild(el);
+    (document.body || document.documentElement).appendChild(el);
     return el;
   }
 
@@ -27,24 +30,27 @@
     ensure();
     clearTimeout(hideTimer);
     busy = true;
+    shownAt = performance.now();
     document.documentElement.classList.add('page-transit-on');
-    document.body.classList.add('page-transit-on');
+    if (document.body) document.body.classList.add('page-transit-on');
     el.classList.add('on');
     el.setAttribute('aria-hidden', 'false');
+    /* Failsafe: nunca dejar el logo pegado */
+    hideTimer = setTimeout(function () {
+      if (busy) hide();
+    }, MAX_MS);
   }
 
   function hide() {
+    clearTimeout(hideTimer);
+    hideTimer = 0;
     if (!el) el = document.getElementById('pageTransit') || document.getElementById('boxiesPageTransit');
-    if (!el) {
-      busy = false;
-      document.documentElement.classList.remove('page-transit-on');
-      document.body.classList.remove('page-transit-on');
-      return;
+    if (el) {
+      el.classList.remove('on');
+      el.setAttribute('aria-hidden', 'true');
     }
-    el.classList.remove('on');
-    el.setAttribute('aria-hidden', 'true');
     document.documentElement.classList.remove('page-transit-on');
-    document.body.classList.remove('page-transit-on');
+    if (document.body) document.body.classList.remove('page-transit-on');
     busy = false;
   }
 
@@ -52,9 +58,6 @@
     return new Promise(function (resolve) { setTimeout(resolve, ms); });
   }
 
-  /**
-   * Muestra el logo, ejecuta work (fn o Promise), espera minMs, luego oculta.
-   */
   function run(work, opts) {
     opts = opts || {};
     var minMs = typeof opts.minMs === 'number' ? opts.minMs : MIN_MS;
@@ -90,11 +93,50 @@
     }
   }
 
+  function landingWillHandle() {
+    try {
+      var force = sessionStorage.getItem('boxiesForceSection') || '';
+      if (!force) {
+        var hash = (location.hash || '').replace(/^#/, '');
+        force = hash.startsWith('demo') ? 'demo' : hash;
+      }
+      if (!force) return false;
+      var id = force.startsWith('demo-') ? 'demo' : force;
+      return !!(document.getElementById(id) && typeof window.BoxiesGoToSection === 'function');
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function dismissAfterLoad() {
+    if (landingOwns || landingWillHandle()) return;
+    var pending = false;
+    try { pending = sessionStorage.getItem('boxiesTransitPending') === '1'; } catch (e) {}
+    if (!pending && !busy) return;
+    consumePending();
+    var finish = function () {
+      var elapsed = shownAt ? performance.now() - shownAt : 0;
+      var left = Math.max(0, MIN_MS - elapsed);
+      setTimeout(hide, left);
+    };
+    if (document.readyState === 'complete') finish();
+    else window.addEventListener('load', finish, { once: true });
+  }
+
   /* Si venimos de otra página con menú → mostrar logo de inmediato */
   try {
     if (sessionStorage.getItem('boxiesTransitPending') === '1') {
-      if (document.body) show();
-      else document.addEventListener('DOMContentLoaded', show);
+      var boot = function () {
+        show();
+        /* Landing con #demo/#inicio lo cierra goToSection; el resto, al load */
+        if (landingWillHandle()) {
+          landingOwns = true;
+        } else {
+          dismissAfterLoad();
+        }
+      };
+      if (document.body) boot();
+      else document.addEventListener('DOMContentLoaded', boot);
     }
   } catch (e) {}
 
@@ -104,6 +146,7 @@
     run: run,
     isBusy: function () { return busy; },
     markPending: markPending,
-    consumePending: consumePending
+    consumePending: consumePending,
+    claimLanding: function () { landingOwns = true; }
   };
 })();
