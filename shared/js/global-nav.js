@@ -350,12 +350,21 @@
       endPrivateSession();
     }
 
+    function onLanding() {
+      return !!(document.getElementById('inicio') && document.getElementById('demo') &&
+        typeof window.BoxiesGoToSection === 'function');
+    }
+
     /** Inicio / Demo: mantienen sesión y pantalla completa (shell FS). */
     function goKeepFs(url) {
       close();
+      var section = url.indexOf('demo') !== -1 ? 'demo' : 'inicio';
       try {
-        sessionStorage.setItem('boxiesForceSection', url.indexOf('demo') !== -1 ? 'demo' : 'inicio');
+        sessionStorage.setItem('boxiesForceSection', section);
+        if (window.BoxiesPageTransit) window.BoxiesPageTransit.markPending(section);
+        else sessionStorage.setItem('boxiesTransitPending', '1');
       } catch (e) {}
+      if (window.BoxiesPageTransit) window.BoxiesPageTransit.show();
       try {
         if (window.BoxiesFullscreen && typeof window.BoxiesFullscreen.navigate === 'function') {
           var keep = false;
@@ -375,6 +384,11 @@
     }
 
     function goHome() {
+      if (onLanding()) {
+        close();
+        window.BoxiesGoToSection('inicio', { updateHash: true });
+        return;
+      }
       goKeepFs('/#inicio');
     }
 
@@ -397,6 +411,11 @@
     }
 
     function goDemo() {
+      if (onLanding()) {
+        close();
+        window.BoxiesGoToSection('demo', { updateHash: true });
+        return;
+      }
       goKeepFs('/#demo');
     }
 
@@ -404,10 +423,17 @@
       close();
       try {
         sessionStorage.setItem('boxiesTeamSession', '1');
+        if (window.BoxiesPageTransit) window.BoxiesPageTransit.markPending();
+        else sessionStorage.setItem('boxiesTransitPending', '1');
       } catch (e0) {}
+      if (window.BoxiesPageTransit) window.BoxiesPageTransit.show();
       try {
         if (typeof portalShowHome === 'function' && !isCotizador()) {
-          portalShowHome();
+          if (window.BoxiesPageTransit) {
+            window.BoxiesPageTransit.run(function () { portalShowHome(); }, { minMs: 420 });
+          } else {
+            portalShowHome();
+          }
           return;
         }
       } catch (err) {}
@@ -529,8 +555,15 @@
         }
         if (target) {
           close();
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          try { history.replaceState(null, '', '#' + hash); } catch (err) {}
+          if (window.BoxiesPageTransit) {
+            window.BoxiesPageTransit.run(function () {
+              target.scrollIntoView({ behavior: 'instant', block: 'start' });
+              try { history.replaceState(null, '', '#' + hash); } catch (err0) {}
+            }, { minMs: 480 });
+          } else {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            try { history.replaceState(null, '', '#' + hash); } catch (err) {}
+          }
           return;
         }
         /* Otra página (p. ej. cotizador → landing): forzar sección al cargar */
@@ -539,12 +572,22 @@
           sessionStorage.setItem('boxiesForceSection', hash);
           sessionStorage.removeItem('boxiesFsView');
           sessionStorage.removeItem('boxiesMenuScrollY');
+          if (window.BoxiesPageTransit) window.BoxiesPageTransit.markPending(hash);
+          else sessionStorage.setItem('boxiesTransitPending', '1');
         } catch (err) {}
+        if (window.BoxiesPageTransit) window.BoxiesPageTransit.show();
         location.href = '/#' + hash;
         return;
       }
       close();
-      if (href) location.href = href;
+      if (href) {
+        try {
+          if (window.BoxiesPageTransit) window.BoxiesPageTransit.markPending();
+          else sessionStorage.setItem('boxiesTransitPending', '1');
+        } catch (eNav) {}
+        if (window.BoxiesPageTransit) window.BoxiesPageTransit.show();
+        location.href = href;
+      }
     });
 
     renderLinks();

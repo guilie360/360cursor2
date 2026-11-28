@@ -49,58 +49,77 @@ function prepareFinalAtJump(){
   const finEl=$('.final');
   if(finEl) finEl.classList.add('in');
 }
-const transit=$('#pageTransit');
 let transitBusy=false;
 function showTransit(){
-  if(!transit) return;
-  transit.classList.add('on');
-  transit.setAttribute('aria-hidden','false');
+  if(window.BoxiesPageTransit) window.BoxiesPageTransit.show();
+  else{
+    const t=$('#pageTransit');
+    if(!t) return;
+    t.classList.add('on');
+    t.setAttribute('aria-hidden','false');
+    document.documentElement.classList.add('page-transit-on');
+    document.body.classList.add('page-transit-on');
+  }
 }
 function hideTransit(){
-  if(!transit) return;
-  transit.classList.remove('on');
-  transit.setAttribute('aria-hidden','true');
+  if(window.BoxiesPageTransit) window.BoxiesPageTransit.hide();
+  else{
+    const t=$('#pageTransit');
+    if(t){
+      t.classList.remove('on');
+      t.setAttribute('aria-hidden','true');
+    }
+    document.documentElement.classList.remove('page-transit-on');
+    document.body.classList.remove('page-transit-on');
+  }
+}
+function withTransit(work,{minMs=560,fromLoad=false}={}){
+  if(transitBusy && !fromLoad) return Promise.resolve();
+  transitBusy=true;
+  const run=()=>{
+    const job=typeof work==='function'?Promise.resolve().then(work):Promise.resolve(work);
+    const wrap=window.BoxiesPageTransit?.run
+      ? window.BoxiesPageTransit.run(job,{minMs:reduce?0:minMs})
+      : (showTransit(), job.finally(()=>new Promise(r=>setTimeout(()=>{hideTransit();r()},reduce?0:minMs))));
+    return Promise.resolve(wrap).finally(()=>{transitBusy=false;snapScrollState()});
+  };
+  return run();
 }
 function goToSection(id,{updateHash=true,fromLoad=false}={}){
   if(id==='inicio'){
-    if(window.BoxiesScrollStory?.leaveToIntro) window.BoxiesScrollStory.leaveToIntro();
-    else scrollTo({top:0,left:0,behavior:'instant'});
-    if(updateHash){try{history.replaceState(null,'','#inicio')}catch(e){}}
-    snapScrollState();
-    return;
+    return withTransit(()=>{
+      if(window.BoxiesScrollStory?.leaveToIntro) window.BoxiesScrollStory.leaveToIntro();
+      else scrollTo({top:0,left:0,behavior:'instant'});
+      if(updateHash){try{history.replaceState(null,'','#inicio')}catch(e){}}
+    },{minMs:fromLoad?420:520,fromLoad});
   }
   if(id==='servicio'){
-    if(window.BoxiesScrollStory?.enterExp) window.BoxiesScrollStory.enterExp();
-    else {
-      const el=document.getElementById('servicio');
-      if(el) scrollTo({top:sectionTop(el),left:0,behavior:'instant'});
-    }
-    if(updateHash){try{history.replaceState(null,'','#servicio')}catch(e){}}
-    return;
+    return withTransit(()=>{
+      if(window.BoxiesScrollStory?.enterExp) window.BoxiesScrollStory.enterExp();
+      else {
+        const el=document.getElementById('servicio');
+        if(el) scrollTo({top:sectionTop(el),left:0,behavior:'instant'});
+      }
+      if(updateHash){try{history.replaceState(null,'','#servicio')}catch(e){}}
+    },{minMs:fromLoad?420:560,fromLoad});
   }
   if(id==='demo'){
-    if(transitBusy && !fromLoad) return;
-    transitBusy=true;
-    showTransit();
-    const done=()=>{
-      hideTransit();
-      transitBusy=false;
-      snapScrollState();
-    };
-    const run=()=>{
+    return withTransit(()=>{
       const api=window.BoxiesScrollStory;
-      const finish=()=>{
+      const settle=()=>{
         if(updateHash){try{history.replaceState(null,'','#demo')}catch(e){}}
-        if(reduce) done();
-        else setTimeout(done, fromLoad ? 180 : 260);
+        prepareFinalAtJump();
+        const fin=document.getElementById('demo');
+        if(fin){
+          fin.classList.add('in','is-settled');
+          fin.classList.remove('from-story','epic-in','is-buried');
+        }
       };
       if(api?.jumpToDemo){
-        Promise.resolve(api.jumpToDemo({soft:true})).then(finish).catch(finish);
-        return;
+        return Promise.resolve(api.jumpToDemo({soft:true})).then(settle);
       }
       if(api?.exitToDemo){
-        Promise.resolve(api.exitToDemo()).then(finish).catch(finish);
-        return;
+        return Promise.resolve(api.exitToDemo()).then(settle);
       }
       prepareFinalAtJump();
       const el=document.getElementById('demo');
@@ -110,38 +129,22 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
         document.documentElement.scrollTop=top;
         document.body.scrollTop=top;
       }
-      finish();
-    };
-    requestAnimationFrame(()=>setTimeout(run, fromLoad ? 60 : 120));
-    return;
+      settle();
+    },{minMs:fromLoad?640:780,fromLoad});
   }
   const el=document.getElementById(id);
-  if(!el) return;
-  if(transitBusy && !fromLoad) return;
-  transitBusy=true;
-  showTransit();
-  const run=()=>{
+  if(!el) return Promise.resolve();
+  return withTransit(()=>{
     prepareFinalAtJump();
     const top=sectionTop(el);
     scrollTo({top,left:0,behavior:'instant'});
     document.documentElement.scrollTop=top;
     document.body.scrollTop=top;
-    snapScrollState();
     if(updateHash){
       const next='#'+id;
       if(location.hash!==next) history.replaceState(null,'',next);
     }
-    requestAnimationFrame(()=>{
-      snapScrollState();
-      const done=()=>{
-        hideTransit();
-        transitBusy=false;
-      };
-      if(reduce) done();
-      else setTimeout(done, fromLoad ? 220 : 280);
-    });
-  };
-  requestAnimationFrame(()=>setTimeout(run, fromLoad ? 40 : 90));
+  },{minMs:fromLoad?400:520,fromLoad});
 }
 window.BoxiesGoToSection=goToSection;
 window.BoxiesSnapLandingScroll=snapScrollState;
@@ -188,6 +191,7 @@ document.addEventListener('boxies:fullscreen',()=>{
 });
 function bootHashJump(){
   let raw=(location.hash||'').replace(/^#/,'');
+  let fromMenu=false;
   try{
     const force=sessionStorage.getItem('boxiesForceSection');
     if(force){
@@ -196,11 +200,23 @@ function bootHashJump(){
       sessionStorage.removeItem('boxiesFsView');
       sessionStorage.removeItem('boxiesMenuScrollY');
     }
+    if(window.BoxiesPageTransit?.consumePending) fromMenu=!!window.BoxiesPageTransit.consumePending();
+    else if(sessionStorage.getItem('boxiesTransitPending')==='1'){
+      fromMenu=true;
+      sessionStorage.removeItem('boxiesTransitPending');
+    }
   }catch(e){}
-  if(!raw) return;
+  if(!raw){
+    if(fromMenu) hideTransit();
+    return;
+  }
   // #demo-apartamento etc. se manejan aparte; llevar a #demo primero.
   const id=raw.startsWith('demo-') ? 'demo' : raw;
-  if(!document.getElementById(id)) return;
+  if(!document.getElementById(id)){
+    if(fromMenu) hideTransit();
+    return;
+  }
+  if(fromMenu || id==='demo' || id==='servicio') showTransit();
   const pinInicio=()=>{
     scrollTo({top:0,left:0,behavior:'instant'});
     document.documentElement.scrollTop=0;
@@ -209,17 +225,15 @@ function bootHashJump(){
     try{if(location.hash!=='#inicio') history.replaceState(null,'','#inicio')}catch(e){}
   };
   if(id==='inicio'){
-    pinInicio();
-    setTimeout(pinInicio,50);
-    setTimeout(pinInicio,200);
-    setTimeout(pinInicio,450);
+    withTransit(()=>{
+      pinInicio();
+    },{minMs:fromMenu?480:320,fromLoad:true});
     return;
   }
   // Evitar el scroll nativo del ancla antes de nuestro salto.
   scrollTo({top:0,left:0,behavior:'instant'});
   snapScrollState();
   goToSection(id,{updateHash:true,fromLoad:true});
-  setTimeout(()=>goToSection(id,{updateHash:true,fromLoad:true}),250);
 }
 
 /* Entrada de la sección final */
