@@ -7,7 +7,7 @@
   --nav-ease:cubic-bezier(.2,.8,.2,1);
 }
 
-/* Logo loader (menú → destino listo) */
+/* Logo loader (menú → destino listo) — llenado líquido de abajo→arriba */
 .page-transit{
   position:fixed;inset:0;z-index:120000;display:grid;place-items:center;
   background:#0b0b0b;opacity:0;visibility:hidden;pointer-events:none;
@@ -16,18 +16,78 @@
 .page-transit.on{
   opacity:1;visibility:visible;pointer-events:auto;
 }
+.page-transit-mark{
+  position:relative;
+  width:clamp(78px,13vw,118px);
+  aspect-ratio:1;
+  opacity:0;
+  transform:scale(.96);
+  transition:opacity .4s var(--nav-ease),transform .5s var(--nav-ease);
+}
+.page-transit.on .page-transit-mark{
+  opacity:1;
+  transform:none;
+}
 .page-transit-logo{
-  width:clamp(72px,12vw,110px);height:auto;object-fit:contain;
-  opacity:0;transform:scale(.92);
-  transition:opacity .35s var(--nav-ease),transform .45s var(--nav-ease);
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:contain;display:block;pointer-events:none;
+  user-select:none;-webkit-user-drag:none;
 }
-.page-transit.on .page-transit-logo{
-  opacity:1;transform:none;
-  animation:pageTransitPulse 1.2s ease-in-out infinite;
+/* Silueta muy tenue siempre visible */
+.page-transit-logo--ghost{
+  opacity:.1;
+  filter:brightness(1.2);
 }
-@keyframes pageTransitPulse{
-  0%,100%{opacity:.72;filter:drop-shadow(0 0 0 rgba(255,255,255,0))}
-  50%{opacity:1;filter:drop-shadow(0 0 18px rgba(255,255,255,.28))}
+/* Capa que se “llena” como líquido (mask blanda = menisco) */
+.page-transit-logo--fill{
+  opacity:1;
+  -webkit-mask-image:linear-gradient(
+    to top,
+    #000 0%,
+    #000 38%,
+    rgba(0,0,0,.72) 48%,
+    rgba(0,0,0,.28) 54%,
+    transparent 62%
+  );
+  mask-image:linear-gradient(
+    to top,
+    #000 0%,
+    #000 38%,
+    rgba(0,0,0,.72) 48%,
+    rgba(0,0,0,.28) 54%,
+    transparent 62%
+  );
+  -webkit-mask-size:100% 280%;
+  mask-size:100% 280%;
+  -webkit-mask-repeat:no-repeat;
+  mask-repeat:no-repeat;
+  -webkit-mask-position:0 100%;
+  mask-position:0 100%;
+}
+.page-transit.on .page-transit-logo--fill{
+  animation:logoLiquidFill 2.15s cubic-bezier(.4,.05,.2,1) infinite;
+}
+@keyframes logoLiquidFill{
+  0%{
+    -webkit-mask-position:0 100%;
+    mask-position:0 100%;
+    filter:brightness(.9);
+  }
+  72%{
+    -webkit-mask-position:0 0%;
+    mask-position:0 0%;
+    filter:brightness(1.06);
+  }
+  86%{
+    -webkit-mask-position:0 0%;
+    mask-position:0 0%;
+    filter:brightness(1);
+  }
+  100%{
+    -webkit-mask-position:0 100%;
+    mask-position:0 100%;
+    filter:brightness(.9);
+  }
 }
 html.page-transit-on .menu-toggle,
 body.page-transit-on .menu-toggle{
@@ -38,8 +98,14 @@ body.page-transit-on .showroom{
   animation:none!important;
 }
 @media(prefers-reduced-motion:reduce){
-  .page-transit,.page-transit-logo{transition:none}
-  .page-transit.on .page-transit-logo{animation:none;opacity:1}
+  .page-transit,.page-transit-mark{transition:none}
+  .page-transit.on .page-transit-logo--fill{
+    animation:none;
+    -webkit-mask-image:none;
+    mask-image:none;
+    opacity:.9;
+  }
+  .page-transit-logo--ghost{opacity:.18}
 }
 @keyframes menuBreath{
   0%,100%{filter:drop-shadow(0 0 2px rgba(214,210,204,.12));opacity:.9}

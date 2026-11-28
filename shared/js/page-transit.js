@@ -14,16 +14,39 @@
   var shownAt = 0;
   var landingOwns = false;
 
+  function logoMarkup() {
+    return (
+      '<div class="page-transit-mark">' +
+        '<img src="' + LOGO + '" alt="" class="page-transit-logo page-transit-logo--ghost">' +
+        '<img src="' + LOGO + '" alt="" class="page-transit-logo page-transit-logo--fill">' +
+      '</div>'
+    );
+  }
+
   function ensure() {
     el = document.getElementById('pageTransit') || document.getElementById('boxiesPageTransit');
-    if (el) return el;
+    if (el) {
+      if (!el.querySelector('.page-transit-mark')) el.innerHTML = logoMarkup();
+      return el;
+    }
     el = document.createElement('div');
     el.id = 'boxiesPageTransit';
     el.className = 'page-transit';
     el.setAttribute('aria-hidden', 'true');
-    el.innerHTML = '<img src="' + LOGO + '" alt="" class="page-transit-logo">';
+    el.innerHTML = logoMarkup();
     (document.body || document.documentElement).appendChild(el);
     return el;
+  }
+
+  function restartLiquid() {
+    var fill = el && el.querySelector('.page-transit-logo--fill');
+    var mark = el && el.querySelector('.page-transit-mark');
+    if (!fill) return;
+    fill.style.animation = 'none';
+    if (mark) mark.style.animation = 'none';
+    void fill.offsetWidth;
+    fill.style.animation = '';
+    if (mark) mark.style.animation = '';
   }
 
   function show() {
@@ -35,6 +58,7 @@
     if (document.body) document.body.classList.add('page-transit-on');
     el.classList.add('on');
     el.setAttribute('aria-hidden', 'false');
+    restartLiquid();
     /* Failsafe: nunca dejar el logo pegado */
     hideTimer = setTimeout(function () {
       if (busy) hide();
