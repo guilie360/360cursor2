@@ -20,16 +20,17 @@
   var EASE = 0.55;
   var REVEAL_GAIN = 0.0028; /* portada→story */
   var READ_DWELL = 1050; /* ms mínimos en un hold CON texto (imán de lectura) */
-  var READ_DWELL_EMPTY = 220; /* hold sin copy (puerta) */
+  var READ_DWELL_EMPTY = 220; /* hold sin copy */
+  var READ_DWELL_DOOR = 1100; /* imán en puerta cerrada (póster nítido) */
   var GESTURE_THRESH = 34; /* un flick suave basta; no hay que “hacerle duro” */
   var GESTURE_RESET = 160; /* silencio = fin del gesto / limpia inercia */
   /* v2 = frames de VIDEO FINAL PARA LANGIND (ruta nueva para evitar cache del CapCut viejo) */
   var CDN = 'https://boxies.b-cdn.net/landing/scroll/v2';
-  /* Frame 0 hi-res: puerta cerrada (evita el webp pixelado del CDN) */
-  var ENTRY_POSTER = '/landing/assets/door-closed.png';
+  /* Puerta cerrada hi-res (2x) — no usar el webp pixelado del CDN */
+  var ENTRY_POSTER = '/landing/assets/door-closed-2x.webp';
 
   var HOLDS = [
-    { t: 0.0 },
+    { t: 0.0, door: true },
     { t: 1.13, title: 'Tu inmueble aún no está terminado.', sub: 'O ni siquiera existe.' },
     { t: 3.8, title: 'Pero ya puedes venderlo.', sub: 'Con sus acabados y materiales' },
     { t: 5.97, title: 'Cada espacio, para recorrerlo.', sub: 'Recorrido 360° interactivo' },
@@ -236,13 +237,29 @@
     })(t0);
   }
 
+  function isDoorHold(k) {
+    var st = stops[typeof k === 'number' ? k : cur] || {};
+    return !!st.door;
+  }
+
   function syncPoster() {
     var el = $('scrollPoster');
     if (!el) return;
     var f = Math.max(0, curT * FPS);
-    /* Visible en reveal y mientras el story está en la puerta cerrada */
-    var show = (mode === 'reveal' || mode === 'exp' || mode === 'land') && f < 0.85;
+    var show = false;
+    if (mode === 'reveal') {
+      show = revealP > 0.15;
+    } else if (mode === 'exp' || mode === 'land') {
+      /* Hold 0 = solo póster nítido. Al scrub cerca de t=0 también lo cubre. */
+      if (isDoorHold(cur) && !busy) show = true;
+      else if (f < 1.2) show = true;
+      else if (busy && f < 4) show = true;
+    }
     el.classList.toggle('is-on', !!show);
+    /* Canvas oculto cuando el póster cubre la puerta cerrada (sin mezcla pixelada) */
+    var coverCanvas = show && f < 1.05 && (isDoorHold(cur) || !busy || f < 0.6);
+    stage.classList.toggle('is-door-poster', !!coverCanvas);
+    if (cv) cv.style.opacity = coverCanvas ? '0' : '1';
   }
 
   function drawFrame(t) {
@@ -259,7 +276,9 @@
     ctx.globalAlpha = 1;
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, W, H);
-    cover(imgs[i0], 1);
+    /* En t≈0 dibuja el póster hi-res también en canvas (por si el <img> falla) */
+    var src0 = (i0 === 0 && imgs[0]) ? imgs[0] : imgs[i0];
+    cover(src0, 1);
     if (a > 0.03 && i1 !== i0) cover(imgs[i1], a);
     if (stillIdx > 0 && stillA > 0) cover(stills[stillIdx], stillA);
     ctx.globalAlpha = 1;
@@ -281,7 +300,9 @@
 
   function armMagnet(k) {
     var st = stops[k] || {};
-    var dwell = (st.title || st.final) ? READ_DWELL : READ_DWELL_EMPTY;
+    var dwell = st.door
+      ? READ_DWELL_DOOR
+      : (st.title || st.final) ? READ_DWELL : READ_DWELL_EMPTY;
     if (reduce) dwell = Math.min(dwell, 180);
     arrivedAt = performance.now();
     inertiaIgnoreUntil = arrivedAt + dwell;
@@ -291,6 +312,7 @@
 
   function showStop(k) {
     var st = stops[k];
+    cur = k;
     msgEls.forEach(function (el, i) { if (el) el.classList.toggle('on', i === k); });
     var shade = $('scrollShade'), scrim = $('scrollScrim'), hint = $('scrollHintStory');
     if (shade) shade.classList.toggle('on', !!st.title || !!st.final);
@@ -300,13 +322,17 @@
     if (hint) {
       hint.classList.remove('on');
       /* El hint aparece cuando ya se puede soltar el imán */
-      var dwell = (st.title || st.final) ? READ_DWELL : READ_DWELL_EMPTY;
+      var dwell = st.door
+        ? READ_DWELL_DOOR
+        : (st.title || st.final) ? READ_DWELL : READ_DWELL_EMPTY;
       hintTimer = setTimeout(function () {
         if (!busy && mode === 'exp') hint.classList.add('on');
       }, Math.max(200, dwell - 80));
     }
     try { history.replaceState(null, '', '#servicio'); } catch (e) {}
+    lastKey = '';
     render();
+    syncPoster();
   }
 
   function nearestHold(t) {
@@ -359,8 +385,15 @@
       if (u < 1) requestAnimationFrame(step);
       else {
         cur = to; busy = false; curT = targetT;
+        if (isDoorHold(to)) {
+          lastKey = '';
+          /* Aterrizaje en puerta: solo póster nítido, sin frame CDN */
+          curT = stops[to].t;
+        }
         armMagnet(to);
-        showStop(to); if (to > 0) fadeStill(to);
+        showStop(to);
+        syncPoster();
+        if (to > 0) fadeStill(to);
       }
     })(t0);
   }
