@@ -339,6 +339,14 @@ body.scroll-story-reveal .scroll-stage-inner{
 .final.in .showroom{animation:showroomIn 1.2s var(--ease) calc(.55s + var(--i)*.15s) backwards,showroomFloat 6s ease-in-out calc(2s + var(--i)*.35s) infinite}
 .final.in .showroom::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.1) 50%,transparent 65%);transform:translateX(-120%);animation:sheen 1.5s var(--ease) calc(1.05s + var(--i)*.15s) 1 forwards}
 
+/* Fin de landing en #demo: sin overscroll que dispare bucles */
+html.landing-ended,body.landing-ended{
+  overscroll-behavior:none;
+}
+html.landing-ended{
+  overscroll-behavior-y:none;
+}
+
 /* Aterrizaje story→demo: último frame queda fijo; el copy/botones nacen con --land */
 html.scroll-story-landing .scroll-stage-inner,
 body.scroll-story-landing .scroll-stage-inner{

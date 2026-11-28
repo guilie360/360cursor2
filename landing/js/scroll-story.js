@@ -122,14 +122,62 @@
       introSec.style.setProperty('--reveal', String(revealP));
       introSec.style.setProperty('--reveal-e', String(e));
     }
-    /* Reveal = solo portada→escena. La puerta permanece en frame 0 (cerrada).
-       Nunca scrubear holds aquí: eso abría la puerta y luego finishReveal la cerraba. */
+    /* Reveal = solo portada→escena. La puerta permanece en frame 0 (cerrada). */
     if (entryReady) {
       curT = stops[0].t;
       stillA = 0;
       stillIdx = -1;
       lastKey = '';
       render();
+    }
+  }
+
+  function clearPortadaChrome() {
+    cancelAnimationFrame(revealRaf);
+    revealRaf = 0;
+    revealP = 0;
+    revealTarget = 0;
+    document.documentElement.style.setProperty('--reveal', '0');
+    document.documentElement.style.setProperty('--reveal-e', '0');
+    document.documentElement.style.removeProperty('--land');
+    document.body.style.removeProperty('--land');
+    if (introSec) {
+      introSec.style.setProperty('--reveal', '0');
+      introSec.style.setProperty('--reveal-e', '0');
+      introSec.style.removeProperty('opacity');
+      introSec.style.removeProperty('transform');
+      introSec.style.removeProperty('filter');
+    }
+    setRevealUi(false);
+    setStoryUi(false);
+    document.documentElement.classList.remove('scroll-story-landing', 'landing-ended');
+    document.body.classList.remove('scroll-story-landing', 'landing-ended');
+    stage.classList.remove('is-landing', 'is-loading');
+    var fin = document.getElementById('demo');
+    if (fin) {
+      fin.classList.remove('is-landing');
+      fin.style.removeProperty('--land');
+    }
+    var dots = $('scrollDots');
+    if (dots) dots.style.opacity = '';
+  }
+
+  function demoDocTop() {
+    var fin = document.getElementById('demo');
+    if (!fin) return sectionTop() + (section.offsetHeight || innerHeight);
+    return Math.round(fin.getBoundingClientRect().top + (scrollY || window.pageYOffset || 0));
+  }
+
+  function clampToDemoEnd() {
+    var fin = document.getElementById('demo');
+    if (!fin) return;
+    var top = demoDocTop();
+    var maxY = Math.max(0, top + fin.offsetHeight - innerHeight);
+    var y = scrollY || window.pageYOffset || 0;
+    if (y > maxY + 1) {
+      scrollTo({ top: maxY, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = maxY;
+      document.body.scrollTop = maxY;
     }
   }
 
@@ -418,17 +466,21 @@
     setRevealUi(false);
 
     var fin = document.getElementById('demo');
-    /* Calcular top del demo ANTES de quitar el pin (el spacer #servicio sigue en flujo) */
+    /* Top del demo ANTES de quitar el pin */
     var top = 0;
     if (fin) {
       top = Math.round(fin.getBoundingClientRect().top + (scrollY || 0));
-      if (!isFinite(top) || top < 0) top = section.offsetTop + section.offsetHeight;
+      if (!isFinite(top) || top < innerHeight) {
+        top = (section.offsetTop || 0) + (section.offsetHeight || innerHeight);
+      }
     }
 
     unlockPage();
     setStoryUi(false);
     document.documentElement.classList.remove('scroll-story-landing');
     document.body.classList.remove('scroll-story-landing');
+    document.documentElement.classList.add('landing-ended');
+    document.body.classList.add('landing-ended');
     stage.classList.remove('is-landing', 'is-loading');
 
     scrollTo({ top: Math.max(0, top), left: 0, behavior: 'instant' });
@@ -441,10 +493,12 @@
       paintDemoBgFromLastFrame(fin);
       try { history.replaceState(null, '', '#demo'); } catch (e) {}
     }
-    requestAnimationFrame(function () {
-      resize();
+    /* Mantener ignore más tiempo para matar inercia del trackpad que reabría el story */
+    setTimeout(function () {
+      clampToDemoEnd();
       ignoreScrollEnter = false;
-    });
+      resize();
+    }, 420);
   }
 
   function parkAtSection() {
@@ -481,25 +535,26 @@
 
   function finishRevealToPage() {
     ignoreScrollEnter = true;
+    goToken++;
     mode = 'page';
     freeEntered = false;
     busy = false;
+    gestureArmed = true;
+    gestureAcc = 0;
+    landP = 0;
     hideTexts();
     cur = 0; curT = stops[0].t; stillA = 0; stillIdx = -1; lastKey = '';
-    setStoryUi(false);
-    setRevealUi(false);
-    applyReveal(0);
+    clearPortadaChrome();
     unlockPage();
-    stage.classList.remove('is-loading');
     scrollTo({ top: 0, left: 0, behavior: 'instant' });
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
     try { history.replaceState(null, '', '#inicio'); } catch (e) {}
     requestAnimationFrame(function () {
       resize();
-      ignoreScrollEnter = false;
+      render();
     });
-    render();
+    setTimeout(function () { ignoreScrollEnter = false; }, 350);
   }
 
   function scrubReveal(delta) {
@@ -529,11 +584,12 @@
   }
 
   function startRevealIn() {
-    if (mode === 'reveal' || mode === 'exp') return;
+    if (ignoreScrollEnter) return;
+    if (mode === 'reveal' || mode === 'exp' || mode === 'land') return;
     if (!entryReady) {
       stage.classList.add('is-loading');
       ensureFrames().then(function () {
-        if (mode === 'page') startRevealIn();
+        if (mode === 'page' && !ignoreScrollEnter) startRevealIn();
       });
       return;
     }
@@ -575,7 +631,30 @@
   }
 
   function leaveToIntro() {
-    startRevealOut();
+    /* Menú Inicio: reset limpio a la portada con logo (nunca dejar blur de reveal) */
+    finishRevealToPage();
+  }
+
+  function reenterStoryFromDemo() {
+    if (mode !== 'free' || ignoreScrollEnter) return;
+    ignoreScrollEnter = true;
+    document.documentElement.classList.remove('landing-ended');
+    document.body.classList.remove('landing-ended');
+    mode = 'exp';
+    freeEntered = false;
+    cur = stops.length - 1;
+    curT = stops[cur].t;
+    landP = 0;
+    setStoryUi(true);
+    lockPage();
+    parkAtSection();
+    requestAnimationFrame(function () {
+      resize();
+      showStop(cur);
+      gestureArmed = true;
+      arrivedAt = performance.now();
+      ignoreScrollEnter = false;
+    });
   }
 
   function exitToDemo() {
@@ -585,7 +664,9 @@
       if (fin0) {
         paintDemoBgFromLastFrame(fin0);
         fin0.classList.add('in', 'from-story');
-        var top0 = Math.round(fin0.getBoundingClientRect().top + (scrollY || 0));
+        document.documentElement.classList.add('landing-ended');
+        document.body.classList.add('landing-ended');
+        var top0 = demoDocTop();
         scrollTo({ top: Math.max(0, top0), behavior: 'smooth' });
       }
       return;
@@ -595,7 +676,25 @@
 
   function onWheel(e) {
     lastWheel = performance.now();
-    if (mode === 'free') return;
+    if (mode === 'free') {
+      var fin = document.getElementById('demo');
+      if (!fin) return;
+      var y = scrollY || window.pageYOffset || 0;
+      var top = demoDocTop();
+      var maxY = Math.max(0, top + fin.offsetHeight - innerHeight);
+      /* Fin de landing: no hay más scroll hacia abajo */
+      if (e.deltaY > 0 && y >= maxY - 2) {
+        e.preventDefault();
+        clampToDemoEnd();
+        return;
+      }
+      /* Subir desde el tope del demo → vuelve al último hold del story */
+      if (e.deltaY < 0 && y <= top + 6) {
+        e.preventDefault();
+        reenterStoryFromDemo();
+      }
+      return;
+    }
     if (mode === 'page') {
       if (e.deltaY > 0) {
         e.preventDefault();
@@ -616,7 +715,27 @@
   var ty0 = null, tDone = false, tAcc = 0, touchFired = false;
   function onTouchStart(e) { ty0 = e.touches[0].clientY; tDone = false; tAcc = 0; touchFired = false; }
   function onTouchMove(e) {
-    if (mode === 'free') return;
+    if (mode === 'free') {
+      if (ty0 == null) return;
+      var dyFree = ty0 - e.touches[0].clientY;
+      var fin = document.getElementById('demo');
+      if (!fin) return;
+      var y = scrollY || 0;
+      var top = demoDocTop();
+      var maxY = Math.max(0, top + fin.offsetHeight - innerHeight);
+      if (dyFree > 12 && y >= maxY - 2) {
+        e.preventDefault();
+        return;
+      }
+      if (dyFree < -12 && y <= top + 6) {
+        e.preventDefault();
+        if (!touchFired) {
+          touchFired = true;
+          reenterStoryFromDemo();
+        }
+      }
+      return;
+    }
     if (ty0 == null) return;
     var dy = ty0 - e.touches[0].clientY;
     if (mode === 'page') {
@@ -673,16 +792,10 @@
 
   function onScroll() {
     if (ignoreScrollEnter) return;
-    if (mode === 'page') {
-      if ((scrollY || 0) > 8) startRevealIn();
-      return;
-    }
-    if (mode !== 'free') return;
-    var st = sectionTop();
-    if (scrollY > st + innerHeight * 0.35) freeEntered = true;
-    if (freeEntered && scrollY <= st + 4) {
-      mode = 'page';
-      startRevealIn();
+    /* Nunca auto-entrar al story por scroll residual: eso dejaba la portada blurry
+       y reabría el loop demo→inicio. Solo gestos explícitos (wheel/touch/key). */
+    if (mode === 'free') {
+      clampToDemoEnd();
     }
   }
 
