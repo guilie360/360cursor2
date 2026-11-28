@@ -395,18 +395,29 @@
     function goMiperfilHome() {
       close();
       try {
+        if (window.BoxiesPageTransit) window.BoxiesPageTransit.show();
+      } catch (eShow) {}
+      try {
         if (typeof window.BoxiesMiPerfilHome === 'function') {
-          window.BoxiesMiPerfilHome();
+          if (window.BoxiesPageTransit) {
+            window.BoxiesPageTransit.run(function () { window.BoxiesMiPerfilHome(); }, { minMs: 420 });
+          } else {
+            window.BoxiesMiPerfilHome();
+          }
           return;
         }
       } catch (e) {}
       try {
         if (/\/miperfil\/?/i.test(location.pathname || '')) {
+          if (window.BoxiesPageTransit) window.BoxiesPageTransit.markPending();
           location.hash = '';
           location.reload();
           return;
         }
       } catch (e2) {}
+      try {
+        if (window.BoxiesPageTransit) window.BoxiesPageTransit.markPending();
+      } catch (e3) {}
       location.href = '/miperfil/';
     }
 
