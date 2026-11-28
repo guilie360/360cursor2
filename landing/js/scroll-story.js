@@ -13,15 +13,15 @@
 
   var FPS = 30;
   var TOTAL = 546; /* VIDEO FINAL ~18.2s @ 30fps */
-  var SPEED = 1.15;
-  var MIN_DUR = 0.55;
-  var MAX_DUR = 2.8;
+  var SPEED = 1.4;
+  var MIN_DUR = 0.75;
+  var MAX_DUR = 2.35;
   var SLOW = 3;
   var EASE = 0.55;
-  var REVEAL_GAIN = 0.0024; /* portada→story (trackpad/touch) */
-  var SCRUB_GAIN = 0.0072; /* story timeline: deltaY → unidades TW */
-  var LAND_GAIN = 0.0021; /* último frame → demo content */
-  var SNAP_IDLE = 150; /* ms sin input → imán al hold más cercano */
+  var REVEAL_GAIN = 0.0028; /* portada→story */
+  var COOLDOWN = 300; /* ms en el imán B antes de aceptar otro gesto */
+  var GESTURE_THRESH = 26; /* delta acumulado para disparar A→B (trackpad-friendly) */
+  var GESTURE_RESET = 110; /* silencio = fin del gesto */
   /* v2 = frames de VIDEO FINAL PARA LANGIND (ruta nueva para evitar cache del CapCut viejo) */
   var CDN = 'https://boxies.b-cdn.net/landing/scroll/v2';
 
@@ -88,8 +88,9 @@
   var framesReady = false, entryReady = false, loading = false, loadPromise = null;
   var ignoreScrollEnter = false;
   var revealP = 0, revealRaf = 0, revealTarget = 0;
-  var goToken = 0, snapTimer = 0, scrubbing = false, lastScrubDir = 1;
+  var goToken = 0, scrubbing = false;
   var landP = 0;
+  var gestureAcc = 0, gestureTimer = 0, gestureArmed = true;
 
   function frameUrl(name) { return CDN + '/' + dirName + '/' + name; }
   function setStoryUi(on) {
@@ -213,7 +214,7 @@
     clearTimeout(hintTimer);
     if (hint) {
       hintTimer = setTimeout(function () {
-        if (!busy && !scrubbing && mode === 'exp') hint.classList.add('on');
+        if (!busy && mode === 'exp') hint.classList.add('on');
       }, k === 0 ? 400 : 900);
     }
     try { history.replaceState(null, '', '#servicio'); } catch (e) {}
@@ -245,36 +246,22 @@
     document.body.classList.remove('scroll-story-lock');
   }
 
-  function softSnap() {
-    if (mode !== 'exp') return;
-    scrubbing = false;
-    var last = stops.length - 1;
-    var k = nearestHold(curT);
-    /* Si veníamos hacia adelante y pasamos el punto medio, imán al siguiente */
-    if (lastScrubDir > 0 && k < last) {
-      var mid = (stops[k].t + stops[k + 1].t) * 0.5;
-      if (curT >= mid) k = k + 1;
-    } else if (lastScrubDir < 0 && k > 0) {
-      var midB = (stops[k - 1].t + stops[k].t) * 0.5;
-      if (curT <= midB) k = k - 1;
-    }
-    goToHold(Math.min(k, last), true);
-  }
-
   function goToHold(to, fromSnap) {
     if (!framesReady && !entryReady) { ensureFrames(); return; }
     if (to < 0) { startRevealOut(); return; }
-    if (to >= stops.length) { beginLand(0.12); return; }
+    if (to >= stops.length) { animateLandToEnd(); return; }
     var token = ++goToken;
     busy = true;
+    gestureArmed = false;
+    gestureAcc = 0;
     scrubbing = false;
     hideTexts();
     cancelAnimationFrame(stillRaf); stillA = 0; stillIdx = -1; lastKey = '';
     var fromT = curT, targetT = stops[to].t;
     var w0 = TW(fromT), w1 = TW(targetT), fwd = targetT >= fromT;
     var span = Math.abs(targetT - fromT);
-    var dur = (reduce ? 0.12 : Math.min(MAX_DUR, Math.max(0.18, span / SPEED))) * 1000;
-    if (fromSnap && span < 0.12) dur = reduce ? 0 : 180;
+    var dur = (reduce ? 0.12 : Math.min(MAX_DUR, Math.max(MIN_DUR, span / SPEED))) * 1000;
+    if (fromSnap && span < 0.12) dur = reduce ? 0 : 160;
     var t0 = performance.now();
     (function step(now) {
       if (token !== goToken) return;
@@ -284,6 +271,7 @@
       if (u < 1) requestAnimationFrame(step);
       else {
         cur = to; busy = false; arrivedAt = performance.now(); curT = targetT;
+        gestureArmed = true; gestureAcc = 0;
         showStop(to); if (to > 0) fadeStill(to);
       }
     })(t0);
@@ -291,11 +279,73 @@
 
   function go(dir) {
     if (!framesReady) { ensureFrames(); return; }
+    if (busy) return;
+    var last = stops.length - 1;
+    if (dir > 0 && cur >= last) { animateLandToEnd(); return; }
     if (dir < 0 && cur === 0 && curT <= stops[0].t + 0.05) { startRevealOut(); return; }
     var next = cur + dir;
-    if (curT > stops[cur].t + 0.05 && dir > 0) next = holdAfter(curT);
-    if (curT < stops[cur].t - 0.05 && dir < 0) next = nearestHold(curT);
+    if (next < 0) { startRevealOut(); return; }
+    if (next > last) { animateLandToEnd(); return; }
     goToHold(next, false);
+  }
+
+  /* Un gesto (rueda/trackpad/swipe) = un tramo A→B con imán en B */
+  function noteGesture(delta) {
+    if (mode === 'land') {
+      if (busy) return;
+      if (delta > 4) animateLandToEnd();
+      else if (delta < -4 && landP < 0.35) {
+        /* volver al último hold */
+        document.documentElement.classList.remove('scroll-story-landing');
+        document.body.classList.remove('scroll-story-landing');
+        stage.classList.remove('is-landing');
+        var fin = document.getElementById('demo');
+        if (fin) fin.classList.remove('is-landing');
+        mode = 'exp';
+        landP = 0;
+        cur = stops.length - 1;
+        curT = stops[cur].t;
+        gestureArmed = true;
+        showStop(cur);
+      }
+      return;
+    }
+    if (mode !== 'exp') return;
+    if (busy) return;
+    var now = performance.now();
+    if (!gestureArmed || now - arrivedAt < COOLDOWN) return;
+
+    gestureAcc += delta;
+    clearTimeout(gestureTimer);
+    gestureTimer = setTimeout(function () { gestureAcc = 0; }, GESTURE_RESET);
+
+    if (Math.abs(gestureAcc) >= GESTURE_THRESH) {
+      var dir = gestureAcc > 0 ? 1 : -1;
+      gestureAcc = 0;
+      go(dir);
+    }
+  }
+
+  function animateLandToEnd() {
+    if (mode === 'free') return;
+    if (mode !== 'land') beginLand(Math.max(0.04, landP));
+    if (busy && mode === 'land') return;
+    var token = ++goToken;
+    busy = true;
+    gestureArmed = false;
+    var from = landP;
+    var t0 = performance.now();
+    var dur = reduce ? 180 : 850;
+    (function step(now) {
+      if (token !== goToken) return;
+      var u = Math.min(1, (now - t0) / dur);
+      applyLand(from + (1 - from) * ease(u));
+      if (u < 1) requestAnimationFrame(step);
+      else {
+        busy = false;
+        finishLand();
+      }
+    })(t0);
   }
 
   function lastFrameName() {
@@ -327,15 +377,10 @@
   }
 
   function beginLand(seed) {
-    if (mode === 'land') {
-      scrubLand((seed || 0) / LAND_GAIN);
-      return;
-    }
-    if (mode === 'free') return;
+    if (mode === 'land' || mode === 'free') return;
     goToken++;
     busy = false;
     scrubbing = false;
-    clearTimeout(snapTimer);
     mode = 'land';
     landP = clamp01(seed || 0);
     cur = stops.length - 1;
@@ -359,34 +404,12 @@
     applyLand(landP);
   }
 
-  function scrubLand(delta) {
-    if (mode !== 'land') return;
-    var next = landP + delta * LAND_GAIN;
-    if (next <= 0.001 && delta < 0) {
-      /* Volver al último hold del story */
-      document.documentElement.classList.remove('scroll-story-landing');
-      document.body.classList.remove('scroll-story-landing');
-      stage.classList.remove('is-landing');
-      var fin = document.getElementById('demo');
-      if (fin) fin.classList.remove('is-landing');
-      mode = 'exp';
-      landP = 0;
-      cur = stops.length - 1;
-      curT = stops[cur].t;
-      showStop(cur);
-      return;
-    }
-    applyLand(next);
-    if (landP >= 0.995) finishLand();
-  }
-
   function finishLand() {
     if (mode === 'free') return;
     ignoreScrollEnter = true;
     goToken++;
     busy = false;
     scrubbing = false;
-    clearTimeout(snapTimer);
     mode = 'free';
     freeEntered = true;
     landP = 1;
@@ -422,60 +445,6 @@
       resize();
       ignoreScrollEnter = false;
     });
-  }
-
-  /* Scrub continuo: trackpad/touch fluye; al soltar, imán suave al hold */
-  function scrubStory(delta) {
-    if (mode === 'land') {
-      scrubLand(delta);
-      return;
-    }
-    if (mode !== 'exp') return;
-    if (!entryReady) { ensureFrames(); return; }
-    goToken++; /* cancela animaciones go en curso */
-    busy = false;
-    scrubbing = true;
-    clearTimeout(snapTimer);
-    clearTimeout(hintTimer);
-    var hint = $('scrollHintStory');
-    if (hint) hint.classList.remove('on');
-
-    lastScrubDir = delta >= 0 ? 1 : -1;
-    var wMin = TW(stops[0].t);
-    var wMax = TW(stops[stops.length - 1].t);
-    var wPos = TW(curT) + delta * SCRUB_GAIN;
-
-    if (wPos < wMin - 2.5) {
-      scrubbing = false;
-      startRevealOut();
-      return;
-    }
-    /* Pasado el último frame → aterrizaje suave a demo (no salto a portada) */
-    if (wPos > wMax + 0.35) {
-      scrubbing = false;
-      beginLand(Math.min(0.35, (wPos - wMax) * 0.08));
-      scrubLand(Math.max(0, delta));
-      return;
-    }
-
-    wPos = Math.max(wMin, Math.min(wMax, wPos));
-    curT = TWinv(wPos);
-    cur = nearestHold(curT);
-    updateDots(cur);
-
-    /* Texto solo si estás muy cerca del hold; si no, fluye sin overlay */
-    var near = Math.abs(stops[cur].t - curT) < 0.12;
-    if (near && (stops[cur].title || stops[cur].final)) {
-      msgEls.forEach(function (el, i) { if (el) el.classList.toggle('on', i === cur); });
-      var shade = $('scrollShade'), scrim = $('scrollScrim');
-      if (shade) shade.classList.toggle('on', true);
-      if (scrim) scrim.classList.toggle('on', !!stops[cur].final);
-    } else {
-      hideTexts();
-    }
-    cancelAnimationFrame(stillRaf); stillA = 0; stillIdx = -1; lastKey = '';
-    render();
-    snapTimer = setTimeout(softSnap, SNAP_IDLE);
   }
 
   function parkAtSection() {
@@ -621,8 +590,7 @@
       }
       return;
     }
-    beginLand(Math.max(landP, 0.2));
-    finishLand();
+    animateLandToEnd();
   }
 
   function onWheel(e) {
@@ -640,20 +608,13 @@
       scrubReveal(e.deltaY);
       return;
     }
-    if (mode === 'land') {
-      e.preventDefault();
-      if (Math.abs(e.deltaY) < 0.5) return;
-      scrubLand(e.deltaY);
-      return;
-    }
     e.preventDefault();
-    /* Trackpad manda deltas chicos y contínuos: scrubear siempre, sin cooldown. */
     if (Math.abs(e.deltaY) < 0.5) return;
-    scrubStory(e.deltaY);
+    noteGesture(e.deltaY);
   }
 
-  var ty0 = null, tDone = false, tAcc = 0;
-  function onTouchStart(e) { ty0 = e.touches[0].clientY; tDone = false; tAcc = 0; }
+  var ty0 = null, tDone = false, tAcc = 0, touchFired = false;
+  function onTouchStart(e) { ty0 = e.touches[0].clientY; tDone = false; tAcc = 0; touchFired = false; }
   function onTouchMove(e) {
     if (mode === 'free') return;
     if (ty0 == null) return;
@@ -672,23 +633,16 @@
       scrubReveal(stepR * 2.2);
       return;
     }
-    if (mode === 'land') {
-      e.preventDefault();
-      var stepL = dy - tAcc;
-      tAcc = dy;
-      scrubLand(stepL * 1.65);
-      return;
-    }
     e.preventDefault();
-    var step = dy - tAcc;
     tAcc = dy;
-    if (Math.abs(step) < 0.4) return;
-    scrubStory(step * 1.65);
+    if (!touchFired && Math.abs(dy) > 36) {
+      touchFired = true;
+      noteGesture(dy);
+    }
   }
   function onTouchEnd() {
-    if (mode === 'exp' && scrubbing) {
-      clearTimeout(snapTimer);
-      snapTimer = setTimeout(softSnap, 60);
+    if ((mode === 'exp' || mode === 'land') && !touchFired && Math.abs(tAcc) > 28) {
+      noteGesture(tAcc);
     }
   }
 
@@ -707,11 +661,12 @@
       return;
     }
     if (mode === 'land') {
-      if (['ArrowDown', 'PageDown', ' '].indexOf(e.key) !== -1) { e.preventDefault(); scrubLand(160); }
-      else if (['ArrowUp', 'PageUp'].indexOf(e.key) !== -1) { e.preventDefault(); scrubLand(-160); }
+      if (['ArrowDown', 'PageDown', ' '].indexOf(e.key) !== -1) { e.preventDefault(); animateLandToEnd(); }
+      else if (['ArrowUp', 'PageUp'].indexOf(e.key) !== -1) { e.preventDefault(); noteGesture(-40); }
       return;
     }
     if (mode !== 'exp') return;
+    if (busy || performance.now() - arrivedAt < COOLDOWN) return;
     if (['ArrowDown', 'PageDown', ' ', 'ArrowRight'].indexOf(e.key) !== -1) { e.preventDefault(); go(1); }
     else if (['ArrowUp', 'PageUp', 'ArrowLeft'].indexOf(e.key) !== -1) { e.preventDefault(); go(-1); }
   }
