@@ -711,21 +711,31 @@
 
   function reenterStoryFromDemo() {
     if (mode !== 'free' || ignoreScrollEnter) return;
+    if (!entryReady) {
+      ensureFrames().then(function () { reenterStoryFromDemo(); });
+      return;
+    }
     ignoreScrollEnter = true;
     document.documentElement.classList.remove('landing-ended');
     document.body.classList.remove('landing-ended');
-    var fin = document.getElementById('demo');
-    if (fin) fin.classList.remove('is-settled', 'is-landing', 'epic-in');
+    buryDemo();
     mode = 'exp';
     freeEntered = false;
     cur = stops.length - 1;
     curT = stops[cur].t;
     landP = 0;
+    stillA = 0;
+    stillIdx = -1;
+    lastKey = '';
+    setRevealUi(false);
     setStoryUi(true);
+    stage.classList.remove('is-landing', 'is-loading');
     lockPage();
     parkAtSection();
     requestAnimationFrame(function () {
       resize();
+      render();
+      armMagnet(cur);
       showStop(cur);
       gestureArmed = true;
       arrivedAt = performance.now();
@@ -733,21 +743,88 @@
     });
   }
 
-  function exitToDemo() {
-    /* Nav / API: aterrizaje completo sin flash a portada */
-    if (mode === 'free') {
-      var fin0 = document.getElementById('demo');
-      if (fin0) {
-        paintDemoBgFromLastFrame(fin0);
-        fin0.classList.add('in', 'from-story');
-        document.documentElement.classList.add('landing-ended');
-        document.body.classList.add('landing-ended');
-        var top0 = demoDocTop();
-        scrollTo({ top: Math.max(0, top0), behavior: 'smooth' });
-      }
-      return;
+  /* Menú / hash #demo: aterrizaje listo para interactuar (sin quedar en mode=page) */
+  function jumpToDemo(opts) {
+    opts = opts || {};
+    var soft = opts.soft !== false;
+    if (mode === 'free' && document.documentElement.classList.contains('landing-ended')) {
+      var topReady = stableDemoTop();
+      scrollTo({ top: topReady, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = topReady;
+      document.body.scrollTop = topReady;
+      clampToDemoEnd();
+      try { history.replaceState(null, '', '#demo'); } catch (e0) {}
+      return Promise.resolve();
     }
-    animateLandToEnd();
+    return ensureFrames().then(function () {
+      ignoreScrollEnter = true;
+      goToken++;
+      busy = false;
+      scrubbing = false;
+      gestureArmed = false;
+      gestureAcc = 0;
+      mode = 'free';
+      freeEntered = true;
+      landP = 1;
+      cur = stops.length - 1;
+      curT = stops[cur].t;
+      stillA = 0;
+      stillIdx = -1;
+      lastKey = '';
+
+      hideTexts();
+      setRevealUi(false);
+      setStoryUi(false);
+      unlockPage();
+      stage.classList.remove('is-landing', 'is-loading');
+      document.documentElement.classList.remove('scroll-story-landing', 'scroll-story-reveal', 'scroll-story-lock');
+      document.body.classList.remove('scroll-story-landing', 'scroll-story-reveal', 'scroll-story-lock');
+      document.documentElement.classList.add('landing-ended');
+      document.body.classList.add('landing-ended');
+
+      var fin = document.getElementById('demo');
+      if (fin) {
+        paintDemoBgFromLastFrame(fin);
+        fin.classList.remove('is-buried', 'is-landing');
+        fin.classList.add('in', 'is-settled');
+        fin.style.setProperty('--land', '1');
+        fin.setAttribute('aria-hidden', 'false');
+        if (soft || reduce) {
+          fin.classList.remove('from-story', 'epic-in');
+        } else {
+          fin.classList.add('from-story');
+          playEpicIn(fin);
+        }
+      }
+
+      var top = stableDemoTop();
+      scrollTo({ top: top, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = top;
+      document.body.scrollTop = top;
+      try { history.replaceState(null, '', '#demo'); } catch (e) {}
+
+      return new Promise(function (resolve) {
+        requestAnimationFrame(function () {
+          scrollTo({ top: stableDemoTop(), left: 0, behavior: 'instant' });
+          clampToDemoEnd();
+          setTimeout(function () {
+            clampToDemoEnd();
+            ignoreScrollEnter = false;
+            gestureArmed = true;
+            resolve();
+          }, soft ? 200 : 480);
+        });
+      });
+    });
+  }
+
+  function exitToDemo() {
+    /* Nav / API: desde portada o story → demo estable */
+    if (mode === 'exp' || mode === 'land') {
+      animateLandToEnd();
+      return Promise.resolve();
+    }
+    return jumpToDemo({ soft: true });
   }
 
   function onWheel(e) {
@@ -799,8 +876,10 @@
       var fin = document.getElementById('demo');
       if (!fin) return;
       var y = scrollY || 0;
-      var top = demoDocTop();
-      var maxY = Math.max(0, top + fin.offsetHeight - innerHeight);
+      var top = document.documentElement.classList.contains('landing-ended')
+        ? stableDemoTop()
+        : demoDocTop();
+      var maxY = Math.max(top, top + fin.offsetHeight - innerHeight);
       if (dyFree > 12 && y >= maxY - 2) {
         e.preventDefault();
         return;
@@ -932,6 +1011,7 @@
     enterExp: enterExp,
     leaveToIntro: leaveToIntro,
     exitToDemo: exitToDemo,
+    jumpToDemo: jumpToDemo,
     isLocked: function () { return mode === 'exp' || mode === 'reveal' || mode === 'land'; },
     mode: function () { return mode; }
   };

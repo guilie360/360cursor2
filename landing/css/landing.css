@@ -287,43 +287,71 @@ body.scroll-story-reveal .scroll-stage-inner{
   color:rgba(255,255,255,.22);font-size:7px;letter-spacing:1.6px;
   pointer-events:none;
 }
-@media(max-width:760px){
+@media(max-width:900px){
   .final{
     min-height:100svh;
-    padding:clamp(72px,10vh,110px) 22px calc(var(--float-safe) + 18px);
-    align-items:center;
-    justify-content:center;
-    text-align:center;
+    padding:clamp(72px,10vh,110px) max(20px,env(safe-area-inset-right,0px)) calc(var(--float-safe) + 18px) max(20px,env(safe-area-inset-left,0px));
+    display:grid!important;
+    place-items:center;
+    text-align:center!important;
   }
   .final-content{
-    width:min(420px,100%);
-    max-width:100%;
+    width:100%;
+    max-width:400px;
     margin:0 auto;
-    grid-template-columns:1fr;
+    display:flex!important;
+    flex-direction:column;
+    align-items:center;
     gap:24px;
     padding:0;
     box-sizing:border-box;
+    transform:none!important;
   }
-  .final-copy{max-width:100%;margin:0 auto}
-  .final-eyebrow{margin:0 auto 16px}
+  .final-copy{
+    width:100%;
+    max-width:100%;
+    margin:0 auto;
+    text-align:center!important;
+  }
+  .final-eyebrow{margin:0 auto 16px;text-align:center}
   .final-copy h2{
     max-width:14ch;
-    margin-inline:auto;
+    margin:0 auto;
     font-size:clamp(34px,9vw,48px);
+    text-align:center!important;
   }
   .final-description{
     max-width:34ch;
     margin:14px auto 0;
     font-size:12px;
     line-height:1.7;
+    text-align:center!important;
   }
-  .showroom-side{width:100%;margin:0 auto}
-  .showrooms{gap:8px;width:100%}
-  .showroom{text-align:center}
-  .showroom-index{text-align:center}
+  .showroom-side{width:100%;max-width:100%;margin:0 auto}
+  .showrooms{gap:10px;width:100%}
+  .showroom{
+    display:flex!important;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    grid-template-columns:none!important;
+    text-align:center;
+    width:100%;
+  }
+  .showroom-index{
+    flex:0 0 auto;
+    text-align:center;
+    width:auto;
+  }
+  .showroom strong{
+    width:auto;
+    flex:0 1 auto;
+    text-align:center;
+  }
   .final-footer{
-    left:50%;width:auto;max-width:54vw;font-size:6px;letter-spacing:1.2px;
+    left:50%;width:auto;max-width:70vw;font-size:6px;letter-spacing:1.2px;
     bottom:calc(var(--float-safe) + 8px);
+    transform:translateX(-50%);
   }
   .final-footer span:nth-child(2){display:none}
 }
@@ -419,19 +447,25 @@ html.landing-ended .final-footer,
   position:relative;
   z-index:2;
 }
-@media(max-width:760px){
+@media(max-width:900px){
   html.landing-ended .final,
   body.landing-ended .final,
   .final.from-story.is-settled{
-    padding:clamp(64px,9vh,96px) 22px calc(var(--float-safe) + 20px)!important;
+    display:grid!important;
+    place-items:center!important;
+    padding:clamp(64px,9vh,96px) max(20px,env(safe-area-inset-right,0px)) calc(var(--float-safe) + 20px) max(20px,env(safe-area-inset-left,0px))!important;
     text-align:center!important;
   }
   html.landing-ended .final-content,
   .final.from-story.is-settled .final-content{
-    width:min(420px,100%)!important;
-    max-width:100%;
-    margin:0 auto;
+    width:100%!important;
+    max-width:400px!important;
+    margin:0 auto!important;
     padding:0!important;
+    display:flex!important;
+    flex-direction:column;
+    align-items:center;
+    transform:none!important;
   }
 }
 
@@ -662,7 +696,7 @@ body.demo-open{overflow:hidden}
 .page-transit{
   position:fixed;inset:0;z-index:5000;display:grid;place-items:center;
   background:#0b0b0b;opacity:0;visibility:hidden;pointer-events:none;
-  transition:opacity .28s var(--ease),visibility .28s;
+  transition:opacity .32s var(--ease),visibility .32s;
 }
 .page-transit.on{
   opacity:1;visibility:visible;pointer-events:auto;
@@ -674,7 +708,13 @@ body.demo-open{overflow:hidden}
 }
 .page-transit.on .page-transit-logo{
   opacity:1;transform:none;
+  animation:transitLogoPulse 1.2s ease-in-out infinite;
+}
+@keyframes transitLogoPulse{
+  0%,100%{opacity:.72;filter:drop-shadow(0 0 0 rgba(255,255,255,0))}
+  50%{opacity:1;filter:drop-shadow(0 0 18px rgba(255,255,255,.28))}
 }
 @media(prefers-reduced-motion:reduce){
   .page-transit,.page-transit-logo{transition:none}
+  .page-transit.on .page-transit-logo{animation:none;opacity:1}
 }

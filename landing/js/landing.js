@@ -78,10 +78,46 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
     if(updateHash){try{history.replaceState(null,'','#servicio')}catch(e){}}
     return;
   }
+  if(id==='demo'){
+    if(transitBusy && !fromLoad) return;
+    transitBusy=true;
+    showTransit();
+    const done=()=>{
+      hideTransit();
+      transitBusy=false;
+      snapScrollState();
+    };
+    const run=()=>{
+      const api=window.BoxiesScrollStory;
+      const finish=()=>{
+        if(updateHash){try{history.replaceState(null,'','#demo')}catch(e){}}
+        if(reduce) done();
+        else setTimeout(done, fromLoad ? 180 : 260);
+      };
+      if(api?.jumpToDemo){
+        Promise.resolve(api.jumpToDemo({soft:true})).then(finish).catch(finish);
+        return;
+      }
+      if(api?.exitToDemo){
+        Promise.resolve(api.exitToDemo()).then(finish).catch(finish);
+        return;
+      }
+      prepareFinalAtJump();
+      const el=document.getElementById('demo');
+      if(el){
+        const top=sectionTop(el);
+        scrollTo({top,left:0,behavior:'instant'});
+        document.documentElement.scrollTop=top;
+        document.body.scrollTop=top;
+      }
+      finish();
+    };
+    requestAnimationFrame(()=>setTimeout(run, fromLoad ? 60 : 120));
+    return;
+  }
   const el=document.getElementById(id);
   if(!el) return;
   if(transitBusy && !fromLoad) return;
-  if(window.BoxiesScrollStory?.isLocked?.()) window.BoxiesScrollStory.exitToDemo?.();
   transitBusy=true;
   showTransit();
   const run=()=>{
