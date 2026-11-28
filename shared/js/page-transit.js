@@ -1,6 +1,6 @@
 /**
  * Logo loader a pantalla completa hasta que el destino esté listo.
- * Base al 80% + líquido que sube (abajo→arriba) hasta 100% justo antes de salir.
+ * Base al 20% + líquido que sube (abajo→arriba) hasta 100% justo antes de salir.
  * API: BoxiesPageTransit.show() / hide() / run(workPromise, { minMs })
  */
 (function () {
@@ -46,12 +46,12 @@
     if (!fill) return;
     /* Reinicia el fill vacío → sube una sola vez (forwards) */
     fill.style.animation = 'none';
-    fill.style.webkitMaskSize = '100% 0%';
-    fill.style.maskSize = '100% 0%';
+    fill.style.clipPath = 'inset(100% 0 0 0)';
+    fill.style.webkitClipPath = 'inset(100% 0 0 0)';
     void fill.offsetWidth;
     fill.style.animation = '';
-    fill.style.webkitMaskSize = '';
-    fill.style.maskSize = '';
+    fill.style.clipPath = '';
+    fill.style.webkitClipPath = '';
   }
 
   function show() {

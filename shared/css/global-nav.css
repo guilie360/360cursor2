@@ -7,7 +7,7 @@
   --nav-ease:cubic-bezier(.2,.8,.2,1);
 }
 
-/* Logo loader — base 80% + líquido que SUBE (abajo→arriba) hasta 100% ~1s */
+/* Logo loader — base 20% + líquido que SUBE (abajo→arriba) hasta 100% ~1s */
 .page-transit{
   --logo-liquid-ms:1000ms;
   position:fixed;inset:0;z-index:120000;display:grid;place-items:center;
@@ -29,34 +29,29 @@
   object-fit:contain;display:block;pointer-events:none;
   user-select:none;-webkit-user-drag:none;
 }
-/* Siempre visible al 80% mientras el líquido sube */
+/* Silueta tenue al 20%; el fill sólido sube como líquido a 100% */
 .page-transit-logo--ghost{
-  opacity:.8;
+  opacity:.2;
 }
-/* Capa a 100%: crece desde abajo (mask anclado al bottom) */
+/* Capa a 100%: clip sube desde abajo (fiable; mask solo para menisco suave) */
 .page-transit-logo--fill{
   opacity:1;
-  -webkit-mask-image:linear-gradient(to top,#000 0%,#000 86%,rgba(0,0,0,.45) 94%,transparent 100%);
-  mask-image:linear-gradient(to top,#000 0%,#000 86%,rgba(0,0,0,.45) 94%,transparent 100%);
-  -webkit-mask-size:100% 0%;
-  mask-size:100% 0%;
-  -webkit-mask-position:bottom center;
-  mask-position:bottom center;
-  -webkit-mask-repeat:no-repeat;
-  mask-repeat:no-repeat;
+  clip-path:inset(100% 0 0 0);
+  -webkit-clip-path:inset(100% 0 0 0);
+  -webkit-mask-image:linear-gradient(to top,#000 0%,#000 90%,transparent 100%);
+  mask-image:linear-gradient(to top,#000 0%,#000 90%,transparent 100%);
 }
 .page-transit.on .page-transit-logo--fill{
   animation:logoLiquidFill var(--logo-liquid-ms) cubic-bezier(.42,.08,.18,1) forwards;
 }
 @keyframes logoLiquidFill{
   0%{
-    -webkit-mask-size:100% 0%;
-    mask-size:100% 0%;
+    clip-path:inset(100% 0 0 0);
+    -webkit-clip-path:inset(100% 0 0 0);
   }
   100%{
-    /* 118% para que el menisco blando pase el borde superior = 100% sólido */
-    -webkit-mask-size:100% 118%;
-    mask-size:100% 118%;
+    clip-path:inset(0 0 0 0);
+    -webkit-clip-path:inset(0 0 0 0);
   }
 }
 html.page-transit-on .menu-toggle,
@@ -71,11 +66,13 @@ body.page-transit-on .showroom{
   .page-transit{transition:none}
   .page-transit.on .page-transit-logo--fill{
     animation:none;
+    clip-path:none;
+    -webkit-clip-path:none;
     -webkit-mask-image:none;
     mask-image:none;
     opacity:1;
   }
-  .page-transit-logo--ghost{opacity:.8}
+  .page-transit-logo--ghost{opacity:.2}
 }
 @keyframes menuBreath{
   0%,100%{filter:drop-shadow(0 0 2px rgba(214,210,204,.12));opacity:.9}
