@@ -339,10 +339,30 @@ body.scroll-story-reveal .scroll-stage-inner{
 .final.in .showroom{animation:showroomIn 1.2s var(--ease) calc(.55s + var(--i)*.15s) backwards,showroomFloat 6s ease-in-out calc(2s + var(--i)*.35s) infinite}
 .final.in .showroom::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.1) 50%,transparent 65%);transform:translateX(-120%);animation:sheen 1.5s var(--ease) calc(1.05s + var(--i)*.15s) 1 forwards}
 
+/* Demo enterrado mientras story/reveal: no debe asomar al volver a portada */
+#demo.is-buried,
+html.scroll-story-reveal #demo,
+html.scroll-story-active:not(.scroll-story-landing):not(.landing-ended) #demo{
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+html.scroll-story-reveal #demo,
+html.scroll-story-active:not(.scroll-story-landing):not(.landing-ended) #demo{
+  /* evita que un .in previo pinte copy encima del stage */
+  z-index:-1!important;
+}
+
 /* Fin de landing en #demo: sin overscroll / sin stage sticky fantasma */
 html.landing-ended,body.landing-ended{
   overscroll-behavior:none;
   overscroll-behavior-y:none;
+}
+html.landing-ended #demo{
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  z-index:auto;
 }
 html.landing-ended .scroll-stage-inner,
 body.landing-ended .scroll-stage-inner{

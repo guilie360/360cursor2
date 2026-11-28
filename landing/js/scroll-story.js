@@ -132,6 +132,15 @@
     }
   }
 
+  function buryDemo() {
+    var fin = document.getElementById('demo');
+    if (!fin) return;
+    fin.classList.remove('in', 'from-story', 'epic-in', 'is-settled', 'is-landing');
+    fin.classList.add('is-buried');
+    fin.style.removeProperty('--land');
+    fin.setAttribute('aria-hidden', 'true');
+  }
+
   function clearPortadaChrome() {
     cancelAnimationFrame(revealRaf);
     revealRaf = 0;
@@ -153,11 +162,7 @@
     document.documentElement.classList.remove('scroll-story-landing', 'landing-ended');
     document.body.classList.remove('scroll-story-landing', 'landing-ended');
     stage.classList.remove('is-landing', 'is-loading');
-    var fin = document.getElementById('demo');
-    if (fin) {
-      fin.classList.remove('is-landing', 'is-settled', 'from-story', 'epic-in');
-      fin.style.removeProperty('--land');
-    }
+    buryDemo();
     var dots = $('scrollDots');
     if (dots) dots.style.opacity = '';
   }
@@ -435,8 +440,8 @@
     if (fin) {
       paintDemoBgFromLastFrame(fin);
       /* Contenido oculto aquí: la entrada épica corre en commitToDemo */
+      fin.classList.remove('is-buried', 'epic-in', 'is-settled');
       fin.classList.add('in', 'from-story', 'is-landing');
-      fin.classList.remove('epic-in', 'is-settled');
       fin.setAttribute('aria-hidden', 'false');
     }
     var dots = $('scrollDots'), hint = $('scrollHintStory');
@@ -478,8 +483,8 @@
 
     if (fin) {
       paintDemoBgFromLastFrame(fin);
+      fin.classList.remove('is-buried', 'is-landing');
       fin.classList.add('in', 'from-story', 'is-settled');
-      fin.classList.remove('is-landing');
       fin.style.setProperty('--land', '1');
       fin.setAttribute('aria-hidden', 'false');
     }
@@ -553,6 +558,7 @@
     stillA = 0;
     stillIdx = -1;
     lastKey = '';
+    buryDemo();
     setRevealUi(false);
     setStoryUi(true);
     document.documentElement.style.setProperty('--reveal', '1');
@@ -629,6 +635,7 @@
       });
       return;
     }
+    buryDemo();
     mode = 'reveal';
     revealTarget = Math.max(revealP, 0.04);
     setStoryUi(false);
@@ -644,13 +651,18 @@
 
   function startRevealOut() {
     if (mode === 'page') return;
+    /* Cerrar puerta → portada: el demo no debe asomar translúcido en el camino */
+    buryDemo();
     hideTexts();
-    setStoryUi(false);
+    setStoryUi(true);
+    document.documentElement.classList.remove('landing-ended');
+    document.body.classList.remove('landing-ended');
     mode = 'reveal';
     revealTarget = Math.min(revealP || 1, 0.96);
     revealP = Math.max(revealP, 0.92);
     setRevealUi(true);
     lockPage();
+    parkAtSection();
     applyReveal(revealP);
     scrubReveal(-120);
   }
