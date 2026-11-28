@@ -7,11 +7,12 @@
   --nav-ease:cubic-bezier(.2,.8,.2,1);
 }
 
-/* Logo loader (menú → destino listo) — llenado líquido de abajo→arriba */
+/* Logo loader — base 80% + líquido que SUBE (abajo→arriba) hasta 100% ~1s */
 .page-transit{
+  --logo-liquid-ms:1000ms;
   position:fixed;inset:0;z-index:120000;display:grid;place-items:center;
   background:#0b0b0b;opacity:0;visibility:hidden;pointer-events:none;
-  transition:opacity .28s var(--nav-ease),visibility .28s;
+  transition:opacity .22s var(--nav-ease),visibility .22s;
 }
 .page-transit.on{
   opacity:1;visibility:visible;pointer-events:auto;
@@ -20,11 +21,6 @@
   position:relative;
   width:clamp(78px,13vw,118px);
   aspect-ratio:1;
-  opacity:0;
-  transform:scale(.96);
-  transition:opacity .4s var(--nav-ease),transform .5s var(--nav-ease);
-}
-.page-transit.on .page-transit-mark{
   opacity:1;
   transform:none;
 }
@@ -33,60 +29,34 @@
   object-fit:contain;display:block;pointer-events:none;
   user-select:none;-webkit-user-drag:none;
 }
-/* Silueta muy tenue siempre visible */
+/* Siempre visible al 80% mientras el líquido sube */
 .page-transit-logo--ghost{
-  opacity:.1;
-  filter:brightness(1.2);
+  opacity:.8;
 }
-/* Capa que se “llena” como líquido (mask blanda = menisco) */
+/* Capa a 100%: crece desde abajo (mask anclado al bottom) */
 .page-transit-logo--fill{
   opacity:1;
-  -webkit-mask-image:linear-gradient(
-    to top,
-    #000 0%,
-    #000 38%,
-    rgba(0,0,0,.72) 48%,
-    rgba(0,0,0,.28) 54%,
-    transparent 62%
-  );
-  mask-image:linear-gradient(
-    to top,
-    #000 0%,
-    #000 38%,
-    rgba(0,0,0,.72) 48%,
-    rgba(0,0,0,.28) 54%,
-    transparent 62%
-  );
-  -webkit-mask-size:100% 280%;
-  mask-size:100% 280%;
+  -webkit-mask-image:linear-gradient(to top,#000 0%,#000 86%,rgba(0,0,0,.45) 94%,transparent 100%);
+  mask-image:linear-gradient(to top,#000 0%,#000 86%,rgba(0,0,0,.45) 94%,transparent 100%);
+  -webkit-mask-size:100% 0%;
+  mask-size:100% 0%;
+  -webkit-mask-position:bottom center;
+  mask-position:bottom center;
   -webkit-mask-repeat:no-repeat;
   mask-repeat:no-repeat;
-  -webkit-mask-position:0 100%;
-  mask-position:0 100%;
 }
 .page-transit.on .page-transit-logo--fill{
-  animation:logoLiquidFill 2.15s cubic-bezier(.4,.05,.2,1) infinite;
+  animation:logoLiquidFill var(--logo-liquid-ms) cubic-bezier(.42,.08,.18,1) forwards;
 }
 @keyframes logoLiquidFill{
   0%{
-    -webkit-mask-position:0 100%;
-    mask-position:0 100%;
-    filter:brightness(.9);
-  }
-  72%{
-    -webkit-mask-position:0 0%;
-    mask-position:0 0%;
-    filter:brightness(1.06);
-  }
-  86%{
-    -webkit-mask-position:0 0%;
-    mask-position:0 0%;
-    filter:brightness(1);
+    -webkit-mask-size:100% 0%;
+    mask-size:100% 0%;
   }
   100%{
-    -webkit-mask-position:0 100%;
-    mask-position:0 100%;
-    filter:brightness(.9);
+    /* 118% para que el menisco blando pase el borde superior = 100% sólido */
+    -webkit-mask-size:100% 118%;
+    mask-size:100% 118%;
   }
 }
 html.page-transit-on .menu-toggle,
@@ -98,14 +68,14 @@ body.page-transit-on .showroom{
   animation:none!important;
 }
 @media(prefers-reduced-motion:reduce){
-  .page-transit,.page-transit-mark{transition:none}
+  .page-transit{transition:none}
   .page-transit.on .page-transit-logo--fill{
     animation:none;
     -webkit-mask-image:none;
     mask-image:none;
-    opacity:.9;
+    opacity:1;
   }
-  .page-transit-logo--ghost{opacity:.18}
+  .page-transit-logo--ghost{opacity:.8}
 }
 @keyframes menuBreath{
   0%,100%{filter:drop-shadow(0 0 2px rgba(214,210,204,.12));opacity:.9}

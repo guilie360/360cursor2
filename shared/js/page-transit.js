@@ -1,12 +1,15 @@
 /**
  * Logo loader a pantalla completa hasta que el destino esté listo.
+ * Base al 80% + líquido que sube (abajo→arriba) hasta 100% justo antes de salir.
  * API: BoxiesPageTransit.show() / hide() / run(workPromise, { minMs })
  */
 (function () {
   'use strict';
 
   var LOGO = '/landing/assets/logo.png';
-  var MIN_MS = 520;
+  /** Debe coincidir con --logo-liquid-ms en global-nav.css */
+  var FILL_MS = 1000;
+  var MIN_MS = FILL_MS;
   var MAX_MS = 4000;
   var el = null;
   var busy = false;
@@ -40,13 +43,15 @@
 
   function restartLiquid() {
     var fill = el && el.querySelector('.page-transit-logo--fill');
-    var mark = el && el.querySelector('.page-transit-mark');
     if (!fill) return;
+    /* Reinicia el fill vacío → sube una sola vez (forwards) */
     fill.style.animation = 'none';
-    if (mark) mark.style.animation = 'none';
+    fill.style.webkitMaskSize = '100% 0%';
+    fill.style.maskSize = '100% 0%';
     void fill.offsetWidth;
     fill.style.animation = '';
-    if (mark) mark.style.animation = '';
+    fill.style.webkitMaskSize = '';
+    fill.style.maskSize = '';
   }
 
   function show() {
@@ -85,6 +90,8 @@
   function run(work, opts) {
     opts = opts || {};
     var minMs = typeof opts.minMs === 'number' ? opts.minMs : MIN_MS;
+    /* Nunca cortar el líquido antes de llenar (salvo reduced-motion en caller con 0) */
+    if (minMs > 0 && minMs < FILL_MS) minMs = FILL_MS;
     var t0 = performance.now();
     show();
     var job = typeof work === 'function' ? Promise.resolve().then(work) : Promise.resolve(work);
@@ -169,6 +176,7 @@
     hide: hide,
     run: run,
     isBusy: function () { return busy; },
+    fillMs: FILL_MS,
     markPending: markPending,
     consumePending: consumePending,
     claimLanding: function () { landingOwns = true; }

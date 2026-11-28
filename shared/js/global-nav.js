@@ -400,7 +400,7 @@
       try {
         if (typeof window.BoxiesMiPerfilHome === 'function') {
           if (window.BoxiesPageTransit) {
-            window.BoxiesPageTransit.run(function () { window.BoxiesMiPerfilHome(); }, { minMs: 420 });
+            window.BoxiesPageTransit.run(function () { window.BoxiesMiPerfilHome(); }, { minMs: 1000 });
           } else {
             window.BoxiesMiPerfilHome();
           }
@@ -441,7 +441,7 @@
       try {
         if (typeof portalShowHome === 'function' && !isCotizador()) {
           if (window.BoxiesPageTransit) {
-            window.BoxiesPageTransit.run(function () { portalShowHome(); }, { minMs: 420 });
+            window.BoxiesPageTransit.run(function () { portalShowHome(); }, { minMs: 1000 });
           } else {
             portalShowHome();
           }
@@ -570,7 +570,7 @@
             window.BoxiesPageTransit.run(function () {
               target.scrollIntoView({ behavior: 'instant', block: 'start' });
               try { history.replaceState(null, '', '#' + hash); } catch (err0) {}
-            }, { minMs: 480 });
+            }, { minMs: 1000 });
           } else {
             target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             try { history.replaceState(null, '', '#' + hash); } catch (err) {}

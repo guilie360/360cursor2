@@ -73,14 +73,16 @@ function hideTransit(){
     document.body.classList.remove('page-transit-on');
   }
 }
-function withTransit(work,{minMs=560,fromLoad=false}={}){
+function withTransit(work,{minMs=1000,fromLoad=false}={}){
   if(transitBusy && !fromLoad) return Promise.resolve();
   transitBusy=true;
+  const fillMs=window.BoxiesPageTransit?.fillMs||1000;
+  const hold=Math.max(minMs,fillMs);
   const run=()=>{
     const job=typeof work==='function'?Promise.resolve().then(work):Promise.resolve(work);
     const wrap=window.BoxiesPageTransit?.run
-      ? window.BoxiesPageTransit.run(job,{minMs:reduce?0:minMs})
-      : (showTransit(), job.finally(()=>new Promise(r=>setTimeout(()=>{hideTransit();r()},reduce?0:minMs))));
+      ? window.BoxiesPageTransit.run(job,{minMs:reduce?0:hold})
+      : (showTransit(), job.finally(()=>new Promise(r=>setTimeout(()=>{hideTransit();r()},reduce?0:hold))));
     return Promise.resolve(wrap).finally(()=>{transitBusy=false;snapScrollState()});
   };
   return run();
@@ -91,7 +93,7 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
       if(window.BoxiesScrollStory?.leaveToIntro) window.BoxiesScrollStory.leaveToIntro();
       else scrollTo({top:0,left:0,behavior:'instant'});
       if(updateHash){try{history.replaceState(null,'','#inicio')}catch(e){}}
-    },{minMs:fromLoad?420:520,fromLoad});
+    },{minMs:1000,fromLoad});
   }
   if(id==='servicio'){
     return withTransit(()=>{
@@ -101,7 +103,7 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
         if(el) scrollTo({top:sectionTop(el),left:0,behavior:'instant'});
       }
       if(updateHash){try{history.replaceState(null,'','#servicio')}catch(e){}}
-    },{minMs:fromLoad?420:560,fromLoad});
+    },{minMs:1000,fromLoad});
   }
   if(id==='demo'){
     return withTransit(()=>{
@@ -130,7 +132,7 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
         document.body.scrollTop=top;
       }
       settle();
-    },{minMs:fromLoad?640:780,fromLoad});
+    },{minMs:1000,fromLoad});
   }
   const el=document.getElementById(id);
   if(!el) return Promise.resolve();
@@ -144,7 +146,7 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
       const next='#'+id;
       if(location.hash!==next) history.replaceState(null,'',next);
     }
-  },{minMs:fromLoad?400:520,fromLoad});
+  },{minMs:1000,fromLoad});
 }
 window.BoxiesGoToSection=goToSection;
 window.BoxiesSnapLandingScroll=snapScrollState;
@@ -228,7 +230,7 @@ function bootHashJump(){
   if(id==='inicio'){
     withTransit(()=>{
       pinInicio();
-    },{minMs:fromMenu?480:320,fromLoad:true});
+    },{minMs:1000,fromLoad:true});
     return;
   }
   // Evitar el scroll nativo del ancla antes de nuestro salto.
