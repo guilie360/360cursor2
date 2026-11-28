@@ -21,7 +21,8 @@
   var COOLDOWN = 700;
   var GAP = 140;
   var REVEAL_GAIN = 0.00155; /* sensibilidad del scrub portada→story */
-  var CDN = 'https://boxies.b-cdn.net/landing/scroll';
+  /* v2 = frames de VIDEO FINAL PARA LANGIND (ruta nueva para evitar cache del CapCut viejo) */
+  var CDN = 'https://boxies.b-cdn.net/landing/scroll/v2';
 
   var HOLDS = [
     { t: 0.0 },
