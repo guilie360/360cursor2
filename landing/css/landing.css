@@ -94,17 +94,12 @@ body.scroll-story-reveal .scroll-stage-inner{
 html.scroll-story-reveal .scroll-stage-inner,
 body.scroll-story-reveal .scroll-stage-inner{
   z-index:22;
-  transform:scale(calc(1.1 - var(--reveal-e) * .1));
-  transform-origin:50% 60%;
-  clip-path: inset(
-    calc((1 - var(--reveal-e)) * 46%)
-    calc((1 - var(--reveal-e)) * 8%)
-    calc((1 - var(--reveal-e)) * 18%)
-    calc((1 - var(--reveal-e)) * 8%)
-    round calc((1 - var(--reveal-e)) * 28px)
-  );
-  filter:saturate(calc(.7 + var(--reveal-e) * .3)) brightness(calc(.82 + var(--reveal-e) * .18));
-  opacity:calc(.25 + var(--reveal-e) * .75);
+  /* Full-bleed suave: puerta cerrada entra entera (sin slit que recorte el centro) */
+  transform:translate3d(0, calc((1 - var(--reveal-e)) * 18vh), 0) scale(calc(1.06 - var(--reveal-e) * .06));
+  transform-origin:50% 50%;
+  filter:saturate(calc(.85 + var(--reveal-e) * .15)) brightness(calc(.88 + var(--reveal-e) * .12));
+  opacity:calc(.15 + var(--reveal-e) * .85);
+  clip-path:none;
 }
 .scroll-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
 .scroll-shade,.scroll-scrim{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:2}

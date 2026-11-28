@@ -117,10 +117,13 @@
       introSec.style.setProperty('--reveal', String(revealP));
       introSec.style.setProperty('--reveal-e', String(e));
     }
-    /* Primeros frames acompañan el reveal para que no sea un corte. */
+    /* Reveal = solo portada→escena. La puerta permanece en frame 0 (cerrada).
+       Nunca scrubear holds aquí: eso abría la puerta y luego finishReveal la cerraba. */
     if (entryReady) {
-      var tReveal = stops[0].t + (stops[1] ? (stops[1].t - stops[0].t) * 0.22 * e : 0);
-      curT = tReveal;
+      curT = stops[0].t;
+      stillA = 0;
+      stillIdx = -1;
+      lastKey = '';
       render();
     }
   }
@@ -253,14 +256,20 @@
     if (mode === 'exp') return;
     mode = 'exp';
     freeEntered = false;
+    cur = 0;
+    curT = stops[0].t;
+    stillA = 0;
+    stillIdx = -1;
+    lastKey = '';
     setRevealUi(false);
     setStoryUi(true);
-    applyReveal(1);
+    document.documentElement.style.setProperty('--reveal', '1');
+    document.documentElement.style.setProperty('--reveal-e', '1');
     parkAtSection();
     lockPage();
     requestAnimationFrame(function () {
       resize();
-      cur = 0; curT = stops[0].t;
+      render();
       arrivedAt = performance.now();
       showStop(0);
       if (!framesReady) stage.classList.add('is-loading');
