@@ -13,15 +13,13 @@
 <link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel73">
 <link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel73">
 <style>
-  /* Puerta de acceso: misma card BOXIES; dos destinos separados */
-  .login-gate-actions{display:grid;gap:12px;margin-top:8px;text-align:left}
+  /* Puerta de acceso minimal: marca + dos destinos */
+  .login-card .login-wordmark{margin-bottom:0}
+  .login-gate-actions{display:grid;gap:12px;margin-top:36px;text-align:left}
   .login-gate-actions .login-submit{margin-top:0;text-decoration:none;display:block;box-sizing:border-box}
-  .login-gate-hint{
-    margin:18px 0 0;color:#666;font:500 12px/1.45 Manrope,Arial,sans-serif;text-align:center
-  }
   .login-gate-back{
-    display:inline-block;margin-top:18px;color:#777;text-decoration:none;
-    font:500 12px/1 Manrope,Arial,sans-serif;letter-spacing:.04em
+    display:inline-block;margin-top:28px;color:#666;text-decoration:none;
+    font:500 11px/1 Manrope,Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase
   }
   .login-gate-back:hover{color:#bbb}
 </style>
@@ -33,13 +31,11 @@
    <img src="/panel_gestion/assets/logo.png" alt="360Preventa">
   </a>
   <h1 class="login-wordmark">BOXIES</h1>
-  <p class="login-subtitle"><strong>360PREVENTA</strong> · ACCESO</p>
   <div class="login-gate-actions">
-   <a class="login-submit mag" href="/miperfil/" data-cursor="CLIENTE">Soy cliente · Mi perfil</a>
-   <a class="login-submit mag" href="/panel_gestion/" data-cursor="EQUIPO">Soy equipo · Panel de gestión</a>
+   <a class="login-submit mag" href="/miperfil/" data-cursor="CLIENTE">Cliente</a>
+   <a class="login-submit mag" href="/panel_gestion/" data-cursor="EQUIPO">Equipo</a>
   </div>
-  <p class="login-gate-hint">Elige cómo quieres entrar. Las cuentas no se mezclan.</p>
-  <a class="login-gate-back" href="/">← Volver al inicio</a>
+  <a class="login-gate-back" href="/">← Inicio</a>
  </div>
 </section>
 </body>
