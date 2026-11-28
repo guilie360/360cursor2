@@ -1,0 +1,1272 @@
+/* BOXIES host — login helpers + content-slot page styles (not chrome). */
+
+[hidden] { display: none !important; }
+
+/* ── Login (premium entry) ── */
+.boxies-login {
+  position: relative;
+}
+
+.boxies-login__fs {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top, 0px));
+  right: max(14px, env(safe-area-inset-right, 0px));
+  z-index: 10050;
+}
+
+.boxies-host .hall-login-page .auth-experience-box.boxies-login__card,
+.boxies-host .boxies-login__card {
+  width: min(580px, calc(100vw - 48px));
+  max-width: 580px;
+  margin: 0;
+  padding: 48px 44px 44px;
+  box-sizing: border-box;
+}
+
+.boxies-host .boxies-login__brand,
+.boxies-host .hall-login-brand.boxies-login__brand {
+  margin: 0 0 14px;
+  font-size: 1.35rem;
+  font-weight: 550;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.88);
+  margin-right: -0.42em;
+}
+
+.boxies-login__subtitle {
+  margin: 0 0 36px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.boxies-login__brand-mark {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.86);
+  letter-spacing: 0.02em;
+}
+
+.boxies-host .boxies-login .auth-oauth-row {
+  margin: 0;
+}
+
+.boxies-host .boxies-login .auth-oauth-btn {
+  width: 100%;
+  min-height: 48px;
+  justify-content: center;
+}
+
+.boxies-host .boxies-login .auth-oauth-divider {
+  margin: 28px 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  color: rgba(255, 255, 255, 0.34);
+}
+
+.boxies-host .boxies-login__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.boxies-host .boxies-login .auth-field {
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.boxies-host .boxies-login .auth-field > span {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  opacity: 0.48;
+}
+
+.boxies-host .boxies-login .auth-field input {
+  height: 52px;
+  padding: 0 16px;
+  padding-right: 48px;
+  font-size: 0.95rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.boxies-host .boxies-login .auth-field input:focus {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.boxies-host .boxies-login .auth-field #bxEmail {
+  padding-right: 16px;
+}
+
+.boxies-host .boxies-login .boxies-login__eye.auth-toggle-password {
+  top: auto;
+  right: 12px;
+  bottom: 10px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.45);
+  opacity: 1;
+  font-size: 0;
+  border-radius: 8px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.boxies-host .boxies-login .boxies-login__eye:hover {
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.boxies-host .boxies-login .boxies-login__eye svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.boxies-host .boxies-login .auth-remember-row {
+  margin: 4px 0 22px;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.boxies-host .boxies-login .boxies-login__submit.auth-action-btn {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.boxies-host .boxies-login .auth-modal-message {
+  margin-top: 18px;
+  min-height: 1.2em;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 640px) {
+  .boxies-host .hall-login-page .auth-experience-box.boxies-login__card,
+  .boxies-host .boxies-login__card {
+    width: min(100%, calc(100vw - 32px));
+    max-width: none;
+    padding: 36px 24px 32px;
+  }
+
+  .boxies-host .boxies-login__brand,
+  .boxies-host .hall-login-brand.boxies-login__brand {
+    font-size: 1.15rem;
+    letter-spacing: 0.36em;
+    margin-right: -0.36em;
+  }
+}
+
+#boxiesContent .boxies-page {
+  max-width: min(920px, 100%);
+}
+
+/* ── Showrooms workspace shell ──
+ * Content fills the panel. Only the table region scrolls.
+ * Footer stays pinned to the bottom of the content area.
+ */
+.boxies-workspace:has(#boxiesContent.boxies-content--showrooms),
+.boxies-workspace__panel:has(#boxiesContent.boxies-content--showrooms) {
+  height: calc(
+    100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe)
+  );
+  min-height: calc(
+    100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe)
+  );
+  overflow: hidden;
+}
+
+#boxiesContent.boxies-content--showrooms {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: calc(
+    100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe)
+  );
+  max-height: calc(
+    100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe)
+  );
+  min-height: 0;
+  box-sizing: border-box;
+  padding-bottom: 12px;
+}
+
+.boxies-workspace:has(#boxiesContent.boxies-content--showrooms) #boxiesContent.boxies-content--showrooms,
+.boxies-workspace__panel:has(#boxiesContent.boxies-content--showrooms) #boxiesContent.boxies-content--showrooms {
+  height: 100%;
+  max-height: 100%;
+}
+
+#boxiesContent .boxies-page--showrooms {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  max-width: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* V7.2.00 — Project Hall: editorial header + tabs + table breathing room */
+#boxiesContent .boxies-page--projects .boxies-page__title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 0 0 4px;
+}
+
+#boxiesContent .boxies-page--projects .boxies-page__desc--lead {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.42);
+  max-width: none;
+}
+
+#boxiesContent .boxies-projects-header {
+  flex: 0 0 auto;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+}
+
+#boxiesContent .boxies-experience-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 4px 20px;
+  margin: 28px 0 0;
+  padding: 0 0 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+#boxiesContent .boxies-experience-tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin: 0 0 -3px;
+  padding: 14px 4px 12px;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+#boxiesContent .boxies-experience-tab:hover {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+#boxiesContent .boxies-experience-tab.is-active {
+  color: rgba(255, 255, 255, 0.96);
+  font-weight: 600;
+  border-bottom-color: rgba(255, 255, 255, 0.92);
+}
+
+#boxiesContent .boxies-projects-order-status {
+  flex: 0 0 auto;
+  min-height: 1.1rem;
+  margin: 10px 0 0;
+  padding: 0;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+#boxiesContent .boxies-projects-body.boxies-showrooms-body,
+#boxiesContent .boxies-page--projects .boxies-showrooms-body {
+  margin-top: 20px;
+  padding-top: 4px;
+}
+
+#boxiesContent .boxies-projects-table.boxies-showrooms-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+#boxiesContent .boxies-projects-table thead th {
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding-top: 10px;
+  padding-bottom: 14px;
+}
+
+#boxiesContent .boxies-projects-table tbody td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  padding-top: 16px;
+  padding-bottom: 16px;
+  vertical-align: middle;
+}
+
+#boxiesContent .boxies-projects-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+#boxiesContent .boxies-projects-table .boxies-showroom-name {
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* V7.0.07 — single page typography hierarchy for BOXIES content */
+#boxiesContent .boxies-page__title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+  color: var(--text-primary, #ffffff);
+}
+
+#boxiesContent .boxies-page__desc {
+  color: var(--text-secondary, #ffffff);
+  opacity: var(--text-secondary-opacity, 0.78);
+  font-size: 13px;
+  font-weight: 400;
+  margin: 0 0 22px;
+  line-height: 1.55;
+}
+
+#boxiesContent .boxies-showrooms-header {
+  flex: 0 0 auto;
+}
+
+#boxiesContent .boxies-showrooms-header .boxies-page__desc {
+  margin-bottom: 10px;
+}
+
+/* V7.2.00 — tab / order-status base styles live in the editorial block above. */
+
+#boxiesContent .boxies-projects-order-status.is-error {
+  color: #f0a0a0;
+}
+
+/* Scrollable table region — takes all remaining height */
+#boxiesContent .boxies-showrooms-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#boxiesContent .admin-table-wrap {
+  padding: 0 8px 8px;
+}
+
+#boxiesContent .boxies-showrooms-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  overflow: auto;
+}
+
+#boxiesContent .admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  color: var(--hall-text, rgba(255, 255, 255, 0.86));
+}
+
+#boxiesContent .admin-table th,
+#boxiesContent .admin-table td {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
+  text-align: left;
+  vertical-align: middle;
+}
+
+#boxiesContent .admin-table thead th {
+  padding-top: 12px;
+  padding-bottom: 14px;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
+  background: transparent;
+  font-weight: 550;
+}
+
+#boxiesContent .admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+#boxiesContent .admin-table tbody tr {
+  transition: background 0.18s var(--hall-ease, ease);
+}
+
+#boxiesContent .admin-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+#boxiesContent .admin-table code {
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
+  background: none;
+}
+
+/* Continuous full-width table */
+#boxiesContent .boxies-showrooms-table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Padding lives on .boxies-cell so th/td geometry matches exactly */
+#boxiesContent .boxies-showrooms-table th,
+#boxiesContent .boxies-showrooms-table td {
+  padding: 0;
+  position: relative;
+  overflow: visible;
+  vertical-align: middle;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
+}
+
+#boxiesContent .boxies-showrooms-table thead th {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  border-bottom: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.06));
+  font-size: 0.625rem;
+  font-weight: 550;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
+  background: transparent;
+}
+
+#boxiesContent .boxies-showrooms-table thead th .boxies-th-label {
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  line-height: 1.3;
+}
+
+#boxiesContent .boxies-showrooms-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+#boxiesContent .boxies-cell {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px 14px;
+  overflow: hidden;
+}
+
+#boxiesContent .boxies-showrooms-table thead .boxies-cell {
+  min-height: 40px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+#boxiesContent .boxies-th-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+/* Alignment: header and body share the same flex justification */
+#boxiesContent .boxies-col-actions .boxies-cell,
+#boxiesContent .boxies-col-drag .boxies-cell,
+#boxiesContent .boxies-col-slug .boxies-cell,
+#boxiesContent .boxies-col-status .boxies-cell,
+#boxiesContent .boxies-col-public .boxies-cell,
+#boxiesContent .boxies-col-updated .boxies-cell {
+  justify-content: center;
+  text-align: center;
+}
+
+#boxiesContent .boxies-col-actions .boxies-cell {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+#boxiesContent .boxies-col-name .boxies-cell {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+#boxiesContent .boxies-col-actions .boxies-th-label,
+#boxiesContent .boxies-col-slug .boxies-th-label,
+#boxiesContent .boxies-col-status .boxies-th-label,
+#boxiesContent .boxies-col-public .boxies-th-label,
+#boxiesContent .boxies-col-updated .boxies-th-label {
+  text-align: center;
+}
+
+#boxiesContent .boxies-col-name .boxies-th-label {
+  text-align: left;
+}
+
+/*
+ * Resize handle: 12px hit target centered on the column boundary.
+ * Visible rule is exactly 1px on that boundary.
+ */
+#boxiesContent .boxies-col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 5;
+  width: 12px;
+  height: 100%;
+  transform: translateX(50%);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+#boxiesContent .boxies-col-resizer::after {
+  content: '';
+  position: absolute;
+  top: 14%;
+  bottom: 14%;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+  transition:
+    background 0.15s ease,
+    width 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+#boxiesContent .boxies-col-resizer:hover::after {
+  width: 2px;
+  background: #6fbf86;
+}
+
+#boxiesContent .boxies-col-resizer.is-active::after,
+body.boxies-col-resizing .boxies-col-resizer.is-active::after {
+  width: 3px;
+  background: #6fbf86;
+  box-shadow: 0 0 0 1px rgba(111, 191, 134, 0.2);
+}
+
+body.boxies-col-resizing,
+body.boxies-col-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+#boxiesContent .boxies-showrooms-table td.boxies-col-updated {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+#boxiesContent .boxies-showroom-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 550;
+  min-width: 0;
+  width: 100%;
+}
+
+#boxiesContent .boxies-showroom-slug {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#boxiesContent .table-actions {
+  white-space: nowrap;
+}
+
+#boxiesContent .boxies-row-actions {
+  display: inline-grid;
+  grid-template-columns: repeat(4, auto);
+  column-gap: 14px;
+  align-items: center;
+  justify-items: center;
+  /* Keep the action cluster compact on the right — not stretched across the cell */
+  width: max-content;
+  max-width: 100%;
+  margin-left: auto;
+}
+
+#boxiesContent .boxies-icon-action {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--hall-btn-border, rgba(255, 255, 255, 0.14));
+  border-radius: var(--hall-radius-pill, 999px);
+  background: var(--hall-btn-bg, rgba(255, 255, 255, 0.03));
+  color: var(--hall-text, rgba(255, 255, 255, 0.72));
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    color var(--boxies-transition, 0.18s ease),
+    background var(--boxies-transition, 0.18s ease),
+    border-color var(--boxies-transition, 0.18s ease),
+    opacity var(--boxies-transition, 0.18s ease);
+}
+
+#boxiesContent .boxies-icon-action:hover:not(:disabled) {
+  color: var(--hall-text, #fff);
+  background: var(--hall-btn-hover-bg, rgba(255, 255, 255, 0.07));
+  border-color: var(--hall-btn-hover-border, rgba(255, 255, 255, 0.22));
+}
+
+#boxiesContent .boxies-icon-action:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+#boxiesContent .boxies-icon-action--danger:hover:not(:disabled) {
+  color: #ffc9c9;
+  border-color: rgba(240, 160, 160, 0.45);
+  background: rgba(240, 160, 160, 0.08);
+}
+
+#boxiesContent .boxies-icon-action.is-busy-label {
+  width: auto;
+  min-width: 0;
+  padding: 0 12px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 960px) {
+  #boxiesContent .boxies-row-actions {
+    column-gap: 11px;
+  }
+}
+
+@media (max-width: 720px) {
+  #boxiesContent .boxies-row-actions {
+    column-gap: 8px;
+  }
+}
+
+#boxiesContent .boxies-showroom-drag-th .boxies-cell,
+#boxiesContent .boxies-showroom-drag .boxies-cell {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+#boxiesContent .boxies-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: grab;
+  letter-spacing: -0.15em;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+#boxiesContent .boxies-drag-handle:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+#boxiesContent .boxies-drag-handle:active {
+  cursor: grabbing;
+}
+
+#boxiesContent .boxies-showroom-row {
+  cursor: grab;
+}
+
+#boxiesContent .boxies-showroom-row.is-dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+#boxiesContent .boxies-showroom-row.is-drag-over {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+
+#boxiesContent #boxiesProjectsBody.is-reordering {
+  pointer-events: none;
+  opacity: 0.72;
+}
+
+#boxiesContent .boxies-public-cell {
+  vertical-align: middle;
+}
+
+/*
+ * V5.9.42 — isolate Público from global `.toggle-switch.on { background: var(--accent) }`.
+ * Root cause: components.css paints ON with theme accent (red under Signature Red / red accents).
+ * BOXIES had no override, so the switch inherited accent instead of Hall neutrals.
+ */
+#boxiesContent .boxies-public-toggle.toggle-switch,
+body[data-button-glass="soft"] #boxiesContent .boxies-public-toggle.toggle-switch,
+body[data-button-glass="glass"] #boxiesContent .boxies-public-toggle.toggle-switch {
+  vertical-align: middle;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+#boxiesContent .boxies-public-toggle.toggle-switch.on,
+body[data-button-glass="soft"] #boxiesContent .boxies-public-toggle.toggle-switch.on,
+body[data-button-glass="glass"] #boxiesContent .boxies-public-toggle.toggle-switch.on,
+body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.toggle-switch.on {
+  background: #111111;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+#boxiesContent .boxies-public-toggle .toggle-switch-knob,
+#boxiesContent .boxies-public-toggle.on .toggle-switch-knob,
+body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-switch-knob {
+  background: #ffffff;
+}
+
+#boxiesContent .boxies-public-toggle:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+#boxiesContent .admin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#boxiesContent .badge-success {
+  color: rgba(140, 230, 180, 0.95);
+  background: rgba(80, 180, 120, 0.12);
+}
+
+#boxiesContent .badge-muted {
+  color: var(--hall-text-faint, rgba(255, 255, 255, 0.42));
+  background: rgba(255, 255, 255, 0.04);
+}
+
+#boxiesContent .boxies-placeholder {
+  max-width: 420px;
+  padding: 8px 0;
+}
+
+#boxiesContent .boxies-builder-stub {
+  max-width: 520px;
+  padding: 24px 0;
+}
+
+#boxiesContent .boxies-builder-stub .boxies-page__eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+#boxiesContent .boxies-builder-stub .boxies-page__meta {
+  margin: 0 0 20px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
+}
+
+#boxiesContent .boxies-placeholder__kicker {
+  margin: 0 0 8px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.34);
+}
+
+/* V7.2.01 — Builder Gallery (immersive project-type cards) */
+#boxiesContent .boxies-exp-select.boxies-exp-gallery {
+  width: 100%;
+  margin: 0;
+  padding: 8px 4px 28px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(
+    100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe) - 24px
+  );
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select__header {
+  margin-bottom: 36px;
+  max-width: 42rem;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select__header .boxies-page__title {
+  margin-bottom: 8px;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select__header .boxies-page__desc {
+  margin-bottom: 0;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.48);
+  letter-spacing: 0.01em;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px 20px;
+  flex: 1 1 auto;
+  align-content: stretch;
+  width: 100%;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card {
+  appearance: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 0;
+  min-height: clamp(220px, 28vh, 320px);
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(120% 80% at 20% 0%, rgba(255, 255, 255, 0.07), transparent 55%),
+    rgba(255, 255, 255, 0.03);
+  color: inherit;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 18px 40px rgba(0, 0, 0, 0.28);
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__media {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-color: rgba(255, 255, 255, 0.02);
+  transform: scale(1.02);
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__media-veil {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 5, 5, 0.15) 0%, rgba(5, 5, 5, 0.55) 48%, rgba(5, 5, 5, 0.92) 100%),
+    radial-gradient(80% 60% at 70% 20%, rgba(255, 255, 255, 0.06), transparent 60%);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 28px 26px 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__title {
+  display: block;
+  font-size: clamp(1.15rem, 1.6vw, 1.45rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.96);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__meta {
+  display: none;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__meta:not([hidden]) {
+  display: block;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__action {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 28px 56px rgba(0, 0, 0, 0.42);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card:hover .boxies-exp-select-card__media {
+  transform: scale(1.06);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card:hover .boxies-exp-select-card__action {
+  color: rgba(255, 255, 255, 0.78);
+  transform: translateX(2px);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.28);
+  outline-offset: 3px;
+}
+
+@media (max-width: 1100px) {
+  #boxiesContent .boxies-exp-gallery .boxies-exp-select__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  #boxiesContent .boxies-exp-gallery .boxies-exp-select__grid {
+    grid-template-columns: 1fr;
+  }
+
+  #boxiesContent .boxies-exp-gallery .boxies-exp-select-card {
+    min-height: 200px;
+  }
+}
+
+/* Legacy admin grid kept for non-gallery contexts */
+#boxiesContent .boxies-exp-select:not(.boxies-exp-gallery) {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+#boxiesContent .boxies-exp-select:not(.boxies-exp-gallery) .boxies-exp-select__header {
+  margin-bottom: var(--hall-space-5, 24px);
+}
+
+#boxiesContent .boxies-exp-select:not(.boxies-exp-gallery) .boxies-exp-select__grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--hall-space-4, 16px);
+}
+
+#boxiesContent .boxies-exp-select:not(.boxies-exp-gallery) .boxies-exp-select-card {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--hall-space-6, 32px);
+  min-height: 196px;
+  min-width: 0;
+  padding: var(--hall-space-5, 24px);
+  margin: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  border-radius: var(--hall-radius-control, 14px);
+  border: 1px solid var(--border-subtle, var(--hall-border, rgba(255, 255, 255, 0.06)));
+  background: var(--hall-surface, rgba(255, 255, 255, 0.028));
+  color: inherit;
+  box-shadow: none;
+  transition:
+    transform var(--hall-duration-fast, 0.18s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    border-color var(--hall-duration-fast, 0.18s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    background var(--hall-duration-fast, 0.18s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+@media (max-width: 1100px) {
+  #boxiesContent .boxies-exp-select:not(.boxies-exp-gallery) .boxies-exp-select__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  #boxiesContent .boxies-exp-select:not(.boxies-exp-gallery) .boxies-exp-select__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Global create-showroom busy overlay — viewport centered */
+.boxies-global-busy {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.boxies-global-busy__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.boxies-global-busy.is-opaque .boxies-global-busy__backdrop {
+  background: #050505;
+}
+
+.boxies-global-busy.is-opaque .boxies-global-busy__spinner {
+  width: 28px;
+  height: 28px;
+  border-width: 1.5px;
+  border-color: rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.9);
+}
+
+.boxies-global-busy__panel {
+  position: relative;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  transform: none;
+}
+
+.boxies-global-busy__spinner {
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  border-top-color: rgba(255, 255, 255, 0.88);
+  border-radius: 50%;
+  animation: boxies-global-busy-spin 0.72s linear infinite;
+}
+
+.boxies-global-busy__label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.52);
+  text-align: center;
+}
+
+@keyframes boxies-global-busy-spin {
+  to { transform: rotate(360deg); }
+}
+
+body.boxies-is-creating-showroom #boxiesCreateShowroomBtn,
+body.boxies-is-global-busy #boxiesCreateShowroomBtn {
+  pointer-events: none;
+}
+
+body.boxies-is-creating-showroom #boxiesCreateShowroomBtn.is-creating {
+  opacity: 0.55;
+}
+
+/* BOXIES confirm modal (AdminUI) — in-app, fullscreen-safe */
+body.boxies-host .admin-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 11500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+body.boxies-host .admin-modal-root.is-open {
+  display: flex;
+}
+
+body.boxies-host .admin-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+body.boxies-host .admin-modal {
+  position: relative;
+  width: min(420px, 100%);
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.88);
+}
+
+body.boxies-host .admin-modal-header,
+body.boxies-host .admin-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+body.boxies-host .admin-modal-footer {
+  border-bottom: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  justify-content: flex-end;
+}
+
+body.boxies-host .admin-modal-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 550;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+body.boxies-host .admin-modal-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+body.boxies-host .admin-modal-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+body.boxies-host .admin-modal-body {
+  padding: 20px;
+}
+
+body.boxies-host .admin-modal-copy {
+  margin: 0 0 0.65rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.92rem;
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+body.boxies-host .admin-modal-copy:last-child {
+  margin-bottom: 0;
+}
+
+body.boxies-host .admin-modal-copy--muted {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.82rem;
+  font-weight: 300;
+}
+
+body.boxies-host .admin-modal-footer .btn-ghost,
+body.boxies-host .admin-modal-footer .btn-danger {
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+body.boxies-host .admin-modal-footer .btn-ghost {
+  color: rgba(255, 255, 255, 0.55);
+  border-color: transparent;
+}
+
+body.boxies-host .admin-modal-footer .btn-ghost:hover {
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body.boxies-host .admin-modal-footer .btn-danger {
+  color: #ff9a9a;
+  border-color: rgba(255, 138, 138, 0.28);
+}
+
+body.boxies-host .admin-modal-footer .btn-danger:hover {
+  background: rgba(240, 160, 160, 0.08);
+  border-color: rgba(240, 160, 160, 0.45);
+}
+
+/* Hall — empty resting state (Shell only; no workspace content) */

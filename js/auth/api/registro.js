@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/registro.js');}catch(_e){}
 /* Visitor registration API */
 var RegistroApi = (function () {
   function getProyectoSlug() {
@@ -115,3 +116,5 @@ var RegistroApi = (function () {
     resolveUniqueLogin: resolveUniqueLogin
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/registro.js');}catch(_e){}

@@ -1,0 +1,33 @@
+/* Scrollbar minimal dark — acorde a 360Preventa / BOXIES */
+html{
+  scrollbar-width:thin;
+  scrollbar-color:rgba(214,210,204,.28) transparent;
+}
+*{
+  scrollbar-width:thin;
+  scrollbar-color:rgba(214,210,204,.28) transparent;
+}
+::-webkit-scrollbar{
+  width:6px;
+  height:6px;
+}
+::-webkit-scrollbar-track{
+  background:transparent;
+}
+::-webkit-scrollbar-thumb{
+  background:rgba(214,210,204,.22);
+  border-radius:99px;
+  border:1px solid transparent;
+  background-clip:padding-box;
+}
+::-webkit-scrollbar-thumb:hover{
+  background:rgba(214,210,204,.42);
+}
+::-webkit-scrollbar-corner{
+  background:transparent;
+}
+::-webkit-scrollbar-button{
+  display:none;
+  width:0;
+  height:0;
+}

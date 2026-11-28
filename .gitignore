@@ -1,0 +1,12 @@
+supabase/.management-token*
+.env
+.env.*
+node_modules/
+.vscode/
+# Landing scroll frames / master video (Bunny CDN; too large for git)
+landing/assets/scroll/
+landing/assets/VIDEO*.mp4
+landing/assets/magnific_*.mp4
+scripts/extract-*.log
+scripts/upload-scroll*.log
+scripts/upload-scroll*.err

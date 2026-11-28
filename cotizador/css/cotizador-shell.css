@@ -1,0 +1,1541 @@
+/* Shell del cotizador público/interno (misma app, distinta capa) */
+body.cotizador-app{
+  background:#0b0b0b;
+  -webkit-user-select:none;
+  user-select:none;
+  caret-color:transparent;
+}
+/* Solo campos de formulario permiten selección/caret de escritura */
+body.cotizador-app input,
+body.cotizador-app textarea,
+body.cotizador-app select,
+body.cotizador-app [contenteditable="true"]{
+  -webkit-user-select:text;
+  user-select:text;
+  caret-color:auto;
+}
+body.cotizador-app button,
+body.cotizador-app a,
+body.cotizador-app summary,
+body.cotizador-app label,
+body.cotizador-app .step,
+body.cotizador-app .package-accordion,
+body.cotizador-app .base-include-item,
+body.cotizador-app .choice,
+body.cotizador-app .flip-front,
+body.cotizador-app .flip-back,
+body.cotizador-app .btn{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  caret-color:transparent!important;
+}
+
+/* Header limpio: solo logo (+ menú global). Precio/reset viven en el footer. */
+body.cotizador-app .brand-copy,
+body.cotizador-app .pricebox span,
+body.cotizador-app #fullscreenBtn,
+body.cotizador-app .topbar .topright{
+  display:none!important;
+}
+body.cotizador-app .chooser-intro{
+  margin-bottom:18px;
+  opacity:.75;
+}
+/* Al entrar a un flujo: quitar el título de página para ir al grano */
+body.cotizador-app:has(#manualConfigurator:not(.hidden)) > main > h1,
+body.cotizador-app:has(#manualConfigurator:not(.hidden)) > main > .chooser-intro,
+body.cotizador-app:has(#packageChooser:not(.hidden)) > main > h1,
+body.cotizador-app:has(#packageChooser:not(.hidden)) > main > .chooser-intro{
+  display:none!important;
+}
+/* Continuar: deja espacio bajo el header sticky al anclar el siguiente paso */
+body.cotizador-app .step,
+body.cotizador-app .package-accordion{
+  scroll-margin-top:84px;
+}
+body.cotizador-app #loginScreen,
+body.cotizador-app #portal,
+body.cotizador-app #hunter,
+body.cotizador-app #teamChatFloat,
+body.cotizador-app #teamChatPopup,
+body.cotizador-app #paymentsGateBackdrop{
+  display:none!important;
+}
+/* Fullscreen solo desde el menú global — nunca icono flotante */
+body.cotizador-app #globalFullscreenBtn,
+body.cotizador-app .global-fullscreen-btn,
+body.cotizador-app #fullscreenToggle{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+
+/* Público: sin comisión de equipo */
+body.cotizador-app.modo-publico .quote-footer-fx,
+body.cotizador-app.modo-publico #eurCopFxPanel,
+body.cotizador-app.modo-publico .quote-footer-commission,
+body.cotizador-app.modo-publico .interno-commission-card{
+  display:none!important;
+}
+
+/* ——— Footer cotización: misma geometría que meta del panel ——— */
+body.cotizador-app .quote-goal-footer{
+  position:fixed!important;
+  left:0!important;right:0!important;bottom:0!important;
+  width:100%!important;max-width:none!important;
+  z-index:80;
+  margin:0!important;padding:0!important;
+  border-top:1px solid rgba(255,255,255,.14);
+  background:rgba(10,10,10,.96);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  padding-bottom:env(safe-area-inset-bottom,0px)!important;
+}
+body.cotizador-app .quote-goal-footer-inner{
+  width:100%;max-width:none;margin:0;box-sizing:border-box;
+  display:flex;align-items:center;gap:14px;
+  padding:10px max(16px,var(--chrome-side,22px));
+}
+/* Spacer absorbe el centro (equivalente a la meta del panel); botones anclados izq/der */
+body.cotizador-app .quote-footer-spacer{flex:1 1 auto;min-width:8px}
+/* Identidad footer: negro + radio 13px (como Reiniciar). Comisión queda aparte. */
+body.cotizador-app .quote-footer-back,
+body.cotizador-app .quote-footer-fx,
+body.cotizador-app .quote-footer-charge,
+body.cotizador-app .quote-footer-reset{
+  border:1px solid rgba(255,255,255,.16)!important;
+  border-radius:13px!important;
+  background:rgba(10,10,10,.96)!important;
+  color:#eee!important;
+  box-sizing:border-box;
+}
+body.cotizador-app .quote-footer-back{
+  flex:0 0 40px;width:40px;height:40px;margin:0;padding:0;z-index:5;
+  display:grid;place-items:center;cursor:pointer;pointer-events:auto;
+  transition:background .18s ease,border-color .18s ease,color .18s ease;
+}
+body.cotizador-app .quote-footer-back svg{
+  width:18px;height:18px;stroke:currentColor;fill:none;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  pointer-events:none;
+}
+/* Mismo hover que el botón de mensaje del panel — al final del bloque para ganar al estado base */
+body.cotizador-app .quote-goal-footer .quote-footer-back:hover,
+body.cotizador-app .quote-goal-footer .quote-footer-back:focus-visible,
+body.cotizador-app .quote-goal-footer .quote-footer-fx:hover,
+body.cotizador-app .quote-goal-footer .quote-footer-fx:focus-visible,
+body.cotizador-app .quote-goal-footer .quote-footer-charge:hover,
+body.cotizador-app .quote-goal-footer .quote-footer-charge:focus-visible,
+body.cotizador-app .quote-goal-footer .quote-footer-reset:hover,
+body.cotizador-app .quote-goal-footer .quote-footer-reset:focus-visible{
+  background:#3b3b3b!important;color:#fff!important;border:1px solid #fff!important;
+  outline:none;box-shadow:none!important;transform:none!important;
+}
+body.cotizador-app .quote-goal-footer .quote-footer-back:active,
+body.cotizador-app .quote-goal-footer .quote-footer-fx:active,
+body.cotizador-app .quote-goal-footer .quote-footer-charge:active,
+body.cotizador-app .quote-goal-footer .quote-footer-reset:active{
+  background:#4a4a4a!important;border:1px solid #fff!important;
+}
+body.cotizador-app .quote-footer-back.portal-hidden{
+  display:grid!important;
+}
+
+/* Comisión Hunter: sutil, nunca compite con el precio del cliente */
+body.cotizador-app .quote-footer-commission{
+  position:relative;flex:0 0 auto;
+  display:none;flex-direction:column;align-items:flex-end;justify-content:center;gap:1px;
+  margin:0;padding:2px 6px 2px 0;border:0;background:transparent;
+  color:#8a8580;cursor:pointer;text-align:right;
+  opacity:.72;transition:opacity .18s ease,color .18s ease;
+}
+body.cotizador-app.modo-interno .quote-footer-commission,
+body.cotizador-app.modo-interno .quote-footer-commission.portal-hidden{
+  display:flex!important;
+}
+body.cotizador-app .quote-footer-charge{
+  display:none;flex:0 0 auto;margin:0 8px 0 0;padding:0 14px;height:40px;
+  font:600 10px/1 var(--font-ui);letter-spacing:.12em;text-transform:uppercase;cursor:pointer;
+  align-items:center;justify-content:center;
+}
+body.cotizador-app.modo-interno .quote-footer-charge{display:inline-flex}
+body.cotizador-app .quote-footer-commission small{
+  font:600 var(--t-xs)/1 var(--font-ui);letter-spacing:.1em;text-transform:uppercase;
+  color:#6f6a64;
+}
+body.cotizador-app .quote-footer-commission strong{
+  font:500 var(--t-xs)/1.1 var(--font-ui);color:#9a948c;
+}
+body.cotizador-app .quote-footer-commission:hover{
+  opacity:1;color:#cfc9bd;
+}
+body.cotizador-app .quote-footer-commission:hover small{color:#a39c93}
+body.cotizador-app .quote-footer-commission:hover strong{color:#d6d0c8}
+
+/* Conversor EUR → COP */
+body.cotizador-app .quote-footer-fx{
+  flex:0 0 auto;
+  display:inline-flex;align-items:center;gap:7px;
+  margin:0 8px 0 0;padding:0 12px;height:40px;
+  cursor:pointer;
+  max-width:min(46vw,210px);
+}
+body.cotizador-app .quote-footer-fx svg{
+  width:16px;height:16px;flex:none;
+  stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;
+}
+body.cotizador-app .quote-footer-fx small{
+  font:600 10px/1.1 var(--font-ui);
+  letter-spacing:.04em;
+  color:rgba(255,255,255,.72);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+body.cotizador-app .quote-footer-fx[aria-expanded="true"]{
+  border-color:#fff!important;color:#fff!important;background:#3b3b3b!important;
+}
+body.cotizador-app .quote-footer-fx:hover small,
+body.cotizador-app .quote-footer-fx[aria-expanded="true"] small{color:#fff}
+body.cotizador-app .quote-footer-fx.is-loading{opacity:.7}
+.eur-cop-fx-panel{
+  position:fixed;inset:0;z-index:120000;
+  display:grid;place-items:center;
+  padding:16px;
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(4px);
+}
+/* Overlay FX tapa el cursor custom (z 110k): devolver puntero de sistema en el popup */
+html.has-cur .eur-cop-fx-panel,
+html.has-cur .eur-cop-fx-panel *{
+  cursor:auto!important;
+}
+html.has-cur .eur-cop-fx-panel button,
+html.has-cur .eur-cop-fx-panel a.btn,
+html.has-cur .eur-cop-fx-panel [data-fx-close]{
+  cursor:pointer!important;
+}
+html.has-cur .eur-cop-fx-panel input{
+  cursor:text!important;
+}
+.eur-cop-fx-panel.hidden{display:none!important}
+.eur-cop-fx-card{
+  width:min(420px,100%);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:16px;
+  background:linear-gradient(180deg,#171717 0%,#101010 100%);
+  box-shadow:0 24px 60px rgba(0,0,0,.55);
+  padding:18px 18px 16px;
+  display:grid;gap:10px;
+}
+.eur-cop-fx-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.eur-cop-fx-title{display:block;margin-top:4px;font:28px/1 Italiana,Georgia,serif;color:#f4f4f5;font-weight:400}
+.eur-cop-fx-close{
+  border:0;background:transparent;color:#9a9a9a;font-size:22px;line-height:1;
+  padding:4px 6px;cursor:pointer;
+}
+.eur-cop-fx-close:hover{color:#fff}
+.eur-cop-fx-pages{
+  display:grid;grid-template-columns:1fr 1fr;gap:6px;
+  padding:4px;border-radius:12px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+}
+.eur-cop-fx-page-btn{
+  border:0;border-radius:9px;padding:9px 10px;
+  background:transparent;color:rgba(255,255,255,.45);
+  font:600 11px/1 Manrope,Arial,sans-serif;
+  letter-spacing:.08em;text-transform:uppercase;
+  cursor:pointer;
+}
+.eur-cop-fx-page-btn.is-active{
+  background:rgba(255,255,255,.1);color:#fff;
+}
+.eur-cop-fx-stage{overflow:hidden}
+.eur-cop-fx-sheet{
+  display:grid;gap:10px;
+}
+.eur-cop-fx-sheet.is-flip{
+  animation:eurCopFxFlip .28s ease;
+}
+@keyframes eurCopFxFlip{
+  from{opacity:.35;transform:translateX(10px)}
+  to{opacity:1;transform:translateX(0)}
+}
+.eur-cop-fx-rate{margin:0;color:#fff;font:600 15px/1.3 Manrope,Arial,sans-serif}
+.eur-cop-fx-updated{margin:0;color:rgba(255,255,255,.42);font:12px/1.3 Manrope,Arial,sans-serif}
+.eur-cop-fx-field{
+  display:grid;gap:6px;
+  color:rgba(255,255,255,.55);
+  font:600 10px/1.2 Manrope,Arial,sans-serif;
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.eur-cop-fx-field input{
+  width:100%;padding:11px 12px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.14);
+  background:#0a0a0a;color:#f2f2f2;
+  font:500 15px/1.3 Manrope,Arial,sans-serif;
+  text-transform:none;letter-spacing:0;
+}
+.eur-cop-fx-actions{
+  display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;
+  justify-content:center;
+}
+.eur-cop-fx-actions .btn{
+  text-decoration:none;display:inline-flex;align-items:center;justify-content:center;
+  min-width:132px;
+}
+.eur-cop-fx-note{margin:2px 0 0;color:rgba(255,255,255,.38);font:11px/1.4 Manrope,Arial,sans-serif}
+@media (max-width:560px){
+  body.cotizador-app .quote-footer-fx{padding:7px 8px;margin-right:6px}
+  body.cotizador-app .quote-footer-fx small{max-width:72px}
+}
+
+/* Precio cliente: protagonista */
+body.cotizador-app .quote-footer-price{
+  display:flex!important;flex-direction:column;align-items:flex-end;justify-content:center;
+  margin:0;padding:0;height:auto;min-width:0;
+}
+body.cotizador-app .quote-footer-price strong{
+  font:400 var(--t-lg)/1 var(--font-display)!important;
+  color:#f0ebe3!important;
+  white-space:nowrap;
+}
+body.cotizador-app .quote-footer-reset{
+  flex:0 0 40px!important;width:40px!important;height:40px!important;
+  min-width:40px!important;max-width:40px!important;
+  padding:0!important;margin:0;
+  display:inline-flex!important;align-items:center;justify-content:center;
+}
+body.cotizador-app .quote-footer-reset svg{
+  width:18px;height:18px;stroke:currentColor;fill:none;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+/* Mini alerta reinicio — debajo del cursor custom (110000) para no “ciegar” el puntero */
+body.cotizador-app .quote-reset-backdrop{
+  position:fixed;inset:0;z-index:10090;
+  background:rgba(0,0,0,.78);backdrop-filter:blur(5px);
+  display:grid;place-items:center;padding:20px;
+}
+html.has-cur body.cotizador-app .cur,
+html.has-cur body.cotizador-app .cur-dot{
+  z-index:110000!important;
+  pointer-events:none!important;
+}
+body.cotizador-app .quote-reset-backdrop.hidden{display:none!important}
+body.cotizador-app .quote-reset-dialog{
+  width:min(420px,100%);
+  background:#171717;border:1px solid rgba(255,255,255,.18);
+  border-radius:16px;padding:28px;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+}
+body.cotizador-app .quote-reset-dialog .eyebrow{
+  margin:0 0 10px;font:600 var(--t-xs)/1 var(--font-ui);
+  letter-spacing:.14em;text-transform:uppercase;color:#8d7d69;
+}
+body.cotizador-app .quote-reset-dialog h3{
+  margin:0 0 8px;font:400 var(--t-lg)/1.1 var(--font-display);color:#f4f1eb;
+}
+body.cotizador-app .quote-reset-dialog p{
+  margin:0 0 20px;color:#aaa;font-size:var(--t-sm);line-height:1.55;
+}
+body.cotizador-app .quote-reset-actions{
+  display:flex;gap:9px;flex-wrap:wrap;
+}
+body.cotizador-app .quote-reset-actions .btn{flex:1;min-width:120px}
+
+/* Popups anclados por encima del footer (no taparlo) */
+body.cotizador-app{
+  --quote-footer-clearance:calc(68px + env(safe-area-inset-bottom,0px));
+}
+body.cotizador-app .manual-upsell,
+body.cotizador-app #manualUpsell,
+body.cotizador-app .interno-commission-card{
+  position:fixed!important;
+  top:auto!important;
+  right:max(16px,var(--chrome-side,22px))!important;
+  left:auto!important;
+  bottom:calc(var(--quote-footer-clearance) + 12px)!important;
+  width:min(310px,calc(100vw - 32px));
+}
+/* Upsell compacto: pastilla con paleta bronce del card anterior */
+body.cotizador-app #manualUpsell.manual-upsell--compact,
+body.cotizador-app .manual-upsell--compact{
+  width:auto!important;
+  max-width:min(340px,calc(100vw - 28px))!important;
+  min-height:0!important;
+  padding:8px 36px 8px 12px!important;
+  gap:10px!important;
+  align-items:center!important;
+  border-radius:15px!important;
+  border:1px solid rgba(205,178,138,.62)!important;
+  background:linear-gradient(145deg,rgba(34,32,29,.97),rgba(15,15,15,.97))!important;
+  box-shadow:0 12px 38px rgba(0,0,0,.38)!important;
+  backdrop-filter:blur(14px);
+}
+body.cotizador-app .manual-upsell--compact .manual-upsell-copy{
+  flex-direction:row!important;
+  align-items:baseline!important;
+  gap:8px!important;
+}
+body.cotizador-app .manual-upsell--compact .manual-upsell-kicker{display:none!important}
+body.cotizador-app .manual-upsell--compact .manual-upsell-copy strong{
+  font:400 var(--t-sm)/1.1 var(--font-display)!important;
+  color:#f1eee8!important;
+  letter-spacing:0!important;
+}
+body.cotizador-app .manual-upsell--compact .manual-upsell-price{
+  font:700 var(--t-sm)/1 var(--font-ui)!important;
+  color:#f1eee8!important;
+}
+body.cotizador-app .manual-upsell--compact .manual-upsell-price small{display:none!important}
+body.cotizador-app .manual-upsell--compact .manual-upsell-link{
+  padding:7px 11px!important;
+  font-size:9px!important;
+  letter-spacing:.04em!important;
+  font-weight:700!important;
+  border:1px solid rgba(205,178,138,.72)!important;
+  border-radius:999px!important;
+  background:transparent!important;
+  color:#e7d3b5!important;
+  white-space:nowrap!important;
+}
+body.cotizador-app .manual-upsell--compact .manual-upsell-link:hover{
+  background:rgba(205,178,138,.12)!important;
+}
+body.cotizador-app .manual-upsell--compact .manual-upsell-link span{
+  font-size:14px!important;
+  margin-left:4px;
+}
+body.cotizador-app .manual-upsell--compact .manual-upsell-close{
+  right:6px!important;
+  top:50%!important;
+  transform:translateY(-50%);
+  font-size:14px!important;
+  color:#99938a!important;
+}
+/* Paquete completo debajo; comisión Hunter encima (misma pastilla, apiladas) */
+body.cotizador-app #manualUpsell,
+body.cotizador-app .manual-upsell:not(.interno-commission-card){
+  z-index:90!important;
+}
+body.cotizador-app #internoCommissionCard.manual-upsell--compact,
+body.cotizador-app .interno-commission-card.manual-upsell--compact{
+  width:auto!important;
+  max-width:min(340px,calc(100vw - 28px))!important;
+}
+/* Si el upsell de paquete está visible, la comisión se apila encima (sin solaparse) */
+body.cotizador-app:has(#manualUpsell:not(.hidden)) #internoCommissionCard:not(.hidden){
+  bottom:calc(var(--quote-footer-clearance) + 12px + 54px)!important;
+}
+/* Recordatorio sutil cada 5s: zumbido / shake corto */
+body.cotizador-app #manualUpsell:not(.hidden){
+  transform-origin:center bottom;
+  will-change:transform;
+  animation:manualUpsellBuzz 5s ease-in-out infinite;
+}
+@keyframes manualUpsellBuzz{
+  0%,84%,100%{transform:translate3d(0,0,0) rotate(0deg)}
+  86%{transform:translate3d(-3px,0,0) rotate(-.7deg)}
+  88%{transform:translate3d(4px,0,0) rotate(.8deg)}
+  90%{transform:translate3d(-3px,1px,0) rotate(-.5deg)}
+  92%{transform:translate3d(3px,0,0) rotate(.5deg)}
+  94%{transform:translate3d(-2px,0,0) rotate(-.3deg)}
+  96%{transform:translate3d(1px,0,0) rotate(.2deg)}
+  98%{transform:translate3d(0,0,0) rotate(0deg)}
+}
+@media (prefers-reduced-motion:reduce){
+  body.cotizador-app #manualUpsell:not(.hidden){animation:none!important}
+}
+body.cotizador-app #internoCommissionCard,
+body.cotizador-app .interno-commission-card{
+  z-index:120!important;
+}
+body.cotizador-app.modo-interno .interno-commission-card:not(.hidden){
+  display:flex!important;
+  align-items:center!important;
+}
+
+/* Público: ocultar acciones solo de equipo en el modal final */
+body.cotizador-app.modo-publico #quoteToProject,
+body.cotizador-app.modo-publico #shareFormats{
+  display:none!important;
+}
+
+/* Modal resumen: dark + borde neutro (menos dorado) */
+body.cotizador-app #orderModal .order-dialog{
+  border:1px solid rgba(255,255,255,.14)!important;
+  border-radius:18px!important;
+  background:linear-gradient(180deg,#171717 0%,#101010 100%)!important;
+  box-shadow:0 30px 70px -28px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.05)!important;
+}
+body.cotizador-app #orderModal .order-dialog-close{
+  position:absolute;top:12px;right:12px;z-index:2;
+  border:0;background:transparent;color:#8a8a8a;font-size:22px;line-height:1;padding:6px 8px;
+}
+body.cotizador-app #orderModal .order-dialog-close:hover{color:#eee}
+body.cotizador-app #orderModal .eyebrow{color:#8a8a8a!important}
+body.cotizador-app #orderModal h2{font:400 var(--t-lg)/1.1 var(--font-display)!important;color:#f3f3f1!important}
+body.cotizador-app #orderModal .field input{
+  border:1px solid rgba(255,255,255,.14)!important;
+  border-radius:12px!important;
+  background:#0a0a0a!important;
+  color:#eee!important;
+}
+body.cotizador-app #orderModal .order-details,
+body.cotizador-app #orderModal .order-detail-row,
+body.cotizador-app #orderModal .price-line{
+  border-color:rgba(255,255,255,.1)!important;
+}
+body.cotizador-app #orderModal .total-line{
+  border-top-color:rgba(255,255,255,.16)!important;
+}
+body.cotizador-app #orderModal .total-line strong{
+  font:400 var(--t-lg)/1 var(--font-display)!important;
+  color:#f3f3f1!important;
+}
+body.cotizador-app #orderModal .quote-pay-terms{
+  margin:12px 0 0;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:13px;
+  background:rgba(255,255,255,.03);
+  color:rgba(255,255,255,.62);
+  font:500 12px/1.45 Manrope,Arial,sans-serif;
+}
+body.cotizador-app #orderModal .quote-pay-terms strong{color:#f3f3f1;font-weight:650}
+body.cotizador-app #orderModal .quote-pay-schedule{margin-top:14px}
+body.cotizador-app #orderModal .summary-actions{
+  display:grid!important;
+  grid-template-columns:1fr 1fr;
+  gap:10px!important;
+  width:100%;
+  margin-top:14px!important;
+}
+body.cotizador-app #orderModal .summary-actions #orderPayDeposit{
+  grid-column:1 / -1;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  min-height:52px!important;
+  padding:14px 18px!important;
+  border-radius:13px!important;
+  background:#0a0a0a!important;
+  color:#fff!important;
+  border:1px solid #fff!important;
+  box-shadow:none!important;
+  text-decoration:none!important;
+  text-align:center!important;
+}
+body.cotizador-app #orderModal .summary-actions #orderPayDeposit:hover{
+  background:#3b3b3b!important;
+  border-color:#fff!important;
+  color:#fff!important;
+}
+body.cotizador-app #orderModal .summary-actions #orderPayBalance{
+  display:none!important;
+}
+body.cotizador-app #orderModal .summary-actions #downloadPdf,
+body.cotizador-app #orderModal .summary-actions .final-quote-whatsapp{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  min-height:48px!important;
+  padding:12px 14px!important;
+  border-radius:13px!important;
+  background:#0a0a0a!important;
+  color:#eee!important;
+  border:1px solid rgba(255,255,255,.16)!important;
+  text-decoration:none!important;
+  text-align:center!important;
+}
+
+body.cotizador-app main{
+  padding-top:12px;
+  padding-bottom:88px;
+}
+/* Solo al final de la lista: aire para pasar la última ficha por encima del upsell */
+body.cotizador-app:has(#manualConfigurator:not(.hidden)) main,
+body.cotizador-app:has(#packageChooser:not(.hidden)) main{
+  padding-bottom:calc(var(--quote-footer-clearance) + 24px)!important;
+}
+body.cotizador-app .manual-step-list,
+body.cotizador-app .package-accordion-list{
+  padding-bottom:0;
+}
+
+@media(max-width:760px){
+  body.cotizador-app .quote-goal-footer-inner{
+    gap:8px;padding:9px 14px;
+  }
+  body.cotizador-app .quote-footer-back,
+  body.cotizador-app .quote-footer-reset{
+    flex-basis:36px!important;width:36px!important;height:36px!important;
+    min-width:36px!important;max-width:36px!important;
+  }
+  body.cotizador-app .quote-footer-back svg,
+  body.cotizador-app .quote-footer-reset svg{width:16px;height:16px}
+  body.cotizador-app .quote-footer-price strong{
+    font-size:clamp(18px,5.6vw,24px)!important;
+  }
+  body.cotizador-app .quote-footer-commission small,
+  body.cotizador-app .quote-footer-commission strong{font-size:var(--t-xs)}
+  body.cotizador-app{
+    --quote-footer-clearance:calc(64px + env(safe-area-inset-bottom,0px));
+  }
+  body.cotizador-app .manual-upsell,
+  body.cotizador-app #manualUpsell,
+  body.cotizador-app .interno-commission-card{
+    right:max(12px,var(--chrome-side,12px))!important;
+    bottom:calc(var(--quote-footer-clearance) + 10px)!important;
+    width:min(300px,calc(100vw - 24px))!important;
+  }
+  body.cotizador-app main{
+    padding-bottom:calc(84px + var(--safe-bottom,0px))
+  }
+  body.cotizador-app:has(#manualConfigurator:not(.hidden)) main,
+  body.cotizador-app:has(#packageChooser:not(.hidden)) main{
+    padding-bottom:calc(var(--quote-footer-clearance) + 28px + var(--safe-bottom,0px))!important;
+  }
+  /* Hueco solo al final de la lista personalizado (pastilla). Completo: sin pad en la lista. */
+  body.cotizador-app .manual-step-list{
+    padding-bottom:calc(var(--quote-footer-clearance) + 64px)!important;
+  }
+  body.cotizador-app .package-accordion-list{
+    padding-bottom:0!important;
+  }
+  body.cotizador-app #manualUpsell.manual-upsell--compact:not(.hidden),
+  body.cotizador-app #internoCommissionCard.manual-upsell--compact:not(.hidden){
+    right:12px!important;
+    max-width:calc(100vw - 24px)!important;
+    padding:7px 32px 7px 11px!important;
+  }
+  body.cotizador-app:has(#manualUpsell:not(.hidden)) #internoCommissionCard:not(.hidden){
+    bottom:calc(var(--quote-footer-clearance) + 10px + 50px)!important;
+  }
+}
+
+/* Cierre: con cursor custom activo, ningún control muestra el puntero de Windows */
+html.has-cur,
+html.has-cur *,
+html.has-cur a,
+html.has-cur button,
+html.has-cur [role="button"],
+html.has-cur summary,
+html.has-cur label,
+html.has-cur .btn,
+html.has-cur .quote-footer-back,
+html.has-cur .quote-footer-reset,
+html.has-cur .flip-front,
+html.has-cur .flip-cta,
+html.has-cur .flip-return{
+  cursor:none!important;
+}
+
+/* ========== Visual refresh v1.2 ==========
+   Menos texto + ritmo sutil (negro / gris frío) + profundidad.
+   Sin rellenos beige/marrón. (go back = quitar este bloque) */
+body.cotizador-app{
+  --line:rgba(255,255,255,.11);
+  --muted:#9a9a9a;
+  --panel:#121212;
+  --panel2:#0e0e0e;
+  --ink:#f3f3f1;
+  --u-gap:14px;
+  --u-gold:#cfc9bd;
+  --u-line:rgba(255,255,255,.10);
+  --u-line-open:rgba(255,255,255,.22);
+  --step-a:#0c0c0c;
+  --step-b:#151515;
+  --step-open:#181818;
+  --chip:#121212;
+  --chip-on:#1a1a1a;
+  /* Tipografía cotizador: solo 4 tamaños (go back = quitar bloque TYPE SCALE abajo) */
+  --font-display:'Italiana',Georgia,serif;
+  --font-ui:'Manrope',Arial,Helvetica,sans-serif;
+  --t-xs:10px;
+  --t-sm:12px;
+  --t-md:15px;
+  --t-lg:clamp(28px,4vw,40px);
+  background:
+    radial-gradient(ellipse 85% 50% at 50% -8%,#161616 0%,#0b0b0b 55%)!important;
+  font-family:var(--font-ui);
+  font-size:var(--t-md);
+  line-height:1.5;
+}
+body.cotizador-app h1{color:#f3f3f1}
+body.cotizador-app .chooser-intro,
+body.cotizador-app .eyebrow{color:#8a8a8a!important}
+
+/* Cartas de path: mismo ancho útil que el título (todo el main) */
+body.cotizador-app #pathChooser.path-chooser-visual:not(.hidden){
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  justify-content:stretch!important;
+  width:100%!important;
+  max-width:none!important;
+  margin-inline:0!important;
+  gap:16px!important;
+}
+body.cotizador-app #pathChooser .flip-card{
+  min-width:0!important;
+  width:100%!important;
+}
+/* Cel: apiladas, altura al contenido (sin hueco vacío alargado) */
+@media (max-width:850px){
+  body.cotizador-app #pathChooser.path-chooser-visual:not(.hidden){
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:12px!important;
+  }
+  body.cotizador-app #pathChooser .flip-card,
+  body.cotizador-app #pathChooser .visual-choice,
+  body.cotizador-app #pathChooser .flip-front,
+  body.cotizador-app #pathChooser .flip-back{
+    width:100%!important;
+    max-width:none!important;
+  }
+  body.cotizador-app #pathChooser .visual-choice,
+  body.cotizador-app #pathChooser .flip-front{
+    height:auto!important;
+    min-height:0!important;
+    padding:20px 18px 16px!important;
+  }
+  body.cotizador-app #pathChooser .flip-front{
+    grid-template-rows:auto auto auto!important;
+    gap:0!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .visual-copy{
+    max-width:100%!important;
+    margin:0 0 4px!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .visual-title{
+    font-size:var(--t-lg)!important;
+    overflow-wrap:anywhere;
+  }
+  body.cotizador-app #pathChooser .flip-front .visual-subtitle{
+    max-width:36ch!important;
+    margin:8px 0 10px!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .visual-price{
+    margin-top:4px!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .visual-saving{
+    min-height:0!important;
+    margin-top:6px!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .included-strip,
+  body.cotizador-app #pathChooser .flip-front .manual-feature-strip{
+    min-height:0!important;
+    margin:10px 0 8px!important;
+    padding:8px 0!important;
+  }
+  body.cotizador-app #pathChooser .included-strip small,
+  body.cotizador-app #pathChooser .manual-feature-strip small{
+    white-space:normal!important;
+    font-size:var(--t-xs)!important;
+  }
+  body.cotizador-app #pathChooser .visual-cta-bottom{
+    margin-top:4px!important;
+    min-height:0!important;
+  }
+}
+@media (max-width:520px){
+  body.cotizador-app #pathChooser .visual-choice,
+  body.cotizador-app #pathChooser .flip-front{
+    padding:18px 16px 14px!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .visual-subtitle{
+    margin:6px 0 8px!important;
+    font-size:var(--t-sm)!important;
+  }
+  body.cotizador-app #pathChooser .flip-front .included-strip,
+  body.cotizador-app #pathChooser .flip-front .manual-feature-strip{
+    margin:8px 0 6px!important;
+    padding:6px 0!important;
+  }
+}
+
+/* Reverso: imagen grande centrada entre Volver y CTA (sin taparlos) */
+@media (max-width:850px){
+  body.cotizador-app #pathChooser .flip-card.flipped{
+    min-height:min(520px,72vh)!important;
+  }
+  body.cotizador-app #pathChooser .flip-card.flipped .flip-inner,
+  body.cotizador-app #pathChooser .flip-card.flipped .flip-back{
+    min-height:min(520px,72vh)!important;
+    height:auto!important;
+  }
+  body.cotizador-app #pathChooser .flip-back{
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:center!important;
+    align-items:center!important;
+    padding:44px 12px 100px!important;
+    overflow:hidden!important;
+    gap:0!important;
+  }
+  body.cotizador-app #pathChooser .flip-back .visual-art{
+    position:relative!important;
+    z-index:1!important;
+    flex:1 1 auto!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:auto!important;
+    min-height:260px!important;
+    max-height:calc(min(520px,72vh) - 150px)!important;
+    margin:0 auto!important;
+    object-fit:contain!important;
+    object-position:center!important;
+  }
+  body.cotizador-app #pathChooser .flip-return{
+    position:absolute!important;
+    top:14px!important;
+    left:14px!important;
+    z-index:5!important;
+  }
+  body.cotizador-app #pathChooser .flip-back > .flip-cta{
+    z-index:5!important;
+  }
+}
+@media (max-width:520px){
+  body.cotizador-app #pathChooser .flip-card.flipped,
+  body.cotizador-app #pathChooser .flip-card.flipped .flip-inner,
+  body.cotizador-app #pathChooser .flip-card.flipped .flip-back{
+    min-height:min(480px,70vh)!important;
+  }
+  body.cotizador-app #pathChooser .flip-back{
+    padding:42px 10px 94px!important;
+  }
+  body.cotizador-app #pathChooser .flip-back .visual-art{
+    min-height:240px!important;
+    max-height:calc(min(480px,70vh) - 140px)!important;
+    width:100%!important;
+  }
+}
+
+/* Shell: profundidad con sombra/inset, sin tinte café */
+body.cotizador-app #packageChooser,
+body.cotizador-app #manualConfigurator{
+  border:1px solid rgba(255,255,255,.10)!important;
+  background:linear-gradient(180deg,#141414 0%,#101010 100%)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 30px 70px -32px rgba(0,0,0,.95),
+    0 0 0 1px rgba(0,0,0,.55)!important;
+  padding:24px!important;
+  border-radius:18px!important;
+}
+body.cotizador-app .package-details,
+body.cotizador-app .manual-details{
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  padding:0!important;
+  gap:12px!important;
+}
+/* Completo: tarjeta de ahorro y preview sin huecos enormes en móvil */
+body.cotizador-app #packageSavingsComparison,
+body.cotizador-app .package-savings-compact{
+  margin:12px 0 0!important;
+  padding:14px 16px!important;
+  min-height:0!important;
+  height:auto!important;
+  align-self:stretch!important;
+  flex:none!important;
+}
+body.cotizador-app #packageSavingsComparison .saving-compact{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  justify-content:flex-start!important;
+  gap:10px!important;
+  min-height:0!important;
+  height:auto!important;
+}
+body.cotizador-app #packageSavingsComparison .saving-compact-title{
+  margin:0!important;
+  white-space:normal!important;
+}
+body.cotizador-app #packageSavingsComparison .saving-compact-values{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:8px!important;
+  max-width:none!important;
+  flex:none!important;
+  width:100%!important;
+}
+body.cotizador-app #packageSavingsComparison .saving-compact-item{
+  padding:8px 0 0!important;
+  border-left:0!important;
+  border-top:1px solid rgba(255,255,255,.1)!important;
+}
+body.cotizador-app #packageSavingsComparison .saving-compact-item:first-child{
+  padding-top:0!important;
+  border-top:0!important;
+}
+body.cotizador-app .showroom-visual-delivery{
+  margin:12px 0 0!important;
+  padding:16px 14px 10px!important;
+  min-height:0!important;
+  flex:none!important;
+}
+body.cotizador-app .showroom-visual-heading{
+  margin:0 auto 10px!important;
+}
+body.cotizador-app #packageChooser > .final-quote-actions{
+  margin-top:20px!important;
+}
+@media(min-width:761px){
+  body.cotizador-app #packageSavingsComparison .saving-compact{
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:24px!important;
+  }
+  body.cotizador-app #packageSavingsComparison .saving-compact-values{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:0!important;
+    flex:1!important;
+    max-width:760px!important;
+  }
+  body.cotizador-app #packageSavingsComparison .saving-compact-item{
+    padding:3px 20px!important;
+    border-top:0!important;
+    border-left:1px solid rgba(255,255,255,.12)!important;
+  }
+  body.cotizador-app #packageSavingsComparison .saving-compact-item:first-child{
+    padding-left:0!important;
+    border-left:0!important;
+  }
+}
+/* Header del flujo — desktop: título | presupuesto. Móvil: columna limpia.
+   Volver del header oculto (footer flecha). */
+body.cotizador-app #manualBackToStart,
+body.cotizador-app #backToPaths,
+body.cotizador-app .quote-flow-head > .btn,
+body.cotizador-app .quote-flow-head-aside > .btn{
+  display:none!important;
+}
+/* Presupuesto flotante duplicado: solo upsell abajo a la derecha */
+body.cotizador-app #manualLiveQuote{
+  display:none!important;
+}
+body.cotizador-app .shell-head.quote-flow-head,
+body.cotizador-app .package-top.quote-flow-head,
+body.cotizador-app .manual-shell-head.quote-flow-head,
+body.cotizador-app .quote-flow-head{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.2fr) minmax(180px,.85fr)!important;
+  align-items:center!important;
+  column-gap:24px!important;
+  row-gap:14px!important;
+  padding:10px 0 18px!important;
+  border-bottom:1px solid rgba(255,255,255,.10)!important;
+  margin:0 0 16px!important;
+  background:transparent!important;
+  position:relative!important;
+  overflow:visible!important;
+}
+body.cotizador-app .quote-flow-head-copy{
+  min-width:0!important;
+  max-width:100%!important;
+  position:relative!important;
+  z-index:1;
+}
+body.cotizador-app .quote-flow-head h2{
+  margin:0!important;
+  max-width:none!important;
+  font:400 var(--t-lg)/1.08 var(--font-display)!important;
+  color:#f3f3f1!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere;
+}
+body.cotizador-app .quote-flow-head-aside{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  justify-content:center!important;
+  gap:0!important;
+  min-width:0!important;
+  width:100%!important;
+  max-width:280px;
+  margin-left:auto;
+  position:relative!important;
+  z-index:1;
+}
+body.cotizador-app .quote-flow-price,
+body.cotizador-app .quote-flow-head-aside .quote-flow-price,
+body.cotizador-app .package-detail-price.quote-flow-price{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-end!important;
+  gap:4px!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  padding:14px 16px!important;
+  border:1px solid rgba(255,255,255,.14)!important;
+  border-radius:15px!important;
+  background:linear-gradient(180deg,#1a1a1a 0%,#101010 100%)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 14px 32px -16px rgba(0,0,0,.95)!important;
+  text-align:right!important;
+  white-space:normal!important;
+  position:relative!important;
+  inset:auto!important;
+  float:none!important;
+}
+body.cotizador-app .quote-flow-price small{
+  color:#8a8a8a!important;
+  font-size:var(--t-xs)!important;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  font-weight:600!important;
+  white-space:normal!important;
+}
+body.cotizador-app .quote-flow-price small:last-child{
+  letter-spacing:.02em;
+  text-transform:none;
+  font-weight:400!important;
+  color:#7a7a7a!important;
+  max-width:100%;
+}
+body.cotizador-app .quote-flow-price strong{
+  font:400 var(--t-lg)/1 var(--font-display)!important;
+  color:#f3f3f1!important;
+  white-space:nowrap!important;
+  order:-1!important;
+}
+body.cotizador-app .quote-flow-tip{
+  margin:0 0 14px!important;
+  color:#8f8f8f!important;
+  font-size:var(--t-sm)!important;
+  line-height:1.45!important;
+  max-width:46ch;
+}
+body.cotizador-app .quote-steps-hint{
+  margin:0 0 12px!important;
+  color:#6f6f6f!important;
+  font:400 var(--t-xs)/1.45 var(--font-ui)!important;
+  letter-spacing:.01em;
+  max-width:52ch;
+}
+body.cotizador-app .package-detail-price{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-end!important;
+  gap:4px!important;
+}
+body.cotizador-app .package-detail-price strong{
+  font:400 var(--t-lg)/1 var(--font-display)!important;
+  color:#f3f3f1!important;
+  order:-1!important;
+}
+body.cotizador-app .package-detail-price small{
+  color:#8a8a8a!important;
+  font-size:var(--t-xs)!important;
+}
+body.cotizador-app .package-detail-price small:last-child{
+  letter-spacing:.02em;
+  text-transform:none;
+  font-weight:400!important;
+  color:#7a7a7a!important;
+}
+/* Móvil / tablet: una columna, sin solapes */
+@media (max-width:900px){
+  body.cotizador-app .shell-head.quote-flow-head,
+  body.cotizador-app .package-top.quote-flow-head,
+  body.cotizador-app .manual-shell-head.quote-flow-head,
+  body.cotizador-app .quote-flow-head{
+    grid-template-columns:1fr!important;
+    align-items:stretch!important;
+    gap:12px!important;
+    padding:4px 0 14px!important;
+    margin-bottom:12px!important;
+  }
+  body.cotizador-app .quote-flow-head-aside{
+    max-width:none!important;
+    margin-left:0!important;
+    width:100%!important;
+  }
+  body.cotizador-app .quote-flow-price,
+  body.cotizador-app .package-detail-price.quote-flow-price{
+    align-items:flex-start!important;
+    text-align:left!important;
+    width:100%!important;
+  }
+  body.cotizador-app #packageChooser,
+  body.cotizador-app #manualConfigurator{
+    padding:14px!important;
+  }
+}
+
+/* Ritmo sutil: A casi negro / B gris un tono más claro */
+body.cotizador-app .manual-step-list > .step:nth-child(odd),
+body.cotizador-app .package-accordion-list > .package-accordion:nth-child(odd){
+  background:var(--step-a)!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+}
+body.cotizador-app .manual-step-list > .step:nth-child(even),
+body.cotizador-app .package-accordion-list > .package-accordion:nth-child(even){
+  background:var(--step-b)!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+}
+body.cotizador-app .package-accordion,
+body.cotizador-app .step{
+  border-radius:14px!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 12px 30px -18px rgba(0,0,0,.88)!important;
+}
+body.cotizador-app .package-accordion[open],
+body.cotizador-app .step[open]{
+  background:var(--step-open)!important;
+  border-color:rgba(255,255,255,.22)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    0 20px 44px -22px rgba(0,0,0,.92)!important;
+}
+body.cotizador-app .step-num,
+body.cotizador-app .accordion-index,
+body.cotizador-app .step[open]>summary .step-num{
+  border:1px solid rgba(255,255,255,.22)!important;
+  color:#d6d6d6!important;
+  font:600 10px/1 Manrope,Arial,sans-serif!important;
+  width:30px!important;height:30px!important;flex-basis:30px!important;
+  background:rgba(255,255,255,.03)!important;
+}
+body.cotizador-app .step[open]>summary .step-num{
+  border-color:rgba(255,255,255,.38)!important;
+  color:#fff!important;
+}
+body.cotizador-app .step>summary::after,
+body.cotizador-app .step[open]>summary::after{color:#b5b5b5!important}
+body.cotizador-app .step-title b,
+body.cotizador-app .accordion-title{color:#f2f2f0!important}
+body.cotizador-app .step-meta,
+body.cotizador-app .accordion-meta{color:#8a8a8a!important}
+
+body.cotizador-app .accordion-intro,
+body.cotizador-app #manualDetails #baseStep .accordion-intro,
+body.cotizador-app #baseStep > .step-content > .desc{
+  color:#8f8f8f!important;
+  font-size:13px!important;
+  line-height:1.45!important;
+  max-width:52ch;
+}
+body.cotizador-app #baseStep > .step-content > .desc{
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+body.cotizador-app .desc,
+body.cotizador-app .note{
+  color:#8f8f8f!important;
+  border-left-color:rgba(255,255,255,.18)!important;
+  background:rgba(255,255,255,.03)!important;
+}
+
+body.cotizador-app .choice,
+body.cotizador-app .base-compact-grid>div,
+body.cotizador-app .base-compact-grid>.base-include-item,
+body.cotizador-app #manualDetails #baseStep .base-compact-grid>div,
+body.cotizador-app #manualDetails #baseStep .base-compact-grid>.base-include-item,
+body.cotizador-app #packageDetails .base-compact-grid>div,
+body.cotizador-app #packageDetails .base-compact-grid>.base-include-item{
+  background:var(--chip)!important;
+  border:1px solid rgba(255,255,255,.09)!important;
+  border-radius:12px!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 8px 18px -14px rgba(0,0,0,.8)!important;
+  min-height:0!important;
+  padding:14px 16px!important;
+  transition:border-color .18s ease,background .18s ease,box-shadow .18s ease;
+}
+body.cotizador-app .base-compact-grid>.base-include-item{
+  position:relative!important;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:0!important;
+  width:100%;
+  padding-right:30px!important;
+  text-align:left;
+  color:inherit;
+  font:inherit;
+  cursor:pointer;
+  -webkit-appearance:none;
+  appearance:none;
+}
+body.cotizador-app .base-compact-grid>.base-include-item::after{
+  content:""!important;
+  position:absolute!important;
+  right:14px!important;
+  top:18px!important;
+  width:6px!important;
+  height:6px!important;
+  border-right:1.5px solid rgba(255,255,255,.45)!important;
+  border-bottom:1.5px solid rgba(255,255,255,.45)!important;
+  border-top:0!important;
+  border-left:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  transform:rotate(45deg)!important;
+  pointer-events:none!important;
+  transition:transform .2s ease,top .2s ease,opacity .2s ease!important;
+}
+body.cotizador-app .base-compact-grid>.base-include-item.is-open::after{
+  transform:rotate(225deg)!important;
+  top:20px!important;
+  opacity:.75!important;
+}
+body.cotizador-app .step:nth-child(even) .choice,
+body.cotizador-app .step:nth-child(even) .base-compact-grid>div,
+body.cotizador-app .step:nth-child(even) .base-compact-grid>.base-include-item,
+body.cotizador-app .package-accordion:nth-child(even) .choice{
+  background:#0f0f0f!important;
+}
+body.cotizador-app .choice:hover,
+body.cotizador-app .base-compact-grid>div:hover,
+body.cotizador-app .base-compact-grid>.base-include-item:hover,
+body.cotizador-app .base-compact-grid>.base-include-item.is-open{
+  border-color:rgba(255,255,255,.22)!important;
+  background:#1a1a1a!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 12px 24px -14px rgba(0,0,0,.85)!important;
+}
+body.cotizador-app .choice:has(input:checked){
+  border-color:rgba(255,255,255,.36)!important;
+  background:var(--chip-on)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08),0 14px 28px -16px rgba(0,0,0,.9)!important;
+}
+body.cotizador-app .choice b,
+body.cotizador-app .base-compact-grid b,
+body.cotizador-app #manualDetails #baseStep .base-compact-grid b{
+  color:#efefed!important;
+  font-size:13px!important;
+  font-weight:600!important;
+}
+body.cotizador-app .choice small,
+body.cotizador-app .base-compact-grid small,
+body.cotizador-app #manualDetails #baseStep .base-compact-grid small,
+body.cotizador-app #packageDetails .base-compact-grid small{
+  display:block;
+  max-height:0;
+  opacity:0;
+  overflow:hidden;
+  margin:0!important;
+  color:#8f8f8f!important;
+  font-size:12px!important;
+  line-height:1.4!important;
+  transition:max-height .22s ease,opacity .18s ease,margin .18s ease;
+}
+body.cotizador-app .choice:hover small,
+body.cotizador-app .choice:focus-within small,
+body.cotizador-app .choice:has(input:checked) small,
+body.cotizador-app .base-compact-grid>div:hover small,
+body.cotizador-app .base-compact-grid>div:focus-within small,
+body.cotizador-app .base-compact-grid>.base-include-item:hover small,
+body.cotizador-app .base-compact-grid>.base-include-item:focus-visible small,
+body.cotizador-app .base-compact-grid>.base-include-item.is-open small{
+  max-height:12em;
+  opacity:1;
+  margin-top:6px!important;
+}
+
+body.cotizador-app .package-type,
+body.cotizador-app #packageArea,
+body.cotizador-app #area,
+body.cotizador-app #similarArea,
+body.cotizador-app #floors,
+body.cotizador-app #similarFloors,
+body.cotizador-app #extraBedrooms{
+  border-color:rgba(255,255,255,.12)!important;
+  background:#0a0a0a!important;
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.55)!important;
+}
+body.cotizador-app .package-type.active{
+  border-color:rgba(255,255,255,.4)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.12)!important;
+}
+body.cotizador-app #packageArea:focus,
+body.cotizador-app #area:focus{
+  border-color:rgba(255,255,255,.35)!important;
+}
+
+/* Volver + Descargar: misma posición centrada en Completo y Personalizado */
+body.cotizador-app #packageChooser > .final-quote-actions,
+body.cotizador-app #manualConfigurator > .final-quote-actions{
+  display:flex!important;
+  justify-content:center!important;
+  align-items:stretch!important;
+  gap:16px!important;
+  flex-wrap:wrap!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:34px auto 8px!important;
+  padding:0!important;
+  float:none!important;
+}
+body.cotizador-app #packageChooser > .final-quote-actions > button:not([hidden]),
+body.cotizador-app #manualConfigurator > .final-quote-actions > button:not([hidden]),
+body.cotizador-app #packageChooser > .final-quote-actions > .final-quote-whatsapp,
+body.cotizador-app #manualConfigurator > .final-quote-actions > .final-quote-whatsapp{
+  margin-left:0!important;
+  margin-right:0!important;
+}
+body.cotizador-app .final-quote-whatsapp,
+body.cotizador-app .btn.final-quote-whatsapp{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  text-decoration:none!important;
+  line-height:1.2!important;
+  white-space:normal!important;
+}
+@media(max-width:620px){
+  body.cotizador-app #packageChooser > .final-quote-actions,
+  body.cotizador-app #manualConfigurator > .final-quote-actions{
+    flex-direction:column!important;
+    align-items:stretch!important;
+  }
+}
+
+/* CTA negro + glow (como antes; no relleno claro) */
+body.cotizador-app .btn.primary,
+body.cotizador-app .final-quote-download{
+  position:relative;
+  isolation:isolate;
+  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.006)),rgba(6,6,6,.92)!important;
+  color:#ece9e3!important;
+  border:1px solid rgba(255,255,255,.17)!important;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.95),inset 0 0 0 1px rgba(255,255,255,.015)!important;
+  text-shadow:none!important;
+}
+body.cotizador-app .btn.primary::after,
+body.cotizador-app .final-quote-download::after{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  border-radius:inherit;
+  pointer-events:none;
+  z-index:-1;
+  border:1px solid rgba(232,220,198,.42);
+  box-shadow:0 0 12px 0 rgba(232,220,198,.18),inset 0 0 8px rgba(255,255,255,.02);
+  opacity:0;
+  animation:btnBreathe 2s ease-in-out infinite;
+}
+body.cotizador-app .btn.primary:hover,
+body.cotizador-app .final-quote-download:hover{
+  background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018)),rgba(10,10,10,.94)!important;
+  color:#f6f4ef!important;
+  border-color:rgba(255,255,255,.38)!important;
+  box-shadow:0 14px 28px -14px rgba(0,0,0,.95),inset 0 0 0 1px rgba(255,255,255,.025)!important;
+  transform:translateY(-1px)!important;
+}
+body.cotizador-app .btn.primary:hover::after,
+body.cotizador-app .final-quote-download:hover::after{
+  animation:none;
+  opacity:.55;
+}
+body.cotizador-app .btn:not(.primary){
+  border-color:rgba(255,255,255,.14)!important;
+  color:#ddd!important;
+  background:rgba(0,0,0,.25)!important;
+}
+body.cotizador-app .btn:not(.primary):hover{
+  border-color:rgba(255,255,255,.35)!important;
+  color:#fff!important;
+}
+body.cotizador-app .total-line,
+body.cotizador-app .total-line strong,
+body.cotizador-app .price-line strong{color:#f3f3f1!important}
+body.cotizador-app .price-line{
+  border-bottom-color:rgba(255,255,255,.08)!important;
+  color:#8f8f8f!important;
+}
+
+body.cotizador-app .visual-choice{
+  border-color:rgba(255,255,255,.12)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 22px 48px -24px rgba(0,0,0,.9)!important;
+}
+body.cotizador-app .visual-package{
+  border-color:rgba(255,255,255,.28)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.04),0 22px 52px -20px rgba(0,0,0,.92)!important;
+}
+
+@media (hover:none){
+  body.cotizador-app .choice:has(input:checked) small,
+  body.cotizador-app .choice:focus-within small{
+    max-height:4.5em;
+    opacity:1;
+    margin-top:6px!important;
+  }
+  /* Base items: stay collapsed until tap (.is-open); no always-visible clamp */
+  body.cotizador-app .base-compact-grid small{
+    max-height:0;
+    opacity:0;
+    margin-top:0!important;
+  }
+  body.cotizador-app .base-compact-grid>.base-include-item.is-open small{
+    max-height:12em;
+    opacity:1;
+    margin-top:6px!important;
+  }
+}
+/* ========== /Visual refresh v1.2 ========== */
+
+/* ========== TYPE SCALE v1 (go back = borrar este bloque) ==========
+   4 tamaños: --t-xs 10 / --t-sm 12 / --t-md 15 / --t-lg clamp display
+   Jerarquía = familia + peso + tracking, no más px sueltos. */
+body.cotizador-app h1,
+body.cotizador-app .visual-title,
+body.cotizador-app #pathChooser .flip-front .visual-title,
+body.cotizador-app .quote-flow-head h2,
+body.cotizador-app .package-top h2,
+body.cotizador-app .manual-shell-head h2,
+body.cotizador-app .package-detail-head h3,
+body.cotizador-app .quote-reset-dialog h3{
+  font-family:var(--font-display)!important;
+  font-size:var(--t-lg)!important;
+  font-weight:400!important;
+  line-height:1.08!important;
+  letter-spacing:-.01em;
+}
+/* Filas de paso: misma familia display, tamaño relativo al md (sin 5º token) */
+body.cotizador-app .accordion-title,
+body.cotizador-app .step-title b{
+  font-family:var(--font-display)!important;
+  font-size:1.35em!important;
+  font-weight:400!important;
+  line-height:1.15!important;
+  letter-spacing:-.01em;
+}
+body.cotizador-app .visual-price,
+body.cotizador-app #pathChooser .visual-price,
+body.cotizador-app .quote-footer-price strong,
+body.cotizador-app #packageLivePrice,
+body.cotizador-app #manualHeadTotal,
+body.cotizador-app #manualLiveTotal,
+body.cotizador-app .total-line,
+body.cotizador-app .total-line strong{
+  font-family:var(--font-display)!important;
+  font-size:var(--t-lg)!important;
+  font-weight:400!important;
+  line-height:1!important;
+}
+body.cotizador-app .quote-flow-price strong,
+body.cotizador-app .package-detail-price strong{
+  font-size:var(--t-lg)!important;
+}
+
+body.cotizador-app,
+body.cotizador-app .btn,
+body.cotizador-app button.btn,
+body.cotizador-app .choice b,
+body.cotizador-app .base-compact-grid b,
+body.cotizador-app label,
+body.cotizador-app input,
+body.cotizador-app select,
+body.cotizador-app textarea,
+body.cotizador-app .price-line,
+body.cotizador-app .flip-cta,
+body.cotizador-app .manual-upsell-link,
+body.cotizador-app .package-type b{
+  font-family:var(--font-ui)!important;
+  font-size:var(--t-md)!important;
+}
+body.cotizador-app .btn,
+body.cotizador-app .flip-cta,
+body.cotizador-app .manual-upsell-link,
+body.cotizador-app .visual-cta-bottom{
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  font-weight:600!important;
+}
+
+body.cotizador-app .chooser-intro,
+body.cotizador-app .intro,
+body.cotizador-app .desc,
+body.cotizador-app .accordion-intro,
+body.cotizador-app .accordion-note,
+body.cotizador-app .quote-flow-tip,
+body.cotizador-app .choice small,
+body.cotizador-app .base-compact-grid small,
+body.cotizador-app .package-type small,
+body.cotizador-app .visual-subtitle,
+body.cotizador-app .visual-note,
+body.cotizador-app .visual-saving,
+body.cotizador-app .quote-reset-dialog p,
+body.cotizador-app .interno-commission-hint,
+body.cotizador-app .package-selected-note,
+body.cotizador-app .note{
+  font-family:var(--font-ui)!important;
+  font-size:var(--t-sm)!important;
+  line-height:1.45!important;
+  font-weight:400!important;
+}
+
+body.cotizador-app .eyebrow,
+body.cotizador-app .step-num,
+body.cotizador-app .step-meta,
+body.cotizador-app .accordion-meta,
+body.cotizador-app .accordion-index,
+body.cotizador-app .manual-upsell-kicker,
+body.cotizador-app .manual-live-kicker,
+body.cotizador-app .visual-from,
+body.cotizador-app .visual-cta-bottom,
+body.cotizador-app .included-strip small,
+body.cotizador-app .manual-feature-strip small,
+body.cotizador-app .quote-footer-commission small,
+body.cotizador-app .quote-footer-commission strong,
+body.cotizador-app .quote-reset-dialog .eyebrow,
+body.cotizador-app .package-detail-price small,
+body.cotizador-app .quote-flow-price small,
+body.cotizador-app .flip-return,
+body.cotizador-app .tag{
+  font-family:var(--font-ui)!important;
+  font-size:var(--t-xs)!important;
+  line-height:1.3!important;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  font-weight:600!important;
+}
+body.cotizador-app .quote-footer-commission strong,
+body.cotizador-app .included-strip small,
+body.cotizador-app .manual-feature-strip small,
+body.cotizador-app .visual-from{
+  letter-spacing:.04em;
+  text-transform:none;
+  font-weight:500!important;
+}
+body.cotizador-app .step summary:after,
+body.cotizador-app .accordion-plus{
+  font-size:var(--t-md)!important;
+  font-weight:400!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+}
+
+/* Path cards: display title stays lg; price lg; rest sm/xs already mapped */
+body.cotizador-app #pathChooser .visual-saving s,
+body.cotizador-app #pathChooser .visual-saving b{
+  font-size:var(--t-sm)!important;
+  font-family:var(--font-ui)!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+  font-weight:600!important;
+}
+body.cotizador-app .package-type span{
+  font-family:var(--font-display)!important;
+  font-size:var(--t-lg)!important;
+  font-weight:400!important;
+  line-height:1!important;
+}
+@media (max-width:760px){
+  body.cotizador-app{
+    --t-lg:clamp(26px,7.5vw,34px);
+  }
+  body.cotizador-app .quote-footer-price strong{
+    font-size:var(--t-lg)!important;
+  }
+}
+/* ========== /TYPE SCALE v1 ========== */

@@ -1,0 +1,435 @@
+/* BOXIES Sistema — infrastructure monitoring dashboard */
+
+.boxies-page--sistema {
+  max-width: 1120px;
+}
+
+.bx-sys-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.bx-sys-badge {
+  flex-shrink: 0;
+  margin-top: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.bx-sys-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.bx-sys-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px 18px 18px;
+  min-width: 0;
+}
+
+.bx-sys-card[data-sys-card="status"],
+.bx-sys-card[data-sys-card="storage"],
+.bx-sys-card[data-sys-card="showrooms"],
+.bx-sys-card[data-sys-card="detail"],
+.bx-sys-card[data-sys-card="cleanup"] {
+  grid-column: span 2;
+}
+
+.bx-sys-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.bx-sys-card__title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 550;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.bx-sys-card__meta {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.28);
+}
+
+.bx-sys-card__lead {
+  margin: 0 0 14px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.bx-sys-loading,
+.bx-sys-empty,
+.bx-sys-error,
+.bx-sys-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.bx-sys-error {
+  color: rgba(255, 140, 140, 0.9);
+}
+
+.bx-sys-hint {
+  margin-top: 12px;
+}
+
+.bx-sys-hint--muted {
+  color: rgba(255, 255, 255, 0.28);
+}
+
+/* Stats */
+.bx-sys-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bx-sys-stat__label {
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.bx-sys-stat__value {
+  font-size: 1.05rem;
+  font-weight: 550;
+  color: rgba(255, 255, 255, 0.9);
+  font-variant-numeric: tabular-nums;
+}
+
+.bx-sys-stat--compact .bx-sys-stat__value {
+  font-size: 0.98rem;
+}
+
+.bx-sys-stat.is-emphasis .bx-sys-stat__value {
+  color: rgba(180, 210, 170, 0.95);
+}
+
+.bx-sys-grid-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.bx-sys-grid-stats--5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.bx-sys-grid-stats--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Storage meter */
+.bx-sys-storage__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.bx-sys-meter__track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.bx-sys-meter__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: #6fbf86;
+  transition: width 0.35s ease, background 0.25s ease;
+}
+
+.bx-sys-storage.is-warning .bx-sys-meter__fill {
+  background: #d4b45a;
+}
+
+.bx-sys-storage.is-critical .bx-sys-meter__fill {
+  background: #d47373;
+}
+
+.bx-sys-meter__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  gap: 12px;
+}
+
+.bx-sys-meter__pct {
+  font-size: 0.85rem;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.bx-sys-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  border: 1px solid transparent;
+}
+
+.bx-sys-pill.is-ok {
+  color: rgba(140, 210, 160, 0.95);
+  border-color: rgba(111, 191, 134, 0.35);
+  background: rgba(111, 191, 134, 0.1);
+}
+
+.bx-sys-pill.is-warning {
+  color: rgba(230, 200, 120, 0.95);
+  border-color: rgba(212, 180, 90, 0.35);
+  background: rgba(212, 180, 90, 0.1);
+}
+
+.bx-sys-pill.is-critical {
+  color: rgba(240, 160, 160, 0.95);
+  border-color: rgba(212, 115, 115, 0.4);
+  background: rgba(212, 115, 115, 0.12);
+}
+
+/* Status strip */
+.bx-sys-status {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.bx-sys-status__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.bx-sys-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6fbf86;
+  box-shadow: 0 0 0 3px rgba(111, 191, 134, 0.15);
+  flex-shrink: 0;
+}
+
+.bx-sys-status__item.is-offline .bx-sys-status__dot {
+  background: #d47373;
+  box-shadow: 0 0 0 3px rgba(212, 115, 115, 0.15);
+}
+
+.bx-sys-status__label {
+  flex: 1;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.bx-sys-status__val {
+  font-size: 0.72rem;
+  font-weight: 550;
+  color: rgba(140, 210, 160, 0.9);
+}
+
+.bx-sys-status__item.is-offline .bx-sys-status__val {
+  color: rgba(240, 160, 160, 0.9);
+}
+
+/* Table */
+.bx-sys-table-wrap {
+  overflow-x: auto;
+}
+
+.bx-sys-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.bx-sys-table th,
+.bx-sys-table td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bx-sys-table th {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.bx-sys-table td {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.bx-sys-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.bx-sys-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.bx-sys-row.is-selected {
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.bx-sys-row.is-selected td {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* Detail / pie */
+.bx-sys-detail__summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.bx-sys-detail__chart {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+}
+
+.bx-sys-pie {
+  width: 148px;
+  height: 148px;
+}
+
+.bx-sys-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bx-sys-legend li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.78rem;
+}
+
+.bx-sys-legend__swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.bx-sys-legend__label {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.bx-sys-legend__val {
+  color: rgba(255, 255, 255, 0.82);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cleanup */
+.bx-sys-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.boxies-action-btn.is-disabled,
+.boxies-action-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.bx-sys-cleanup-results {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.bx-sys-cleanup-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .bx-sys-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bx-sys-card[data-sys-card="status"],
+  .bx-sys-card[data-sys-card="storage"],
+  .bx-sys-card[data-sys-card="showrooms"],
+  .bx-sys-card[data-sys-card="detail"],
+  .bx-sys-card[data-sys-card="cleanup"] {
+    grid-column: span 1;
+  }
+
+  .bx-sys-status,
+  .bx-sys-storage__stats,
+  .bx-sys-grid-stats,
+  .bx-sys-grid-stats--3,
+  .bx-sys-grid-stats--5,
+  .bx-sys-cleanup-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bx-sys-detail__chart {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+}
+
+@media (max-width: 520px) {
+  .bx-sys-header {
+    flex-direction: column;
+  }
+
+  .bx-sys-status,
+  .bx-sys-storage__stats,
+  .bx-sys-grid-stats,
+  .bx-sys-grid-stats--3,
+  .bx-sys-grid-stats--5,
+  .bx-sys-cleanup-grid,
+  .bx-sys-detail__summary {
+    grid-template-columns: 1fr;
+  }
+}

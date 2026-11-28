@@ -1,0 +1,1106 @@
+/* ═══════════════════════════════════════════════════════════
+   BOXIES Workspace UI System V5.9.23
+   Source of truth: Hero surfaces + Guardar/Republicar + Subir
+   Visual only — no scroll/geometry/logic contracts.
+   Floating: WorkspaceSelect + Ambientes + Zonas share --ws-floating-*
+   ═══════════════════════════════════════════════════════════ */
+
+#boxiesContent,
+.builder-app,
+.builder-step-content {
+  --ws-surface: rgba(255, 255, 255, 0.02);
+  --ws-surface-raised: rgba(255, 255, 255, 0.03);
+  --ws-control-bg: rgba(0, 0, 0, 0.3);
+  --ws-border: rgba(255, 255, 255, 0.07);
+  --ws-border-strong: rgba(255, 255, 255, 0.12);
+  --ws-border-control: rgba(255, 255, 255, 0.08);
+  --ws-border-hover: rgba(255, 255, 255, 0.22);
+  --ws-text: rgba(255, 255, 255, 0.9);
+  --ws-text-secondary: rgba(255, 255, 255, 0.62);
+  --ws-text-muted: rgba(255, 255, 255, 0.38);
+  --ws-text-title: rgba(255, 255, 255, 0.55);
+  --ws-font-title: 11px;
+  --ws-font-control: 13px;
+  --ws-font-secondary: 11px;
+  --ws-font-btn: 0.62rem;
+  --ws-font-btn-secondary: 0.65rem;
+  --ws-radius-card: 12px;
+  --ws-radius-control: 8px;
+  --ws-radius-pill: 999px;
+  --ws-space-xs: 4px;
+  --ws-space-sm: 8px;
+  --ws-space-md: 10px;
+  --ws-space-lg: 12px;
+  --ws-space-xl: 14px;
+  --ws-control-h: 40px;
+  --ws-btn-h: 32px;
+  --ws-selected-border: rgba(111, 191, 134, 0.55);
+  --ws-selected-bg: rgba(111, 191, 134, 0.12);
+  --ws-selected-text: rgba(180, 235, 195, 0.98);
+  --ws-btn-primary-bg: rgba(255, 255, 255, 0.04);
+  --ws-btn-primary-border: rgba(255, 255, 255, 0.14);
+  --ws-btn-primary-text: rgba(255, 255, 255, 0.88);
+  --ws-btn-primary-hover-bg: rgba(255, 255, 255, 0.08);
+  --ws-btn-primary-hover-border: rgba(255, 255, 255, 0.24);
+  --ws-btn-secondary-bg: rgba(255, 255, 255, 0.03);
+  --ws-btn-secondary-border: rgba(255, 255, 255, 0.14);
+  --ws-btn-secondary-text: rgba(255, 255, 255, 0.86);
+  /* Floating panels — Hero solid black (#050505), never translucent / never blue */
+  --ws-floating-bg: #050505;
+  --ws-floating-border: rgba(255, 255, 255, 0.12);
+  --ws-floating-shadow: 0 14px 32px rgba(0, 0, 0, 0.72);
+  --ws-floating-z: 80;
+  /* Micro field unit: label+control association (near-invisible) */
+  --ws-field-unit-bg: rgba(255, 255, 255, 0.028);
+  --ws-field-unit-border: rgba(255, 255, 255, 0.055);
+}
+
+/* ── PRIMARY = Guardar / Republicar (dark). Values mirrored in builder.css. ── */
+.builder-header-action-btn.is-primary {
+  min-width: 108px;
+  height: var(--ws-btn-h);
+  padding: 0 14px;
+  background: var(--ws-btn-primary-bg);
+  border: 1px solid var(--ws-btn-primary-border);
+  border-radius: var(--ws-radius-pill);
+  color: var(--ws-btn-primary-text);
+  font-size: var(--ws-font-btn);
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.builder-header-action-btn.is-primary:hover:not(:disabled) {
+  background: var(--ws-btn-primary-hover-bg);
+  border-color: var(--ws-btn-primary-hover-border);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* ── SECONDARY = Subir Hero family ── */
+.builder-header-action-btn,
+.builder-header-action-btn.boxies-btn-secondary {
+  height: var(--ws-btn-h);
+  border: 1px solid var(--ws-btn-secondary-border);
+  border-radius: var(--ws-radius-pill);
+  background: var(--ws-btn-secondary-bg);
+  color: var(--ws-btn-secondary-text);
+  font-size: var(--ws-font-btn-secondary);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.builder-header-action-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--ws-border-hover);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* ── Fields / controls (Hero pattern) ── */
+.builder-field label {
+  font-size: var(--ws-font-secondary);
+  font-weight: 500;
+  color: var(--ws-text-muted);
+}
+
+.builder-field input,
+.builder-field select,
+.builder-field textarea,
+.builder-textarea,
+.builder-menu-child-row input[type="text"],
+.builder-menu-child-row select,
+.builder-estructura-ambiente input {
+  height: var(--ws-control-h);
+  background: var(--ws-control-bg);
+  border: 1px solid var(--ws-border-control);
+  border-radius: var(--ws-radius-control);
+  color: var(--ws-text);
+  font-size: var(--ws-font-control);
+}
+
+.builder-field textarea,
+.builder-textarea {
+  height: auto;
+  min-height: 80px;
+  padding: 10px 12px;
+}
+
+.builder-field input:focus,
+.builder-field select:focus,
+.builder-field textarea:focus,
+.builder-textarea:focus {
+  border-color: rgba(255, 255, 255, 0.22);
+  outline: none;
+}
+
+/* ── Surfaces / cards (Hero config + media) ── */
+.builder-hero-media-card,
+.builder-hero-config-card,
+.builder-confirm-form,
+.builder-menu-item,
+.builder-estructura-section,
+.builder-estructura-acc,
+.builder-upload-card {
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius-card);
+  background: var(--ws-surface);
+}
+
+.builder-hero-media-card.has-media {
+  border-color: var(--ws-border-strong);
+  background: var(--ws-surface-raised);
+}
+
+.builder-hero-config-card__title,
+.builder-hero-media-card__label,
+.builder-confirm-title,
+.builder-estructura-section__title {
+  font-size: var(--ws-font-title);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ws-text-title);
+}
+
+.builder-hero-media-card__name,
+.builder-menu-item-name,
+.builder-estructura-acc > summary,
+.builder-estructura-acc__title {
+  font-size: var(--ws-font-control);
+  font-weight: 560;
+  color: var(--ws-text);
+}
+
+/* ── Estructura: alias typography to WS tokens; fix input size override ── */
+.builder-step-content--estructura {
+  --estructura-font-title: var(--ws-font-title);
+  --estructura-font-control: var(--ws-font-control);
+  --estructura-font-secondary: var(--ws-font-secondary);
+}
+
+.builder-step-content--estructura .builder-step-title {
+  font-size: 20px;
+}
+
+.builder-step-content--estructura .builder-header-action-btn {
+  font-size: var(--ws-font-btn-secondary);
+}
+
+.builder-step-content--estructura .builder-header-action-btn.is-primary {
+  font-size: var(--ws-font-btn);
+}
+
+.builder-step-content--estructura .builder-field label,
+.builder-step-content--estructura .builder-check-row,
+.builder-step-content--estructura .builder-estructura-row__label,
+.builder-step-content--estructura .builder-estructura-sublabel {
+  font-size: var(--ws-font-secondary);
+}
+
+.builder-step-content--estructura .builder-field input,
+.builder-step-content--estructura .builder-field select,
+.builder-step-content--estructura .builder-estructura-ambiente input {
+  font-size: var(--ws-font-control);
+}
+
+.builder-estructura-type.is-selected,
+.builder-estructura-chip.is-on {
+  border-color: var(--ws-selected-border);
+  background: var(--ws-selected-bg);
+  color: var(--ws-selected-text);
+}
+
+.builder-estructura-chip {
+  background: var(--ws-control-bg);
+  border-color: var(--ws-border-control);
+  font-size: var(--ws-font-secondary);
+}
+
+.builder-estructura-stepper {
+  background: var(--ws-control-bg);
+  border-color: var(--ws-border-control);
+  border-radius: var(--ws-radius-control);
+}
+
+.builder-estructura-acc--nested {
+  background: rgba(255, 255, 255, 0.015);
+  border-color: var(--ws-border);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   .ws-field-unit — one label + one control as a subtle unit
+   Use only where association is ambiguous (e.g. 2-col metric grids).
+   Not a card. Not green. Not for buttons/headers/chips/popovers.
+   ═══════════════════════════════════════════════════════════ */
+.ws-field-unit {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--ws-field-unit-border);
+  border-radius: var(--ws-radius-control, 8px);
+  background: var(--ws-field-unit-bg);
+  color: inherit;
+}
+
+.ws-field-unit .builder-estructura-row__label,
+.ws-field-unit > span:not(.builder-estructura-stepper) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ws-field-unit .builder-estructura-stepper {
+  flex: 0 0 auto;
+}
+
+.ws-field-unit.builder-check-row,
+.ws-field-unit.builder-check-row--ws {
+  justify-content: flex-start;
+  cursor: pointer;
+}
+
+/* Metric grids: cells that already are label+control pairs */
+.builder-estructura-grid2 > .ws-field-unit {
+  height: 100%;
+}
+
+/* Edificio único / múltiples: same card geometry inside towers-grid (Tipologías principle) */
+.builder-step-content--estructura .builder-estructura-edificio-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.builder-step-content--estructura .builder-estructura-row--tower-count {
+  max-width: 420px;
+}
+
+.builder-step-content--estructura .builder-estructura-towers-grid > .builder-estructura-acc--building {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  align-self: start;
+}
+
+.builder-step-content--estructura .builder-estructura-towers-grid > .builder-estructura-acc--building .builder-estructura-row {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.builder-step-content--estructura .builder-estructura-towers-grid + .builder-header-action-btn {
+  margin-top: 12px;
+}
+
+/* Conjunto: etapas + componentes (V5.9.19) */
+.builder-conjunto-stages-grid {
+  margin-top: 4px;
+}
+
+.builder-conjunto-comp {
+  box-sizing: border-box;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius-control);
+  background: var(--ws-field-unit-bg, rgba(255, 255, 255, 0.028));
+}
+
+.builder-conjunto-comp__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.builder-conjunto-comp__type {
+  font-size: var(--ws-font-title);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ws-text-secondary);
+}
+
+.builder-estructura-row__value {
+  font-size: var(--ws-font-control, 13px);
+  font-variant-numeric: tabular-nums;
+  color: var(--ws-text-primary, rgba(255, 255, 255, 0.9));
+  min-width: 36px;
+  text-align: right;
+}
+
+.builder-conjunto-stages-grid + .builder-header-action-btn,
+.builder-conjunto-comp + .ws-ms {
+  margin-top: 8px;
+}
+
+/* Resumen del proyecto (V5.9.23) — ficha técnica compacta vertical */
+.builder-estructura-resumen__card {
+  box-sizing: border-box;
+  padding: 12px 12px 10px;
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius-control);
+  background: var(--ws-field-unit-bg, rgba(255, 255, 255, 0.028));
+}
+
+.builder-estructura-resumen__header {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ws-border);
+}
+
+.builder-estructura-resumen__header-type {
+  font-size: var(--ws-font-title);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ws-text);
+}
+
+.builder-estructura-resumen__header-meta {
+  margin-top: 4px;
+  font-size: var(--ws-font-control);
+  line-height: 1.4;
+  color: var(--ws-text-secondary);
+}
+
+.builder-estructura-resumen__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.builder-estructura-resumen__section + .builder-estructura-resumen__section {
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.builder-estructura-resumen__label {
+  margin-bottom: 6px;
+  font-size: var(--ws-font-title);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ws-text-title);
+}
+
+.builder-estructura-resumen__row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px 14px;
+  max-width: 28rem;
+  min-width: 0;
+  padding: 2px 0;
+}
+
+.builder-estructura-resumen__row-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--ws-font-control);
+  color: var(--ws-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.builder-estructura-resumen__row-value {
+  flex: 0 0 auto;
+  font-size: var(--ws-font-control);
+  font-variant-numeric: tabular-nums;
+  font-weight: 560;
+  color: var(--ws-text);
+}
+
+.builder-estructura-resumen__group + .builder-estructura-resumen__group {
+  margin-top: 8px;
+}
+
+.builder-estructura-resumen__group-title {
+  margin-bottom: 3px;
+  font-size: var(--ws-font-secondary);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ws-text-muted);
+}
+
+.builder-estructura-resumen__tip {
+  padding: 7px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.045);
+}
+
+.builder-estructura-resumen__tip:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.builder-estructura-resumen__tip-title {
+  font-size: var(--ws-font-control);
+  font-weight: 560;
+  color: var(--ws-text);
+}
+
+.builder-estructura-resumen__tip-meta {
+  margin-top: 2px;
+  font-size: var(--ws-font-secondary);
+  line-height: 1.45;
+  color: var(--ws-text-secondary);
+}
+
+.builder-estructura-resumen__sub {
+  margin-top: 2px;
+  font-size: var(--ws-font-secondary);
+  line-height: 1.4;
+  color: var(--ws-text-muted);
+}
+
+.builder-estructura-resumen__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.builder-estructura-resumen__chip {
+  pointer-events: none;
+}
+
+.builder-estructura-draft-status {
+  font-size: var(--ws-font-secondary);
+  font-weight: 520;
+  letter-spacing: 0.02em;
+  color: var(--ws-text-muted);
+  white-space: nowrap;
+}
+
+.builder-estructura-draft-status.is-dirty {
+  color: var(--ws-text-secondary);
+}
+
+.builder-estructura-draft-status.is-saved {
+  color: rgba(111, 191, 134, 0.88);
+}
+
+.builder-estructura-head__actions {
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* ── Organización física: compact grids + flatter mixto ── */
+.builder-estructura-org-compact {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  align-items: start;
+  margin-top: 4px;
+}
+
+.builder-estructura-org-compact--single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 420px;
+}
+
+.builder-estructura-org-compact__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.builder-estructura-building-body {
+  gap: 8px;
+}
+
+.builder-estructura-mixto-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ws-border);
+  background: transparent;
+}
+
+.builder-estructura-mixto-section .builder-estructura-sublabel {
+  margin-bottom: 0;
+}
+
+/* Boolean WS checks (azotea / repetir) — in-flow, never absolute/opacity:0 */
+.builder-step-content--estructura .builder-check-row--ws {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  margin: 0;
+  padding: 0;
+  color: var(--ws-text);
+  cursor: pointer;
+}
+
+.builder-step-content--estructura .builder-check-row--ws input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 3px;
+  background: #0a0a0a;
+  cursor: pointer;
+  position: relative;
+  accent-color: transparent;
+}
+
+.builder-step-content--estructura .builder-check-row--ws input[type="checkbox"]:checked {
+  border-color: var(--ws-selected-border);
+  background: rgba(111, 191, 134, 0.28);
+}
+
+.builder-step-content--estructura .builder-check-row--ws input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  width: 5px;
+  height: 8px;
+  border: solid var(--ws-selected-text);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+@media (max-width: 980px) {
+  .builder-estructura-org-compact {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Menu / Viviendas surface alignment ── */
+.builder-menu-item {
+  background: var(--ws-surface);
+  border-color: var(--ws-border);
+  border-radius: var(--ws-radius-card);
+}
+
+.builder-menu-item-summary:hover {
+  background: var(--ws-surface-raised);
+}
+
+.builder-menu-item-meta,
+.builder-menu-hint,
+.builder-menu-children-title,
+.builder-doc-meta,
+.builder-file-meta {
+  font-size: var(--ws-font-secondary);
+  color: var(--ws-text-muted);
+}
+
+.builder-vivienda-media {
+  border-top-color: var(--ws-border);
+}
+
+.builder-doc-item,
+.builder-upload-zone {
+  border-color: var(--ws-border-control);
+  border-radius: var(--ws-radius-control);
+  background: var(--ws-control-bg);
+}
+
+/* ── Checkboxes: keep custom section check; soft-align native checks ── */
+.builder-check-row {
+  font-size: var(--ws-font-secondary);
+  color: var(--ws-text-secondary);
+}
+
+.builder-check-row input[type="checkbox"] {
+  accent-color: #6fbf86;
+}
+
+/* ── Scrollbar thumb color only for hero cols (popover scroll styled below) ── */
+.builder-hero-col {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+/* ── Native select baseline (closed control + dark color-scheme) ── */
+#boxiesContent,
+.builder-app,
+.builder-step-content {
+  color-scheme: dark;
+}
+
+.builder-field select,
+.builder-menu-child-row select {
+  color-scheme: dark;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: none;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Floating surface — WorkspaceSelect + all WS multiselects
+   ═══════════════════════════════════════════════════════════ */
+.ws-select__list,
+.ws-ms__panel,
+.builder-ambiente-picker__panel {
+  background: var(--ws-floating-bg, #050505) !important;
+  background-color: var(--ws-floating-bg, #050505) !important;
+  opacity: 1 !important;
+  border: 1px solid var(--ws-floating-border, rgba(255, 255, 255, 0.12));
+  border-radius: var(--ws-radius-control, 8px);
+  box-shadow: var(--ws-floating-shadow, 0 14px 32px rgba(0, 0, 0, 0.72));
+  z-index: var(--ws-floating-z, 80);
+  isolation: isolate;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Workspace custom select
+   ═══════════════════════════════════════════════════════════ */
+.ws-select {
+  position: relative;
+  display: block;
+  width: 100%;
+  z-index: 1;
+}
+
+.ws-select.is-open {
+  z-index: calc(var(--ws-floating-z) + 1);
+}
+
+.ws-select__native {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.ws-select__trigger {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: var(--ws-control-h, 40px);
+  padding: 0 12px;
+  margin: 0;
+  border: 1px solid var(--ws-border-control, rgba(255, 255, 255, 0.08));
+  border-radius: var(--ws-radius-control, 8px);
+  background: #141414;
+  background-color: #141414;
+  color: var(--ws-text, rgba(255, 255, 255, 0.9));
+  font-size: var(--ws-font-control, 13px);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.ws-select__trigger:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.ws-select__trigger:focus-visible {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.ws-select.is-disabled .ws-select__trigger,
+.ws-select__trigger:disabled {
+  opacity: 0.45;
+  cursor: default;
+  color: var(--ws-text-muted, rgba(255, 255, 255, 0.38));
+}
+
+.ws-select__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ws-select__chevron {
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 5px 4px 0 4px;
+  border-color: rgba(255, 255, 255, 0.45) transparent transparent transparent;
+  transition: transform 0.15s ease;
+}
+
+.ws-select.is-open .ws-select__chevron,
+.ws-ms.is-open .ws-select__chevron {
+  transform: rotate(180deg);
+}
+
+.ws-select__list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 240px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+/* Portaled to body (V7.2.15) — escape overflow:auto ancestors.
+   Must hardcode opaque bg: body is outside #boxiesContent so --ws-floating-* is undefined. */
+body > .ws-select__list {
+  position: fixed;
+  right: auto;
+  top: auto;
+  z-index: 10050 !important;
+  background: #141414 !important;
+  background-color: #141414 !important;
+  opacity: 1 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.72) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.ws-select__list::-webkit-scrollbar {
+  width: 5px;
+}
+.ws-select__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ws-select__list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+}
+
+.ws-select__option {
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  color: var(--ws-text, rgba(255, 255, 255, 0.9));
+  font-size: var(--ws-font-control, 13px);
+  line-height: 1.3;
+  cursor: pointer;
+  background: transparent;
+}
+
+.ws-select__option:hover,
+.ws-select__option.is-active {
+  background: #000;
+  color: #fff;
+}
+
+.ws-select__option.is-selected {
+  background: var(--ws-selected-bg, rgba(111, 191, 134, 0.12));
+  color: var(--ws-selected-text, rgba(180, 235, 195, 0.98));
+  border-color: var(--ws-selected-border, rgba(111, 191, 134, 0.55));
+}
+
+.ws-select__option.is-selected:hover,
+.ws-select__option.is-selected.is-active {
+  background: #000;
+  color: #fff;
+  border-color: transparent;
+}
+
+.ws-select__option[data-disabled="1"] {
+  color: var(--ws-text-muted, rgba(255, 255, 255, 0.38));
+  cursor: default;
+  opacity: 0.55;
+}
+
+.ws-select__option[data-disabled="1"]:hover {
+  background: transparent;
+  color: var(--ws-text-muted, rgba(255, 255, 255, 0.38));
+}
+
+/* ═══════════════════════════════════════════════════════════
+   WS Multiselect (Ambientes + Zonas/Amenidades)
+   Green = selected ONLY. Unselected never green.
+   ═══════════════════════════════════════════════════════════ */
+.ws-ms,
+.builder-ambiente-picker {
+  position: relative;
+  display: inline-block;
+  margin-top: 6px;
+  z-index: 1;
+}
+
+.ws-ms--block {
+  display: block;
+  width: 100%;
+  margin-top: 0;
+}
+
+.ws-ms.is-open,
+.ws-ms:has(.ws-ms__panel:not([hidden])),
+.builder-ambiente-picker:has(.builder-ambiente-picker__panel:not([hidden])),
+.builder-ambiente-picker:has(.ws-ms__panel:not([hidden])) {
+  z-index: calc(var(--ws-floating-z) + 1);
+}
+
+.ws-ms__panel,
+.builder-ambiente-picker__panel {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  width: min(360px, calc(100vw - 48px));
+  max-height: 360px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.ws-ms--block .ws-ms__panel {
+  width: 100%;
+  max-width: 520px;
+}
+
+.ws-ms__panel::-webkit-scrollbar,
+.builder-ambiente-picker__panel::-webkit-scrollbar {
+  width: 5px;
+}
+.ws-ms__panel::-webkit-scrollbar-track,
+.builder-ambiente-picker__panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ws-ms__panel::-webkit-scrollbar-thumb,
+.builder-ambiente-picker__panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+}
+
+.ws-ms__group,
+.builder-ambiente-picker__group {
+  margin-bottom: 10px;
+}
+
+.ws-ms__group-title,
+.builder-ambiente-picker__group-title {
+  margin: 0 0 6px;
+  padding: 0 6px;
+  font-size: var(--ws-font-title);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ws-text-secondary);
+}
+
+.ws-ms__options,
+.builder-ambiente-picker__options {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+
+/* NORMAL — neutral only, never green */
+.ws-ms__opt,
+.builder-ambiente-picker__opt {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--ws-border);
+  background: transparent;
+  font-size: var(--ws-font-control);
+  color: var(--ws-text);
+  cursor: pointer;
+  line-height: 1.3;
+  flex: none;
+}
+
+/* Kill legacy builder.css priority green on unselected */
+.ws-ms__opt.is-priority,
+.builder-ambiente-picker__opt.is-priority {
+  border-color: var(--ws-border) !important;
+  background: transparent !important;
+  color: var(--ws-text) !important;
+}
+
+.ws-ms__opt:hover,
+.builder-ambiente-picker__opt:hover {
+  background: #000;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+/* SELECTED — green only when actually checked */
+.ws-ms__opt:has(input:checked),
+.builder-ambiente-picker__opt:has(input:checked),
+.ws-ms__opt.is-priority:has(input:checked),
+.builder-ambiente-picker__opt.is-priority:has(input:checked) {
+  background: var(--ws-selected-bg) !important;
+  color: var(--ws-selected-text) !important;
+  border-color: var(--ws-selected-border) !important;
+}
+
+.ws-ms__opt:has(input:checked):hover,
+.builder-ambiente-picker__opt:has(input:checked):hover {
+  background: var(--ws-selected-bg) !important;
+  color: var(--ws-selected-text) !important;
+  border-color: var(--ws-selected-border) !important;
+}
+
+.ws-ms__opt input[type="checkbox"],
+.builder-ambiente-picker__opt input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 3px;
+  background: #0a0a0a;
+  cursor: pointer;
+  position: relative;
+  accent-color: transparent;
+}
+
+.ws-ms__opt input[type="checkbox"]:checked,
+.builder-ambiente-picker__opt input[type="checkbox"]:checked {
+  border-color: var(--ws-selected-border);
+  background: rgba(111, 191, 134, 0.28);
+}
+
+.ws-ms__opt input[type="checkbox"]:checked::after,
+.builder-ambiente-picker__opt input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  width: 5px;
+  height: 8px;
+  border: solid var(--ws-selected-text);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+.ws-ms__opt:hover input[type="checkbox"],
+.builder-ambiente-picker__opt:hover input[type="checkbox"] {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.ws-ms__opt:has(input:checked):hover input[type="checkbox"],
+.builder-ambiente-picker__opt:has(input:checked):hover input[type="checkbox"] {
+  border-color: var(--ws-selected-border);
+}
+
+.builder-ambiente-picker__custom {
+  margin-top: 8px;
+  padding: 0 4px;
+  font-size: var(--ws-font-secondary);
+  color: var(--ws-text-muted);
+}
+
+.builder-ambiente-picker__custom input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+  height: var(--ws-control-h);
+  margin-top: 4px;
+  padding: 0 12px;
+  border-radius: var(--ws-radius-control);
+  border: 1px solid var(--ws-border-control);
+  background: var(--ws-control-bg);
+  color: var(--ws-text);
+  font-size: var(--ws-font-control);
+}
+
+.builder-ambiente-picker__custom input[type="text"]:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.builder-ambiente-picker__actions {
+  display: none !important;
+}
+
+/* Summary chips (Zonas selected) — display only */
+.ws-ms__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.ws-ms__empty {
+  font-size: var(--ws-font-secondary);
+  color: var(--ws-text-secondary);
+  line-height: 1.4;
+}
+
+.ws-ms__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius-control);
+  background: var(--ws-surface);
+  color: var(--ws-text);
+  font-size: var(--ws-font-secondary);
+  line-height: 1.2;
+}
+
+.ws-ms__chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ws-ms__chip-remove {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ws-text-muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ws-ms__chip-remove:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+

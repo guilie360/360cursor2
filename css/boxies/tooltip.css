@@ -1,0 +1,53 @@
+/* BOXIES global tooltip — replaces native title tooltips */
+
+.boxies-tooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 11000;
+  max-width: min(240px, calc(100vw - 20px));
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(12, 12, 12, 0.96);
+  color: rgba(255, 255, 255, 0.88);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 450;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 0.14s ease, transform 0.14s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.boxies-tooltip[data-placement="right"] {
+  transform: translateX(3px);
+}
+
+.boxies-tooltip[data-placement="left"] {
+  transform: translateX(-3px);
+}
+
+.boxies-tooltip[data-placement="bottom"] {
+  transform: translateY(-3px);
+}
+
+.boxies-tooltip.is-visible {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .boxies-tooltip {
+    display: none !important;
+  }
+}

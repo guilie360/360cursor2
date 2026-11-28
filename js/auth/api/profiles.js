@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/profiles.js');}catch(_e){}
 /* Platform profiles API — roles, permissions, tema_actual */
 var ProfilesApi = (function () {
   var SELECT = 'id, nombre, apellido, nombre_visible, avatar, tema_actual, rol, permisos, created_at, updated_at';
@@ -118,3 +119,5 @@ var ProfilesApi = (function () {
     normalizeRow: normalizeRow
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/profiles.js');}catch(_e){}

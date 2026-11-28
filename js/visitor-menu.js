@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-menu.js');}catch(_e){}
 /* Menu profile strip + authenticated explorar */
 var VisitorMenu = (function () {
   var ICON_PROFILE =
@@ -20,17 +21,40 @@ var VisitorMenu = (function () {
       PlatformRoles.isAdmin(VisitorSession.getProfile());
   }
 
+  var STYLE_V3_LABEL = 'Style V.3';
+
+  function activeThemeIndicatorHtml() {
+    if (!isAdminProfile()) return '';
+    if (typeof StyleEngine === 'undefined' || typeof StyleEngine.getActiveThemeLabel !== 'function') return '';
+    var label = StyleEngine.getActiveThemeLabel();
+    var isStyleV3 = typeof StyleEngineStore !== 'undefined' &&
+      StyleEngineStore.getActiveTheme &&
+      StyleEngineStore.ACTIVE &&
+      StyleEngineStore.getActiveTheme() === StyleEngineStore.ACTIVE.STYLE_ENGINE;
+    return (
+      '<div class="menu-active-theme-indicator">' +
+        '<span class="menu-active-theme-label">Tema activo</span>' +
+        '<span class="menu-active-theme-value' + (isStyleV3 ? ' is-style-engine' : ' is-legacy') + '">' +
+          '<span class="menu-active-theme-dot">○</span> ' + escapeHtml(label) +
+        '</span>' +
+      '</div>'
+    );
+  }
+
   function primaryStripActionHtml() {
     if (isAdminProfile()) {
+      /* Admin: Administrar (desktop) / Admin (móvil). Style V.3 se añade aparte. */
       return (
         '<a href="' + escapeHtml(adminBuilderHref()) + '" class="menu-profile-action menu-admin-btn">' +
-          ICON_ADMIN + '<span>Administrar</span>' +
+          ICON_ADMIN +
+          '<span class="menu-action-label-desk">Administrar</span>' +
+          '<span class="menu-action-label-mobile">Admin</span>' +
         '</a>'
       );
     }
     return (
       '<button type="button" class="menu-profile-action menu-profile-link-btn">' +
-        ICON_PROFILE + '<span>Perfil</span>' +
+        ICON_PROFILE + '<span>Mi perfil</span>' +
       '</button>'
     );
   }
@@ -57,23 +81,39 @@ var VisitorMenu = (function () {
     }
 
     return (
-      '<div class="menu-profile-strip">' +
-        '<div class="menu-profile-strip-left">' +
-          VisitorPersonalization.renderAvatarHtml('menu-profile-avatar-sm') +
-          '<div class="menu-profile-strip-meta">' +
-            '<div class="menu-profile-name">' + escapeHtml(VisitorPersonalization.getDisplayName()) + '</div>' +
-            '<div class="menu-profile-type">' + escapeHtml(profileTypeLabel()) + '</div>' +
-            verificationHint +
+      '<div class="menu-profile-card">' +
+        '<div class="menu-profile-strip">' +
+          '<div class="menu-profile-strip-left">' +
+            VisitorPersonalization.renderAvatarHtml('menu-profile-avatar-sm menu-profile-avatar-status') +
+            '<div class="menu-profile-strip-meta">' +
+              '<div class="menu-profile-name">' + escapeHtml(VisitorPersonalization.getDisplayName()) + '</div>' +
+              '<div class="menu-profile-type">' + escapeHtml(profileTypeLabel()) + '</div>' +
+              activeThemeIndicatorHtml() +
+              verificationHint +
+            '</div>' +
           '</div>' +
-        '</div>' +
-        '<div class="menu-profile-strip-actions">' +
-          primaryStripActionHtml() +
-          '<button type="button" class="menu-profile-action menu-personalize-btn">' +
-            ICON_SETTINGS + '<span>Personalizar</span>' +
-          '</button>' +
-          '<button type="button" class="menu-profile-action menu-logout-btn">' +
-            ICON_LOGOUT + '<span>Salir</span>' +
-          '</button>' +
+          '<div class="menu-profile-strip-actions">' +
+            primaryStripActionHtml() +
+            (isAdminProfile()
+              ? (
+                '<button type="button" class="menu-profile-action menu-personalize-v2-btn">' +
+                  ICON_SETTINGS +
+                  '<span class="menu-action-label-desk">' + STYLE_V3_LABEL + '</span>' +
+                  '<span class="menu-action-label-mobile">Style</span>' +
+                '</button>'
+              )
+              : '') +
+            '<button type="button" class="menu-profile-action menu-logout-btn">' +
+              ICON_LOGOUT +
+              (isAdminProfile()
+                ? (
+                  '<span class="menu-action-label-desk">Cerrar sesión</span>' +
+                  '<span class="menu-action-label-mobile">Salir</span>'
+                )
+                : '<span>Cerrar sesión</span>') +
+            '</button>' +
+            '<button type="button" class="menu-profile-close" id="menuProfileCloseBtn" aria-label="Cerrar menú" hidden>&times;</button>' +
+          '</div>' +
         '</div>' +
       '</div>'
     );
@@ -88,16 +128,33 @@ var VisitorMenu = (function () {
   }
 
   function adminBuilderHref() {
-    if (typeof AuthRedirects !== 'undefined' && typeof AuthRedirects.adminBuilder === 'function') {
-      return AuthRedirects.adminBuilder();
-    }
+    /* V5.3.2 — Administrar opens canonical /boxies builder by UUID when known. */
     try {
-      var url = new URL('admin/ai-project-builder.html', window.location.href);
-      var proyecto = new URLSearchParams(window.location.search).get('proyecto');
-      if (proyecto) url.searchParams.set('proyecto', proyecto);
-      return url.href;
+      var project =
+        (typeof window !== 'undefined' && window.PROJECT_DATA) ||
+        (typeof PROJECT_DATA !== 'undefined' ? PROJECT_DATA : null);
+      var id = project && project.id ? String(project.id) : '';
+      var slug =
+        (project && project.slug) ||
+        (typeof getProjectSlugFromUrl === 'function'
+          ? getProjectSlugFromUrl()
+          : new URLSearchParams(window.location.search).get('proyecto')) ||
+        '';
+      if (id) {
+        var qs = 'page=builder&projectId=' + encodeURIComponent(id);
+        if (slug) {
+          qs +=
+            '&project=' + encodeURIComponent(slug) +
+            '&proyecto=' + encodeURIComponent(slug);
+        }
+        return new URL('/boxies/?' + qs, window.location.origin).href;
+      }
+      if (typeof AuthRedirects !== 'undefined' && typeof AuthRedirects.adminBuilder === 'function') {
+        return AuthRedirects.adminBuilder();
+      }
+      return new URL('/boxies/?page=projects', window.location.origin).href;
     } catch (e) {
-      return 'admin/ai-project-builder.html';
+      return '/boxies/?page=projects';
     }
   }
 
@@ -134,13 +191,14 @@ var VisitorMenu = (function () {
         }
       };
     });
-    document.querySelectorAll('.menu-personalize-btn').forEach(function (btn) {
+    document.querySelectorAll('.menu-personalize-v2-btn').forEach(function (btn) {
       btn.onclick = function () {
+        if (!isAdminProfile()) return;
         if (typeof goTo === 'function') {
-          goTo('menu-personalizar');
+          goTo('menu-personalizar-v2');
           return;
         }
-        if (typeof showMenuLevel === 'function') showMenuLevel('personalizar');
+        if (typeof showMenuLevel === 'function') showMenuLevel('personalizar-v2');
       };
     });
     document.querySelectorAll('.menu-logout-btn').forEach(function (btn) {
@@ -154,11 +212,25 @@ var VisitorMenu = (function () {
         if (typeof playSound === 'function') playSound('buttonTap');
       };
     });
+    document.querySelectorAll('.menu-profile-close').forEach(function (btn) {
+      btn.onclick = function (e) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.handleClose === 'function') {
+          GlobalClose.handleClose({ explicitUserClose: true });
+        } else if (typeof closeMainMenuIfOpen === 'function') {
+          closeMainMenuIfOpen();
+        }
+      };
+    });
   }
 
   function refreshProfile() {
     var slot = document.getElementById('mainMenuProfileSlot');
     var menu = document.getElementById('mainMenu');
+    var styleV3Open = typeof window.isStyleV3MenuLocked === 'function' && window.isStyleV3MenuLocked();
 
     if (!VisitorSession.isAuthenticated()) {
       if (typeof VisitorPersonalizePanel !== 'undefined' &&
@@ -166,13 +238,19 @@ var VisitorMenu = (function () {
           VisitorPersonalizePanel.isEditorSessionLocked()) {
         return;
       }
+      if (styleV3Open) {
+        if (menu) menu.classList.add('has-visitor-profile');
+        if (slot) slot.innerHTML = profileStripHtml();
+        bindProfileActions();
+        return;
+      }
       if (slot) slot.innerHTML = '';
       if (menu && menu.classList.contains('active') && typeof showMenuLevel === 'function') {
-        var personalizar = document.getElementById('mainMenuListPersonalizar');
-        if (personalizar && personalizar.style.display !== 'none') {
+        var personalizarV2 = document.getElementById('mainMenuListPersonalizarV2');
+        if (personalizarV2 && personalizarV2.style.display !== 'none') {
           if (typeof goBack === 'function' &&
               typeof navStack !== 'undefined' &&
-              navStack[navStack.length - 1] === 'menu-personalizar') {
+              navStack[navStack.length - 1] === 'menu-personalizar-v2') {
             goBack();
           } else {
             showMenuLevel('primary');
@@ -230,9 +308,18 @@ var VisitorMenu = (function () {
   }
 
   function init() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/visitor-menu.js :: init');}catch(_bd){}
+  try {
+
     window.refreshVisitorMenuProfile = refreshProfile;
     window.onVisitorSessionChanged = function () {
       refreshProfile();
+      if (typeof VisitorPersonalizePanel !== 'undefined' &&
+          typeof VisitorPersonalizePanel.isOnPersonalizarPanel === 'function' &&
+          VisitorPersonalizePanel.isOnPersonalizarPanel() &&
+          typeof VisitorPersonalizePanel.render === 'function') {
+        VisitorPersonalizePanel.render();
+      }
     };
     window.onVisitorPersonalizationChanged = function () {
       refreshProfile();
@@ -242,7 +329,11 @@ var VisitorMenu = (function () {
     if (explorarBtn) {
       explorarBtn.addEventListener('click', handleExplorar);
     }
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/visitor-menu.js :: init');}catch(_bd){}
   }
+}
 
   return {
     init: init,
@@ -252,3 +343,5 @@ var VisitorMenu = (function () {
     adminBuilderHref: adminBuilderHref
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-menu.js');}catch(_e){}

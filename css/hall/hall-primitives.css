@@ -1,0 +1,670 @@
+/*
+ * HALL primitives — premium refinement.
+ * Outline glass + white solid. Quiet motion. Editorial panels.
+ */
+
+/* ——— Type rhythm ——— */
+.hall-title,
+.section-header h1,
+.dashboard-card h1,
+.hall-login-brand,
+.login-logo,
+.dashboard-logo {
+  color: var(--hall-text, rgba(255, 255, 255, 0.94));
+  font-weight: 650;
+}
+
+.section-header h1 {
+  font-size: var(--hall-title-size, 1.625rem);
+  font-weight: 600;
+  margin: 0 0 var(--hall-space-2, 8px);
+  letter-spacing: -0.022em;
+  line-height: var(--hall-leading-tight, 1.35);
+}
+
+/*
+ * Auth title/lead colors are HALL-shell only.
+ * On the visitor project page, --hall-text-muted is undefined; using it made
+ * color invalid-at-computed-value-time and the title inherited UA black —
+ * while Style V.3 expects var(--text-primary) from components.css.
+ */
+body.dashboard-shell .auth-gate-title,
+body.login-page .auth-gate-title,
+body.hall-login .auth-gate-title,
+body.hall-app .auth-gate-title,
+body.platform-builder-shell .auth-gate-title,
+body.visitor-dashboard .auth-gate-title,
+.bx-admin2 .auth-gate-title {
+  font-size: 0.8125rem;
+  font-weight: 550;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0 0 var(--hall-space-3, 12px);
+  color: var(--hall-text-muted, var(--hall-text, rgba(255, 255, 255, 0.94)));
+}
+
+.hall-lead,
+.section-header p,
+.placeholder-copy,
+.login-subtitle {
+  color: var(--hall-text-muted);
+  line-height: var(--hall-leading-body, 1.6);
+  font-size: var(--hall-lead-size, 0.9375rem);
+  font-weight: 400;
+  letter-spacing: 0.005em;
+}
+
+body.dashboard-shell .auth-view-lead,
+body.dashboard-shell .auth-copy,
+body.login-page .auth-view-lead,
+body.login-page .auth-copy,
+body.hall-login .auth-view-lead,
+body.hall-login .auth-copy,
+body.hall-app .auth-view-lead,
+body.hall-app .auth-copy,
+body.platform-builder-shell .auth-view-lead,
+body.platform-builder-shell .auth-copy,
+body.visitor-dashboard .auth-view-lead,
+body.visitor-dashboard .auth-copy,
+.bx-admin2 .auth-view-lead,
+.bx-admin2 .auth-copy,
+body.dashboard-shell .login-subtitle,
+body.login-page .login-subtitle,
+body.hall-login .login-subtitle,
+body.hall-app .login-subtitle,
+.bx-admin2 .login-subtitle {
+  color: var(--hall-text-muted);
+  line-height: var(--hall-leading-body, 1.6);
+  font-size: var(--hall-lead-size, 0.9375rem);
+  font-weight: 400;
+  letter-spacing: 0.005em;
+}
+
+body.dashboard-shell .auth-view-lead,
+body.dashboard-shell .auth-copy,
+body.login-page .auth-view-lead,
+body.login-page .auth-copy,
+body.hall-login .auth-view-lead,
+body.hall-login .auth-copy,
+body.hall-app .auth-view-lead,
+body.hall-app .auth-copy,
+body.platform-builder-shell .auth-view-lead,
+body.platform-builder-shell .auth-copy,
+body.visitor-dashboard .auth-view-lead,
+body.visitor-dashboard .auth-copy,
+.bx-admin2 .auth-view-lead,
+.bx-admin2 .auth-copy,
+body.dashboard-shell .login-subtitle,
+body.login-page .login-subtitle,
+body.hall-login .login-subtitle,
+body.hall-app .login-subtitle,
+.bx-admin2 .login-subtitle {
+  text-align: center;
+  margin: 0 0 var(--hall-space-6, 32px);
+  font-size: 0.875rem;
+  color: var(--hall-text-faint, var(--hall-text-muted, rgba(255, 255, 255, 0.34)));
+}
+
+.hall-login-brand,
+body.login-page .login-logo {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: var(--hall-tracking-brand, 0.18em);
+  text-transform: uppercase;
+  margin-bottom: var(--hall-space-3, 12px);
+  color: var(--hall-text);
+}
+
+/* ——— Buttons ——— */
+body.dashboard-shell .hall-btn,
+body.dashboard-shell .hall-btn--primary,
+body.dashboard-shell .outline-btn,
+body.dashboard-shell .btn-primary,
+body.dashboard-shell .btn-secondary,
+body.dashboard-shell .btn-ghost,
+body.dashboard-shell .btn-compact,
+body.dashboard-shell .btn-inline,
+body.dashboard-shell .auth-action-btn,
+body.dashboard-shell .auth-oauth-btn,
+body.login-page .hall-btn,
+body.login-page .outline-btn,
+body.login-page .btn-primary,
+body.login-page .btn-secondary,
+body.login-page .btn-ghost,
+body.login-page .btn-compact,
+body.login-page .auth-action-btn,
+body.login-page .auth-oauth-btn,
+body.hall-login .hall-btn,
+body.hall-login .outline-btn,
+body.hall-login .btn-primary,
+body.hall-login .btn-secondary,
+body.hall-login .auth-action-btn,
+body.hall-login .auth-oauth-btn,
+body.hall-app .hall-btn,
+body.hall-app .outline-btn,
+body.hall-app .btn-primary,
+body.hall-app .btn-secondary,
+body.hall-app .btn-ghost,
+body.hall-app .btn-compact,
+body.hall-app .auth-action-btn,
+body.hall-app .auth-oauth-btn,
+body.platform-builder-shell .hall-btn,
+body.platform-builder-shell .outline-btn,
+body.platform-builder-shell .btn-primary,
+body.platform-builder-shell .btn-secondary,
+body.platform-builder-shell .btn-ghost,
+body.platform-builder-shell .btn-compact,
+body.visitor-dashboard .hall-btn,
+body.visitor-dashboard .outline-btn,
+body.visitor-dashboard .btn-primary,
+body.visitor-dashboard .btn-ghost,
+body.visitor-dashboard .btn-compact,
+.bx-admin2 .hall-btn,
+.bx-admin2 .outline-btn,
+.bx-admin2 .btn-primary,
+.bx-admin2 .btn-secondary,
+.bx-admin2 .btn-ghost,
+.bx-admin2 .btn-compact,
+.bx-admin2 .auth-action-btn,
+.bx-admin2 .auth-oauth-btn,
+body.dashboard-shell[data-button-glass] .outline-btn,
+body.dashboard-shell[data-button-glass] .auth-experience-box .outline-btn,
+body.login-page[data-button-glass] .outline-btn,
+body.hall-app[data-button-glass] .outline-btn,
+body.hall-app[data-button-glass] .auth-experience-box .outline-btn,
+.bx-admin2[data-button-glass] .outline-btn,
+.bx-admin2[data-button-glass] .auth-experience-box .outline-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-sizing: border-box;
+  margin: 0;
+  min-height: var(--hall-btn-min-h, 48px);
+  padding: 12px 28px;
+  border-radius: var(--hall-radius-pill, 999px);
+  border: 1px solid var(--hall-btn-border);
+  background: var(--hall-btn-bg);
+  color: var(--hall-text);
+  font-size: 0.6875rem;
+  font-weight: 550;
+  letter-spacing: var(--hall-tracking-action, 0.12em);
+  text-transform: uppercase;
+  text-decoration: none;
+  line-height: 1.2;
+  cursor: pointer;
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  box-shadow: var(--hall-inset);
+  transition:
+    background var(--hall-duration, 0.28s) var(--hall-ease),
+    color var(--hall-duration, 0.28s) var(--hall-ease),
+    border-color var(--hall-duration, 0.28s) var(--hall-ease),
+    box-shadow var(--hall-duration, 0.28s) var(--hall-ease),
+    opacity var(--hall-duration-fast, 0.18s) var(--hall-ease);
+}
+
+body.dashboard-shell .hall-btn:hover,
+body.dashboard-shell .outline-btn:hover,
+body.dashboard-shell .btn-primary:hover:not(:disabled),
+body.dashboard-shell .btn-secondary:hover:not(:disabled),
+body.dashboard-shell .btn-ghost:hover:not(:disabled),
+body.dashboard-shell .auth-action-btn:hover,
+body.dashboard-shell .auth-oauth-btn:hover,
+body.login-page .hall-btn:hover,
+body.login-page .outline-btn:hover,
+body.login-page .btn-primary:hover:not(:disabled),
+body.login-page .auth-action-btn:hover,
+body.login-page .auth-oauth-btn:hover,
+body.hall-app .hall-btn:hover,
+body.hall-app .outline-btn:hover,
+body.hall-app .btn-primary:hover:not(:disabled),
+body.hall-app .btn-ghost:hover:not(:disabled),
+body.hall-app .auth-action-btn:hover,
+body.hall-app .auth-oauth-btn:hover,
+body.platform-builder-shell .btn-primary:hover:not(:disabled),
+body.platform-builder-shell .btn-ghost:hover:not(:disabled),
+.bx-admin2 .outline-btn:hover,
+.bx-admin2 .btn-primary:hover:not(:disabled),
+.bx-admin2 .btn-ghost:hover:not(:disabled),
+.bx-admin2 .auth-action-btn:hover,
+.bx-admin2 .auth-oauth-btn:hover,
+body.dashboard-shell[data-button-glass] .outline-btn:hover,
+body.hall-app[data-button-glass] .outline-btn:hover,
+.bx-admin2[data-button-glass] .outline-btn:hover {
+  background: var(--hall-btn-hover-bg);
+  border-color: var(--hall-btn-hover-border);
+  color: var(--hall-text);
+  box-shadow: var(--hall-inset), var(--hall-shadow-soft);
+}
+
+body.dashboard-shell .hall-btn:active:not(:disabled),
+body.dashboard-shell .outline-btn:active:not(:disabled),
+body.dashboard-shell .btn-primary:active:not(:disabled),
+body.login-page .outline-btn:active:not(:disabled),
+body.hall-app .btn-primary:active:not(:disabled),
+.bx-admin2 .btn-primary:active:not(:disabled),
+.bx-admin2 .outline-btn:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+  transition-duration: 0.1s;
+}
+
+body.dashboard-shell .btn-primary:disabled,
+body.dashboard-shell .btn-ghost:disabled,
+body.hall-app .btn-primary:disabled,
+.bx-admin2 .btn-primary:disabled {
+  opacity: 0.32;
+  cursor: default;
+  box-shadow: none;
+}
+
+body.dashboard-shell .btn-primary,
+body.dashboard-shell .auth-action-btn,
+body.dashboard-shell .auth-oauth-btn,
+body.login-page .btn-primary,
+body.login-page .auth-action-btn,
+body.login-page .auth-oauth-btn,
+body.hall-login .btn-primary,
+body.hall-login .auth-action-btn,
+body.hall-app .btn-primary,
+body.hall-app .auth-action-btn,
+body.hall-app .auth-oauth-btn,
+.bx-admin2 .btn-primary,
+.bx-admin2 .auth-action-btn,
+.bx-admin2 .auth-oauth-btn {
+  width: 100%;
+}
+
+body.dashboard-shell .btn-compact,
+body.dashboard-shell .btn-inline,
+body.dashboard-shell .btn-ghost,
+body.hall-app .btn-compact,
+body.hall-app .btn-inline,
+body.hall-app .btn-ghost,
+body.platform-builder-shell .btn-compact,
+body.platform-builder-shell .btn-ghost,
+.bx-admin2 .btn-compact,
+.bx-admin2 .btn-ghost,
+body.visitor-dashboard .btn-ghost {
+  width: auto;
+  min-height: var(--hall-btn-compact-h, 38px);
+  padding: 0 18px;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+}
+
+body.dashboard-shell .btn-ghost,
+body.hall-app .btn-ghost,
+.bx-admin2 .btn-ghost,
+body.visitor-dashboard .btn-ghost {
+  background: transparent;
+  box-shadow: none;
+  border-color: var(--hall-border);
+}
+
+body.dashboard-shell .btn-ghost:hover,
+body.hall-app .btn-ghost:hover,
+.bx-admin2 .btn-ghost:hover {
+  background: var(--hall-surface);
+  border-color: var(--hall-border-strong);
+  box-shadow: none;
+}
+
+body.dashboard-shell .hall-btn--solid,
+body.hall-app .hall-btn--solid,
+body.platform-builder-shell .hall-btn--solid,
+body.platform-builder-shell .builder-header-action-btn.is-primary,
+.bx-admin2 .hall-btn--solid {
+  background: var(--hall-btn-solid-bg);
+  border-color: transparent;
+  color: var(--hall-btn-solid-text);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+body.dashboard-shell .hall-btn--solid:hover,
+body.hall-app .hall-btn--solid:hover,
+body.platform-builder-shell .builder-header-action-btn.is-primary:hover:not(:disabled),
+.bx-admin2 .hall-btn--solid:hover {
+  background: #ffffff;
+  border-color: transparent;
+  color: #080808;
+  box-shadow: var(--hall-shadow-soft);
+}
+
+body.dashboard-shell .btn-danger,
+body.hall-app .btn-danger,
+.bx-admin2 .btn-danger {
+  width: auto;
+  min-height: var(--hall-btn-compact-h, 38px);
+  padding: 0 18px;
+  border-color: rgba(255, 138, 138, 0.28);
+  color: #ff9a9a;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ——— Inputs ——— */
+body.dashboard-shell .hall-field,
+body.dashboard-shell .auth-field,
+body.dashboard-shell .field,
+body.login-page .hall-field,
+body.login-page .auth-field,
+body.login-page .field,
+body.hall-app .hall-field,
+body.hall-app .auth-field,
+body.hall-app .field,
+.bx-admin2 .hall-field,
+.bx-admin2 .auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hall-space-2, 8px);
+  position: relative;
+  margin-bottom: 0;
+}
+
+body.login-page .field,
+body.hall-login .field,
+body.hall-app .auth-field,
+.bx-admin2 .auth-field {
+  margin-bottom: var(--hall-space-4, 16px);
+}
+
+body.dashboard-shell .hall-field > span,
+body.dashboard-shell .hall-field > label,
+body.dashboard-shell .auth-field > span,
+body.dashboard-shell .field > label,
+body.login-page .auth-field > span,
+body.login-page .field > label,
+body.hall-app .auth-field > span,
+body.hall-app .field > label,
+.bx-admin2 .auth-field > span {
+  font-size: var(--hall-label-size, 0.6875rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hall-text-faint);
+  font-weight: 550;
+}
+
+body.dashboard-shell .hall-input,
+body.dashboard-shell .hall-field input,
+body.dashboard-shell .auth-field input,
+body.dashboard-shell .field input,
+body.dashboard-shell .admin-input,
+body.dashboard-shell .admin-textarea,
+body.login-page .hall-field input,
+body.login-page .auth-field input,
+body.login-page .field input,
+body.hall-app .auth-field input,
+body.hall-app .field input,
+body.hall-app .admin-input,
+.bx-admin2 .auth-field input,
+body.platform-builder-shell .admin-input,
+body.platform-builder-shell select.hall-input,
+body.platform-builder-shell .builder-field select,
+body.platform-builder-shell .builder-field input {
+  width: 100%;
+  height: var(--hall-input-h, 50px);
+  padding: 0 18px;
+  box-sizing: border-box;
+  border: 1px solid var(--hall-border-hairline);
+  border-radius: var(--hall-radius-control, 14px);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--hall-text);
+  font-size: 0.9375rem;
+  letter-spacing: 0.01em;
+  outline: none;
+  box-shadow: var(--hall-input-inset);
+  backdrop-filter: blur(10px) saturate(115%);
+  -webkit-backdrop-filter: blur(10px) saturate(115%);
+  transition:
+    border-color var(--hall-duration-fast, 0.18s) var(--hall-ease),
+    background var(--hall-duration-fast, 0.18s) var(--hall-ease),
+    box-shadow var(--hall-duration-fast, 0.18s) var(--hall-ease);
+}
+
+body.dashboard-shell .admin-textarea,
+body.hall-app .admin-textarea,
+body.platform-builder-shell .admin-textarea {
+  height: auto;
+  min-height: 104px;
+  padding: 14px 18px;
+  resize: vertical;
+}
+
+body.dashboard-shell .hall-input:focus,
+body.dashboard-shell .auth-field input:focus,
+body.dashboard-shell .field input:focus,
+body.dashboard-shell .admin-input:focus,
+body.login-page .auth-field input:focus,
+body.login-page .field input:focus,
+body.hall-app .auth-field input:focus,
+.bx-admin2 .auth-field input:focus {
+  border-color: var(--hall-border-strong);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: var(--hall-input-inset), 0 0 0 3px rgba(255, 255, 255, 0.04);
+}
+
+body.dashboard-shell .auth-remember-row,
+body.dashboard-shell .remember-row,
+body.login-page .remember-row,
+body.hall-app .auth-remember-row,
+.bx-admin2 .auth-remember-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hall-space-3, 12px);
+  margin: var(--hall-space-1, 4px) 0 var(--hall-space-5, 24px);
+  font-size: 0.8125rem;
+  color: var(--hall-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+body.dashboard-shell .auth-remember-row input,
+body.login-page .remember-row input,
+.bx-admin2 .auth-remember-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: rgba(255, 255, 255, 0.7);
+}
+
+/* ——— Cards / editorial panels ——— */
+body.dashboard-shell .hall-card,
+body.dashboard-shell .hall-panel,
+body.dashboard-shell .panel-card,
+body.dashboard-shell .dashboard-card,
+body.dashboard-shell .login-card,
+body.dashboard-shell .content-modal-box.auth-experience-box,
+body.login-page .login-card,
+body.login-page .hall-card,
+body.hall-app .panel-card,
+body.hall-app .login-card,
+body.hall-app .content-modal-box.auth-experience-box,
+.bx-admin2 .panel-card,
+.bx-admin2 .content-modal-box.auth-experience-box,
+body.visitor-dashboard .panel-card {
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.055) 0%,
+    rgba(255, 255, 255, 0.028) 100%
+  );
+  border: 1px solid var(--hall-border);
+  border-radius: var(--hall-radius-card, 24px);
+  box-shadow: var(--hall-shadow-card), var(--hall-inset);
+  backdrop-filter: blur(28px) saturate(115%);
+  -webkit-backdrop-filter: blur(28px) saturate(115%);
+  color: var(--hall-text);
+}
+
+body.dashboard-shell .hall-card,
+body.dashboard-shell .panel-card,
+body.dashboard-shell .dashboard-card,
+body.dashboard-shell .login-card,
+body.login-page .login-card,
+body.hall-app .panel-card,
+body.hall-app .login-card,
+body.hall-app .content-modal-box.auth-experience-box,
+.bx-admin2 .panel-card,
+.bx-admin2 .content-modal-box.auth-experience-box {
+  padding: var(--hall-pad-card, 40px);
+}
+
+body.dashboard-shell .panel-card-flush,
+body.hall-app .panel-card-flush,
+.bx-admin2 .panel-card-flush {
+  padding: var(--hall-space-2, 8px) 0;
+  overflow: hidden;
+}
+
+body.dashboard-shell .panel-card-title,
+body.hall-app .panel-card-title {
+  font-size: 0.8125rem;
+  font-weight: 550;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 var(--hall-space-4, 16px);
+  padding: 0 var(--hall-space-5, 24px);
+  color: var(--hall-text-muted);
+}
+
+/* ——— Badges ——— */
+body.dashboard-shell .admin-badge,
+body.hall-app .admin-badge,
+.bx-admin2 .admin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--hall-radius-pill, 999px);
+  font-size: 0.625rem;
+  font-weight: 550;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  color: var(--hall-text-muted);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body.dashboard-shell .badge-success,
+body.hall-app .badge-success,
+.bx-admin2 .badge-success {
+  color: rgba(154, 214, 122, 0.92);
+  background: rgba(126, 217, 87, 0.08);
+  border-color: transparent;
+}
+
+body.dashboard-shell .badge-muted,
+.bx-admin2 .badge-muted {
+  color: var(--hall-text-faint);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ——— Tables as editorial lists ——— */
+body.dashboard-shell .admin-table-wrap,
+body.hall-app .admin-table-wrap,
+.bx-admin2 .admin-table-wrap {
+  padding: 0 var(--hall-space-2, 8px) var(--hall-space-2, 8px);
+}
+
+body.dashboard-shell .admin-table,
+body.hall-app .admin-table,
+.bx-admin2 .admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  color: var(--hall-text);
+}
+
+body.dashboard-shell .admin-table th,
+body.dashboard-shell .admin-table td,
+body.hall-app .admin-table th,
+body.hall-app .admin-table td,
+.bx-admin2 .admin-table th,
+.bx-admin2 .admin-table td {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--hall-border-hairline);
+  text-align: left;
+  vertical-align: middle;
+}
+
+body.dashboard-shell .admin-table thead th,
+body.hall-app .admin-table thead th,
+.bx-admin2 .admin-table thead th {
+  padding-top: 12px;
+  padding-bottom: 14px;
+}
+
+body.dashboard-shell .admin-table tbody tr:last-child td,
+body.hall-app .admin-table tbody tr:last-child td,
+.bx-admin2 .admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+body.dashboard-shell .admin-table th,
+body.hall-app .admin-table th,
+.bx-admin2 .admin-table th {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--hall-text-faint);
+  background: transparent;
+  font-weight: 550;
+}
+
+body.dashboard-shell .admin-table tbody tr,
+.bx-admin2 .admin-table tbody tr {
+  transition: background var(--hall-duration-fast, 0.18s) var(--hall-ease);
+}
+
+body.dashboard-shell .admin-table tbody tr:hover,
+.bx-admin2 .admin-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+body.dashboard-shell .admin-table td:first-child,
+.bx-admin2 .admin-table td:first-child {
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+
+body.dashboard-shell .admin-table code,
+.bx-admin2 .admin-table code {
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--hall-text-faint);
+  background: none;
+}
+
+.table-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ——— Messages ——— */
+body.dashboard-shell .form-message,
+body.dashboard-shell .auth-modal-message,
+body.login-page .form-message,
+body.hall-app .auth-modal-message,
+.bx-admin2 .auth-modal-message {
+  min-height: 1.25rem;
+  margin-top: var(--hall-space-4, 16px);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--hall-text-faint);
+}
+
+body.dashboard-shell .form-message.error,
+body.login-page .form-message.error,
+.bx-admin2 .auth-modal-message.is-error {
+  color: #ff9a9a;
+}
+
+body.dashboard-shell .form-message.success,
+body.login-page .form-message.success {
+  color: #9ad67a;
+}

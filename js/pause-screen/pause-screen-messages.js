@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/pause-screen/pause-screen-messages.js');}catch(_e){}
 /* Mensajes predeterminados — categorías para la pantalla de pausa */
 var PauseScreenMessages = (function () {
   var CATEGORIES = {
@@ -70,3 +71,5 @@ var PauseScreenMessages = (function () {
     buildPool: buildPool
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/pause-screen/pause-screen-messages.js');}catch(_e){}

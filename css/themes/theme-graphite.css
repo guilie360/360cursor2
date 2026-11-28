@@ -1,0 +1,238 @@
+/**
+ * Theme Graphite — refined Premium cabin (slightly cooler, clearer hierarchy).
+ *
+ * Based on Theme Premium: keeps blue-tinted palette, ambient depth, canvas frame.
+ * Refinements only — blue −12%, top light −35%, stronger workspace/panel/canvas steps.
+ * Scoped to body.theme-graphite. Does not affect Classic or Premium.
+ */
+
+body.theme-graphite {
+  --editor-theme-id: graphite;
+
+  /* HALL — Premium cabin, blue tint slightly reduced */
+  --hall-bg: #040404;
+  --hall-surface: rgba(255, 255, 255, 0.034);
+  --hall-surface-raised: rgba(255, 255, 255, 0.052);
+  --hall-surface-hover: rgba(255, 255, 255, 0.065);
+  --hall-border: rgba(255, 255, 255, 0.072);
+  --hall-border-strong: rgba(255, 255, 255, 0.13);
+  --hall-border-hairline: rgba(255, 255, 255, 0.052);
+  --hall-inset: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* BOXIES shell */
+  --boxies-dock-bg: rgba(7, 7, 8, 0.92);
+  --boxies-dock-border: rgba(255, 255, 255, 0.065);
+  --boxies-edge-fringe-w: 40px;
+  --boxies-edge-fringe-shadow: 16px 0 36px rgba(0, 0, 0, 0.62);
+
+  /* Builder tokens */
+  --builder-bg: rgba(11, 11, 12, 0.64);
+  --builder-bg-hover: rgba(255, 255, 255, 0.045);
+  --builder-border: rgba(255, 255, 255, 0.058);
+  --builder-divider: rgba(255, 255, 255, 0.068);
+  --builder-dock-bg: rgba(7, 7, 8, 0.9);
+  --builder-dock-border: rgba(255, 255, 255, 0.065);
+  --builder-float-bg: rgba(13, 13, 14, 0.94);
+  --builder-float-bg-hover: rgba(16, 16, 17, 0.97);
+  --builder-float-border: rgba(255, 255, 255, 0.095);
+
+  /* Hierarchy: app < workspace < panels < canvas well < canvas stage */
+  --qe-graphite-app: #040404;
+  --qe-graphite-workspace-top: #0a0a0b;
+  --qe-graphite-workspace-bottom: #060606;
+  --qe-graphite-panel: rgba(13, 13, 15, 0.96);
+  --qe-graphite-canvas-well: #080809;
+  --qe-graphite-canvas-stage: #050505;
+
+  /* Quotation editor cabin tokens */
+  --qe-theme-workspace-bg:
+    radial-gradient(ellipse 130% 90% at 50% -10%, rgba(255, 255, 255, 0.023) 0%, transparent 58%),
+    linear-gradient(180deg, var(--qe-graphite-workspace-top) 0%, var(--qe-graphite-workspace-bottom) 100%);
+  --qe-theme-canvas-well:
+    radial-gradient(ellipse 85% 70% at 50% 45%, rgba(255, 255, 255, 0.012) 0%, transparent 72%),
+    var(--qe-graphite-canvas-well);
+  --qe-theme-canvas-frame-radius: 18px;
+  --qe-theme-canvas-frame-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -28px 56px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.085),
+    0 28px 72px rgba(0, 0, 0, 0.58);
+  --qe-theme-canvas-stage-border: rgba(255, 255, 255, 0.1);
+  --qe-theme-canvas-stage-bg: var(--qe-graphite-canvas-stage);
+  --qe-theme-panel-bg: var(--qe-graphite-panel);
+  --qe-theme-panel-border: rgba(255, 255, 255, 0.065);
+  --qe-theme-pill-bg: linear-gradient(180deg, rgba(21, 21, 24, 0.96) 0%, rgba(12, 12, 14, 0.94) 100%);
+  --qe-theme-pill-border: rgba(255, 255, 255, 0.115);
+  --qe-theme-pill-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 12px 32px rgba(0, 0, 0, 0.44);
+  --qe-theme-float-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.065),
+    0 24px 64px rgba(0, 0, 0, 0.55);
+  --qe-theme-header-bg: linear-gradient(180deg, rgba(14, 14, 15, 0.98) 0%, rgba(7, 7, 8, 0.96) 100%);
+  --qe-theme-header-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 10px 28px rgba(0, 0, 0, 0.38);
+  --qe-theme-dock-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 -14px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* ── App chrome ── */
+
+body.theme-graphite.boxies-host,
+body.theme-graphite.boxies-shell {
+  background: var(--qe-graphite-app);
+}
+
+body.theme-graphite .boxies-header {
+  background: var(--qe-theme-header-bg);
+  border-bottom-color: rgba(255, 255, 255, 0.055);
+  box-shadow: var(--qe-theme-header-shadow);
+}
+
+body.theme-graphite .boxies-dock {
+  background: var(--boxies-dock-bg);
+  border-top-color: var(--boxies-dock-border);
+  box-shadow: var(--qe-theme-dock-shadow);
+  backdrop-filter: blur(28px) saturate(135%);
+  -webkit-backdrop-filter: blur(28px) saturate(135%);
+}
+
+body.theme-graphite.boxies-shell::before,
+body.theme-graphite.boxies-shell::after {
+  box-shadow: var(--boxies-edge-fringe-shadow);
+}
+
+/* ── Quotation workspace — cabin envelope ── */
+
+body.theme-graphite .quotation-workspace.is-editor,
+body.theme-graphite #boxiesContent.quotation-builder-host .quotation-workspace {
+  background: var(--qe-theme-workspace-bg);
+}
+
+body.theme-graphite .quotation-left-block {
+  background: var(--qe-theme-panel-bg);
+  border-right-color: var(--qe-theme-panel-border);
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.035),
+    -6px 0 20px rgba(0, 0, 0, 0.28);
+}
+
+body.theme-graphite .quotation-props,
+body.theme-graphite .qe-col--inspector:not(.is-collapsed) {
+  background: var(--qe-theme-panel-bg);
+  border-left-color: var(--qe-theme-panel-border);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.035),
+    6px 0 20px rgba(0, 0, 0, 0.28);
+}
+
+body.theme-graphite .qe-props-panel__layers {
+  border-bottom-color: rgba(255, 255, 255, 0.065);
+}
+
+body.theme-graphite .qe-props-panel__head {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+body.theme-graphite .qe-props-panel__empty,
+body.theme-graphite .qe-props-panel__body .builder-menu-hint {
+  color: rgba(255, 255, 255, 0.36);
+}
+
+body.theme-graphite .qe-props-panel .qe-layers__item:hover {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+body.theme-graphite .qe-col--library {
+  background: rgba(11, 11, 13, 0.72);
+  border-right-color: var(--qe-theme-panel-border);
+}
+
+body.theme-graphite .qe-col--canvas {
+  background: var(--qe-theme-canvas-well);
+}
+
+body.theme-graphite .qe-canvas-fit__frame {
+  border-radius: var(--qe-theme-canvas-frame-radius);
+  box-shadow: var(--qe-theme-canvas-frame-shadow);
+}
+
+body.theme-graphite .qe-stage-unit .qe-canvas__stage {
+  border-color: var(--qe-theme-canvas-stage-border);
+  background: var(--qe-theme-canvas-stage-bg);
+  border-radius: calc(var(--qe-theme-canvas-frame-radius) - 2px);
+}
+
+body.theme-graphite .qe-scenes,
+body.theme-graphite .qe-layers {
+  background: var(--qe-theme-panel-bg);
+  border-color: rgba(255, 255, 255, 0.085);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.038),
+    0 4px 14px rgba(0, 0, 0, 0.32);
+}
+
+body.theme-graphite .qe-canvas-tool,
+body.theme-graphite .qe-dock {
+  background: var(--qe-theme-pill-bg);
+  border-color: var(--qe-theme-pill-border);
+  box-shadow: var(--qe-theme-pill-shadow);
+  backdrop-filter: blur(16px) saturate(125%);
+  -webkit-backdrop-filter: blur(16px) saturate(125%);
+}
+
+body.theme-graphite .qe-canvas-tool__btn.is-active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.theme-graphite .qe-canvas-tool-float {
+  border-color: rgba(255, 255, 255, 0.115);
+  background: rgba(11, 11, 12, 0.94);
+  box-shadow: var(--qe-theme-float-shadow);
+  backdrop-filter: blur(22px) saturate(135%);
+  -webkit-backdrop-filter: blur(22px) saturate(135%);
+}
+
+body.theme-graphite .qe-canvas-tool-float__head {
+  border-bottom-color: rgba(255, 255, 255, 0.075);
+}
+
+body.theme-graphite .quotation-panel-float {
+  background: var(--builder-float-bg);
+  border-color: var(--builder-float-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 8px 24px rgba(0, 0, 0, 0.38);
+}
+
+body.theme-graphite.boxies-shell .admin-toast {
+  border-color: rgba(255, 255, 255, 0.13);
+  background: rgba(9, 9, 10, 0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 12px 36px rgba(0, 0, 0, 0.52);
+}
+
+body.theme-graphite .admin-modal-backdrop {
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+body.theme-graphite .admin-modal {
+  border-color: rgba(255, 255, 255, 0.095);
+  background: linear-gradient(180deg, rgba(14, 14, 15, 0.98) 0%, rgba(9, 9, 10, 0.97) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 28px 80px rgba(0, 0, 0, 0.58);
+}
+
+body.theme-graphite .boxies-user-menu__panel {
+  border-color: rgba(255, 255, 255, 0.095);
+  background: rgba(11, 11, 12, 0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 16px 48px rgba(0, 0, 0, 0.5);
+}

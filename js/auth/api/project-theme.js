@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/project-theme.js');}catch(_e){}
 /* Official project default theme API */
 var ProjectThemeApi = (function () {
   function getClient() {
@@ -6,24 +7,10 @@ var ProjectThemeApi = (function () {
 
   function normalizeConfig(raw) {
     if (!raw || typeof raw !== 'object') return null;
-    return {
-      themeKey: raw.themeKey || ThemeSystem.CUSTOM_THEME_KEY,
-      bg: raw.bg || raw.background || null,
-      menuColor: raw.menuColor || raw.panelColor || raw.bg || raw.background || null,
-      surface: raw.surface || null,
-      accent: raw.accent || null,
-      textMode: raw.textMode === 'dark' ? 'dark' : 'light',
-      bgTextMode: raw.bgTextMode === 'dark' ? 'dark' : 'light',
-      visualDepth: ThemeSystem.normalizeVisualDepth(raw.visualDepth),
-      panelGlass: ThemeSystem.normalizePanelGlass(raw.panelGlass),
-      bgGlass: ThemeSystem.normalizePanelGlass(raw.bgGlass || raw.panelGlass),
-      buttonGlass: ThemeSystem.normalizePanelGlass(raw.buttonGlass),
-      borderGlass: ThemeSystem.normalizePanelGlass(raw.borderGlass),
-      shadowGlass: ThemeSystem.normalizeShadowGlass(raw.shadowGlass),
-      heroSurface: raw.heroSurface || raw.surface || null,
-      heroButtonGlass: ThemeSystem.normalizePanelGlass(raw.heroButtonGlass || raw.buttonGlass),
-      heroBorderGlass: ThemeSystem.normalizePanelGlass(raw.heroBorderGlass || raw.borderGlass)
-    };
+    return Object.assign(
+      { themeKey: raw.themeKey || ThemeSystem.CUSTOM_THEME_KEY },
+      ThemeSystem.normalizeCustomConfig(raw)
+    );
   }
 
   function getFromProject(project) {
@@ -83,3 +70,5 @@ var ProjectThemeApi = (function () {
     normalizeConfig: normalizeConfig
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/project-theme.js');}catch(_e){}

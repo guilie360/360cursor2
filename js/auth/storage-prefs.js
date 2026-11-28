@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/storage-prefs.js');}catch(_e){}
 /* Auth UI preferences — Remember me + saved email */
 var AuthStoragePrefs = (function () {
   var REMEMBER_KEY = '360preventa_remember_me';
@@ -67,3 +68,5 @@ var AuthStoragePrefs = (function () {
     clearSavedEmail: clearSavedEmail
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/storage-prefs.js');}catch(_e){}

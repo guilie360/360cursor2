@@ -1,0 +1,203 @@
+/* Mi perfil — chrome panel + home cards + info */
+.miperfil-mode #teamChatPopup .chat-bottom-tabs,
+.miperfil-mode #teamChatPopup .chat-recipient-panel,
+.miperfil-mode #chatRequestPayKey{display:none!important}
+.miperfil-mode #teamChatPopup .team-chat-message.is-mine{
+  margin-left:auto;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18)
+}
+/* Login BOXIES: misma card que panel; portal oculto hasta autenticar */
+.miperfil-mode.miperfil-login-open #portal{display:none!important}
+.miperfil-mode #loginScreen.login-screen{z-index:20}
+.miperfil-mode #loginScreen .login-error{
+  min-height:18px;margin-top:12px;color:#e5a0a0;
+  font:500 12px/1.35 Manrope,Arial,sans-serif;text-align:left
+}
+.miperfil-info-form{margin-top:0;display:grid;gap:4px;max-width:480px}
+.miperfil-info-form .btn{margin-top:10px;justify-self:start;min-width:160px}
+.miperfil-error{color:#e5a0a0!important;min-height:18px}
+.miperfil-grid{margin-top:0}
+/*
+ * Cabecera ÚNICA fuera de las secciones: no se remonta al navegar.
+ * Geometría bloqueada para que eyebrow / título / lead no salten.
+ */
+.miperfil-mode #miperfilPageHead.miperfil-page-head{
+  display:grid!important;
+  grid-template-rows:14px auto 21px;
+  align-content:start;
+  gap:10px;
+  margin:0 0 22px!important;
+  padding:0!important;
+  min-height:118px;
+  box-sizing:border-box;
+}
+.miperfil-mode #miperfilPageHead .eyebrow{
+  margin:0!important;
+  padding:0!important;
+  height:14px;
+  line-height:14px;
+  color:#aaa!important;
+  font:10px/14px Manrope,Arial,sans-serif!important;
+  letter-spacing:.2em!important;
+  text-transform:uppercase!important;
+}
+.miperfil-mode #miperfilPageHead .portal-title{
+  margin:0!important;
+  padding:0!important;
+  font:clamp(32px,4.6vw,48px)/1.05 Italiana,Georgia,serif!important;
+  font-weight:400!important;
+  color:#f0ebe3!important;
+  min-height:50px;
+  display:flex;
+  align-items:flex-end;
+}
+.miperfil-mode #miperfilPageHead .miperfil-lead{
+  margin:0!important;
+  padding:0!important;
+  height:21px;
+  max-width:640px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:rgba(255,255,255,.55)!important;
+  font:500 13px/21px Manrope,Arial,sans-serif!important;
+}
+.miperfil-mode #homeView,
+.miperfil-mode #infoView,
+.miperfil-mode #docsView,
+.miperfil-mode #paysView,
+.miperfil-mode #showroomsView{
+  margin:0!important;
+  padding:0!important;
+}
+.showrooms-root{display:grid;gap:28px;max-width:920px}
+.showroom-block .eyebrow{margin:0 0 12px}
+.showroom-thumbs{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px
+}
+.showroom-thumb-card{
+  display:flex;flex-direction:column;text-decoration:none;color:inherit;
+  border:1px solid rgba(255,255,255,.10);border-radius:16px;overflow:hidden;
+  background:linear-gradient(180deg,#121212 0%,#0a0a0a 100%);
+  transition:border-color .2s,transform .2s
+}
+.showroom-thumb-card:hover{border-color:rgba(255,255,255,.22);transform:translateY(-2px)}
+.showroom-thumb-media{
+  display:block;aspect-ratio:16/10;background:#0d0d0d;overflow:hidden
+}
+.showroom-thumb-media img{width:100%;height:100%;object-fit:cover;display:block}
+.showroom-thumb-fallback{
+  display:block;width:100%;height:100%;
+  background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02))
+}
+.showroom-thumb-meta{padding:14px 16px 16px}
+.showroom-thumb-meta strong{
+  display:block;font:400 20px/1.2 Italiana,Georgia,serif;color:#fff;margin-bottom:4px
+}
+.showroom-thumb-meta small{color:rgba(255,255,255,.45);font:500 12px/1.3 Manrope,Arial,sans-serif}
+.showroom-files{display:grid;gap:10px}
+.showroom-file-card{
+  display:flex;align-items:center;gap:14px;text-decoration:none;color:inherit;
+  padding:14px 16px;border:1px solid rgba(255,255,255,.10);border-radius:14px;
+  background:linear-gradient(180deg,#121212 0%,#0a0a0a 100%);
+  transition:border-color .2s
+}
+.showroom-file-card:hover{border-color:rgba(255,255,255,.22)}
+.showroom-file-icon{
+  width:40px;height:40px;border-radius:10px;flex:none;
+  display:grid;place-items:center;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.4)
+}
+.showroom-file-icon svg{
+  width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round;color:#ddd
+}
+.showroom-file-meta strong{
+  display:block;font:400 18px/1.2 Italiana,Georgia,serif;color:#fff;margin-bottom:2px
+}
+.showroom-file-meta small{color:rgba(255,255,255,.45);font:500 12px/1.3 Manrope,Arial,sans-serif}
+.docs-list,.pays-list{margin-top:0!important}
+.miperfil-mode .portal-card--soon{opacity:.55;cursor:not-allowed}
+/* Neutraliza el lift más claro de base.css; el look dark vive en patches (#homeView). */
+.miperfil-mode #homeView .portal-card::before{opacity:0!important}
+.miperfil-mode .doc-card,
+.miperfil-mode .pay-project{
+  background:linear-gradient(180deg,#121212 0%,#0a0a0a 100%);
+  border-color:rgba(255,255,255,.10);
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset
+}
+.miperfil-mode .pay-split-card{
+  background:#0a0a0a;border-color:rgba(255,255,255,.08)
+}
+.miperfil-page{padding-bottom:24px}
+.miperfil-info-form input,
+.miperfil-login-form input{
+  -webkit-user-select:text!important;user-select:text!important;caret-color:auto!important;cursor:text!important
+}
+.docs-list{display:grid;gap:14px;max-width:720px}
+.doc-card{
+  text-align:left;padding:22px 22px 18px;border:1px solid rgba(255,255,255,.12);
+  background:#141414;border-radius:18px
+}
+.doc-card.is-pending,.doc-card.is-empty{opacity:.78}
+.doc-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.doc-kind{
+  font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#999
+}
+.doc-date,.doc-status{font-size:11px;color:#888}
+.doc-status.is-ready{color:#c8e0c8}
+.doc-card h3{margin:0 0 6px;font:400 26px Italiana,Georgia,serif;color:#fff}
+.doc-card .desc{margin:0 0 14px}
+.doc-card .btn{min-width:150px}
+.miperfil-mode .portal-head-right{display:flex;align-items:center;gap:8px}
+.miperfil-pay-btn{
+  border:1px solid rgba(255,255,255,.22)!important;background:transparent!important;color:#eee!important;
+  padding:8px 14px!important;font:600 11px Manrope,Arial,sans-serif!important;letter-spacing:.08em;text-transform:uppercase;
+  border-radius:13px!important;min-height:36px
+}
+.miperfil-pay-btn:hover{background:rgba(255,255,255,.06)!important;border-color:rgba(255,255,255,.4)!important;color:#fff!important}
+.miperfil-pay-dots{
+  display:inline-flex;align-items:center;gap:5px;margin-right:2px
+}
+.miperfil-mode .pay-stage-dots{
+  display:inline-flex;align-items:center;gap:5px;flex:none
+}
+.miperfil-mode .pay-stage-dot{
+  width:8px;height:8px;border-radius:50%;box-sizing:border-box;
+  border:1.5px solid rgba(255,255,255,.28);background:transparent;display:inline-block
+}
+.miperfil-mode .pay-stage-dot.is-on{
+  border-color:#7dcea0;background:#7dcea0;box-shadow:0 0 0 3px rgba(125,206,160,.12)
+}
+.pays-list{display:grid;gap:12px;max-width:720px}
+.pay-project{
+  border:1px solid rgba(255,255,255,.12);background:#141414;border-radius:18px;overflow:hidden
+}
+.pay-project>summary{
+  list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:16px 18px;
+  user-select:text;-webkit-user-select:text
+}
+.pay-project>summary::-webkit-details-marker{display:none}
+.pay-project-title{flex:1;font:400 22px Italiana,Georgia,serif;color:#fff;min-width:0}
+.pay-project-meta{font-size:12px;color:#999;text-align:right;white-space:nowrap}
+.pay-project>summary .pay-stage-dots{margin:0 4px}
+.pay-project .accordion-chevron{color:#888;font-size:14px}
+.pay-project[open] .accordion-chevron{transform:rotate(45deg)}
+.pay-project-body{padding:0 18px 18px;border-top:1px solid rgba(255,255,255,.08)}
+.pay-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.pay-split-card{
+  border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px 14px;background:#101010
+}
+.pay-split-card.is-done{border-color:rgba(180,210,180,.28)}
+.pay-split-card small{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#888}
+.pay-split-card strong{display:block;margin:6px 0 2px;font:400 22px Italiana,Georgia,serif;color:#fff}
+.pay-split-card span{font-size:12px;color:#aaa}
+.pay-actions{display:grid;gap:10px;justify-items:start}
+.pay-actions .btn{min-width:180px}
+.pay-extra{margin-top:4px;padding:12px 14px;border:1px dashed rgba(255,255,255,.18);border-radius:12px}
+.pay-extra.is-pending{border-color:rgba(205,178,138,.35)}
+.pay-extra-status{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#d0b88f}
+.pay-extra-hint,.pay-done-note,.pay-status{margin:0}
+@media(max-width:560px){
+  .pay-split{grid-template-columns:1fr}
+  .pay-project-title{font-size:18px}
+  .miperfil-pay-btn{padding:8px 10px!important;font-size:10px!important}
+}

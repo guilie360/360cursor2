@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es" class="theme-ready">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Quotation Runtime</title>
+  <style>html,body.qr-host{margin:0;background:#050505;color:#fff;height:100%;}</style>
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/taroa/favicon.png?v=ws7300">
+  <link rel="icon" type="image/png" sizes="192x192" href="../assets/taroa/favicon.png?v=ws7300">
+  <link rel="apple-touch-icon" href="../assets/taroa/favicon.png?v=ws7300">
+  <script src="../js/builder/quotation/quotation-runtime-build.js"></script>
+  <script>
+    (function () {
+      var build = window.QUOTATION_RUNTIME_BUILD || 'ws7984';
+      try {
+        var qBuild = new URLSearchParams(window.location.search || '').get('build');
+        if (qBuild) build = qBuild;
+      } catch (eBuild) { /* ignore */ }
+      window.__QR_RUNTIME_BUILD__ = build;
+    })();
+  </script>
+  <script>
+    /* V7.2.08 — Canvas mode: lock logical viewport before CSS/layout (1920×1080). */
+    (function () {
+      try {
+        var p = new URLSearchParams(window.location.search || '');
+        if (p.get('canvas') !== '1' && p.get('canvas') !== 'true') return;
+        var w = parseInt(p.get('designWidth'), 10) || 1920;
+        var h = parseInt(p.get('designHeight'), 10) || 1080;
+        var root = document.documentElement;
+        root.classList.add('qr-canvas-mode');
+        root.setAttribute('data-qr-design-w', String(w));
+        root.setAttribute('data-qr-design-h', String(h));
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (meta) {
+          meta.setAttribute(
+            'content',
+            'width=' + w + ', height=' + h + ', initial-scale=1, maximum-scale=1, user-scalable=no'
+          );
+        }
+        root.style.setProperty('--qr-design-w', w + 'px');
+        root.style.setProperty('--qr-design-h', h + 'px');
+        root.style.setProperty('--qr-vw', (w / 100) + 'px');
+        root.style.setProperty('--qr-vh', (h / 100) + 'px');
+        root.style.width = w + 'px';
+        root.style.height = h + 'px';
+        root.style.overflow = 'hidden';
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400&family=Cormorant+Garamond:wght@300;400&family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/components.css?v=ws7259">
+  <link rel="stylesheet" href="../css/platform/product-assistant.css">
+  <link rel="stylesheet" href="../css/hall/hall.css">
+  <link rel="stylesheet" href="../css/boxies/quotation-runtime.css?v=ws7984">
+  <link rel="stylesheet" href="../css/boxies/quotation-proposals-page.css?v=ws7975">
+  <link rel="stylesheet" href="../css/boxies/hero-renderer.css?v=ws7984">
+</head>
+<body class="qr-host">
+  <div id="quotationRuntimeRoot" data-quotation-runtime class="qr-presentation" data-qr-view="hero"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/shared/config.js"></script>
+  <script src="../js/platform/hall-design-system.js"></script>
+  <script>
+    try {
+      if (typeof HallDesignSystem !== 'undefined') HallDesignSystem.paint({ persist: false });
+      else document.documentElement.classList.add('theme-ready');
+    } catch (e) {
+      document.documentElement.classList.add('theme-ready');
+    }
+  </script>
+  <script src="../js/auth/storage-prefs.js"></script>
+  <script src="../js/auth/client.js"></script>
+  <script src="../js/shared/hero-renderer.js?v=ws7982"></script>
+  <script src="../js/shared/project-cover.js?v=ws7915"></script>
+  <script src="../js/builder/engines/scene-button-model.js?v=ws7981"></script>
+  <script src="../js/builder/engines/experiencia-engine.js?v=ws7913"></script>
+  <script src="../js/builder/engines/button-presets.js?v=ws7981"></script>
+  <script src="../js/builder/engines/button-overlay-renderer.js?v=ws7981"></script>
+  <script src="../js/builder/quotation/quotation-persist-audit.js?v=ws7984"></script>
+  <script src="../js/builder/quotation/quotation-runtime-bridge.js?v=ws7226"></script>
+  <script src="../js/builder/quotation/quotation-proposals-modal.js?v=ws7224"></script>
+  <script src="../js/builder/quotation/quotation-proposals-page.js?v=ws7975"></script>
+  <script src="../js/builder/quotation/quotation-runtime.js?v=ws7984"></script>
+  <script>
+    (function () {
+      function start() {
+        if (typeof QuotationRuntime === 'undefined' || !QuotationRuntime.boot) {
+          var host = document.getElementById('quotationRuntimeRoot');
+          if (host) {
+            host.innerHTML =
+              '<div class="qr-error" role="alert">' +
+                '<h1 class="qr-error__title">QuotationRuntime no disponible</h1>' +
+              '</div>';
+          }
+          return;
+        }
+        QuotationRuntime.boot().catch(function (err) {
+          console.error('[QuotationRuntime]', err);
+        });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+      } else {
+        start();
+      }
+    })();
+  </script>
+</body>
+</html>

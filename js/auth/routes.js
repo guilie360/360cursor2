@@ -1,15 +1,18 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/routes.js');}catch(_e){}
 /* Role-based routing — prepared for future dashboards */
 var AuthRouter = (function () {
   var DESTINATIONS = {
-    staff: '/admin/dashboard.html',
+    staff: '/boxies/',
     visitante: '/auth/cuenta.html',
     asesor: '/auth/cuenta.html',
-    cliente: '/auth/cuenta.html',
+    cliente: '/miperfil/',
     propietario: '/auth/cuenta.html'
   };
 
   var PROTECTED_VISITOR_PATHS = [
-    '/auth/cuenta.html'
+    '/auth/cuenta.html',
+    '/miperfil/',
+    '/miperfil/index.html'
   ];
 
   function getAccountType(profile) {
@@ -21,7 +24,7 @@ var AuthRouter = (function () {
     var type = getAccountType(profile);
     if (!type) return AuthRedirects.ingresar();
     var path = DESTINATIONS[type] || AuthRedirects.cuenta();
-    if (type === 'visitante') {
+    if (type === 'visitante' || type === 'staff') {
       return AuthRedirects.withProyecto(path);
     }
     return path;
@@ -45,3 +48,5 @@ var AuthRouter = (function () {
     PROTECTED_VISITOR_PATHS: PROTECTED_VISITOR_PATHS
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/routes.js');}catch(_e){}

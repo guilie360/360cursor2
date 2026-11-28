@@ -1,0 +1,35 @@
+/*
+ * HALL Design System — Style Engine V3 visual contract
+ * Living reference: Style Engine editor + BOXIES AI builder chrome.
+ */
+
+@import url("./hall-chrome.css");
+@import url("./hall-primitives.css");
+@import url("./hall-layouts.css");
+
+/*
+ * Visitor project auth modal (index.html) is NOT a HALL shell.
+ * Reassert Style V.3 theme tokens so responsive layout never inherits
+ * undefined HALL muted colors (which resolved to UA black on mobile).
+ */
+.auth-experience-modal .auth-gate-title {
+  color: var(--text-primary);
+}
+
+.auth-experience-modal .auth-view-lead {
+  color: var(--text-secondary);
+  opacity: var(--text-secondary-opacity);
+}
+
+.auth-experience-modal .auth-gate-benefits li {
+  color: var(--text-secondary);
+  opacity: var(--text-secondary-opacity);
+}
+
+.auth-experience-modal .auth-field span {
+  color: var(--text-primary);
+}
+
+.auth-experience-modal .auth-oauth-divider {
+  color: var(--text-secondary);
+}
