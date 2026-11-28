@@ -357,28 +357,34 @@ body.scroll-story-active:not(.scroll-story-reveal) .scroll-stage-inner{
   .showroom-side{width:100%;max-width:100%;margin:0 auto}
   .showrooms{gap:10px;width:100%}
   .showroom{
-    display:flex!important;
+    display:grid!important;
+    grid-template-columns:42px 1fr!important;
     align-items:center;
-    justify-content:center;
-    gap:12px;
-    grid-template-columns:none!important;
+    gap:8px;
     text-align:center;
     width:100%;
   }
   .showroom-index{
-    flex:0 0 auto;
-    text-align:center;
+    text-align:left;
     width:auto;
   }
   .showroom strong{
-    width:auto;
-    flex:0 1 auto;
+    width:100%;
     text-align:center;
   }
   .final-footer{
-    left:50%;width:auto;max-width:70vw;font-size:6px;letter-spacing:1.2px;
-    bottom:calc(var(--float-safe) + 8px);
-    transform:translateX(-50%);
+    position:absolute!important;
+    left:50%!important;
+    right:auto!important;
+    bottom:calc(var(--float-safe) + 10px)!important;
+    width:auto!important;
+    max-width:90vw;
+    margin:0!important;
+    transform:translateX(-50%)!important;
+    text-align:center!important;
+    font-size:7px;
+    letter-spacing:1.4px;
+    z-index:3;
   }
   .final-footer span:nth-child(2){display:none}
 }
@@ -468,11 +474,19 @@ html.landing-ended .final-bg,
   inset:0;
 }
 html.landing-ended .final-content,
-html.landing-ended .final-footer,
-.final.is-settled .final-content,
-.final.is-settled .final-footer{
+.final.is-settled .final-content{
   position:relative;
   z-index:2;
+}
+html.landing-ended .final-footer,
+.final.is-settled .final-footer{
+  position:absolute;
+  left:50%;
+  bottom:calc(var(--float-bottom, 24px) + 52px);
+  width:auto;
+  transform:translateX(-50%);
+  text-align:center;
+  z-index:3;
 }
 @media(max-width:900px){
   html.landing-ended .final,
@@ -493,6 +507,20 @@ html.landing-ended .final-footer,
     flex-direction:column;
     align-items:center;
     transform:none!important;
+  }
+  html.landing-ended .final-footer,
+  body.landing-ended .final-footer,
+  .final.from-story.is-settled .final-footer,
+  .final.is-settled .final-footer{
+    position:absolute!important;
+    left:50%!important;
+    bottom:calc(var(--float-safe) + 10px)!important;
+    width:auto!important;
+    max-width:90vw;
+    margin:0!important;
+    transform:translateX(-50%)!important;
+    text-align:center!important;
+    z-index:3!important;
   }
 }
 
