@@ -376,98 +376,144 @@ html.landing-ended .final-footer,
 .final.is-settled .final-footer{
   position:relative;
   z-index:2;
-  opacity:1!important;
-  visibility:visible!important;
-}
-html.landing-ended .final-eyebrow,
-html.landing-ended .final-description,
-html.landing-ended .final-copy h2,
-html.landing-ended .final-copy h2 .w>span,
-html.landing-ended .showroom,
-html.landing-ended .final-footer,
-.final.is-settled .final-eyebrow,
-.final.is-settled .final-description,
-.final.is-settled .final-copy h2 .w>span,
-.final.is-settled .showroom,
-.final.is-settled .final-footer{
-  opacity:1!important;
-  transform:none!important;
-  filter:none!important;
-  animation:none!important;
-  transition:none!important;
-  visibility:visible!important;
 }
 
-/* Aterrizaje story→demo: último frame queda fijo; el copy/botones nacen con --land */
+/* Haz de luz del lucernario — nace el copy/botones desde ahí */
+.final-beam{
+  position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;
+  background:
+    radial-gradient(ellipse 28% 70% at 50% 8%, rgba(255,255,255,.22), transparent 70%),
+    linear-gradient(180deg, rgba(255,255,255,.16) 0%, rgba(255,255,255,.05) 38%, transparent 72%);
+  mix-blend-mode:screen;
+  transform-origin:50% 0%;
+  clip-path: inset(0 48% 0 48%);
+}
+.final.from-story:not(.epic-in) .final-eyebrow,
+.final.from-story:not(.epic-in) .final-description,
+.final.from-story:not(.epic-in) .final-copy h2 .w>span,
+.final.from-story:not(.epic-in) .showroom,
+.final.from-story:not(.epic-in) .final-footer{
+  opacity:0;
+  visibility:hidden;
+}
+
+/* Aterrizaje: solo frame; el contenido espera la entrada épica */
 html.scroll-story-landing .scroll-stage-inner,
 body.scroll-story-landing .scroll-stage-inner{
   z-index:22;
 }
 .final.is-landing{
-  --land:0;
   position:fixed;inset:0;z-index:28;
   min-height:100%;height:100%;height:100dvh;
   padding:clamp(72px,10vh,120px) 0 calc(var(--float-safe) + 28px);
   background:transparent;
   pointer-events:none;
 }
-.final.is-landing .final-bg{
-  /* Durante el land el canvas es el fondo; al commitToDemo el bg ya está pintado */
-  opacity:0!important;
-  transition:none!important;
-}
+.final.is-landing .final-bg{opacity:0!important;transition:none!important}
 .final.is-landing .final-content,
-.final.is-landing .final-footer{
-  pointer-events:auto;
-}
-.final.is-landing .final-eyebrow,
-.final.is-landing .final-description,
-.final.is-landing .final-copy h2,
-.final.is-landing .final-copy h2 .w>span,
-.final.is-landing .showroom-heading,
 .final.is-landing .final-footer,
-.final.is-landing .showroom{
-  animation:none!important;
-  transition:none!important;
-}
-.final.is-landing .final-eyebrow,
-.final.is-landing .final-description,
-.final.is-landing .showroom-heading,
-.final.is-landing .final-footer{
-  opacity:var(--land);
-  transform:translate3d(0, calc((1 - var(--land)) * 22px), 0);
-  filter:blur(calc((1 - var(--land)) * 6px));
-}
-.final.is-landing .final-copy h2 .w>span{
-  transform:translate3d(0, calc((1 - var(--land)) * 110%), 0);
-}
-.final.is-landing .showroom{
-  opacity:calc(var(--land) * var(--land));
-  transform:translate3d(calc((1 - var(--land)) * 36px), 0, 0) scale(calc(.97 + var(--land) * .03));
-  filter:blur(calc((1 - var(--land)) * 8px));
-  pointer-events:auto;
-}
-.final.is-landing .showroom:nth-child(1){opacity:calc(var(--land) * 1.05 - .05)}
-.final.is-landing .showroom:nth-child(2){opacity:calc(var(--land) * 1.15 - .15)}
-.final.is-landing .showroom:nth-child(3){opacity:calc(var(--land) * 1.25 - .25)}
-/* Tras aterrizar desde story: fondo ya match, sin zoom de entrada */
-.final.from-story:not(.is-landing) .final-bg{
+.final.is-landing .final-beam{opacity:0!important;visibility:hidden!important;pointer-events:none}
+
+.final.from-story .final-bg{
   opacity:1;
   transform:none;
   transition:none;
 }
-.final.from-story:not(.is-landing) .final-eyebrow,
-.final.from-story:not(.is-landing) .final-description,
-.final.from-story:not(.is-landing) .showroom,
-.final.from-story:not(.is-landing) .final-footer{
-  opacity:1;
-  animation:none;
-  filter:none;
-  transform:none;
+
+/* ——— Entrada épica: nace desde el haz de luz ——— */
+.final.epic-in .final-beam{
+  visibility:visible;
+  animation:epicBeam 1.65s cubic-bezier(.16,1,.3,1) both;
 }
-.final.from-story:not(.is-landing) .final-copy h2 .w>span{
-  transform:none;
-  transition:none;
+.final.epic-in .final-eyebrow{
+  visibility:visible;
+  animation:epicEyebrow 1.05s cubic-bezier(.16,1,.3,1) .18s both;
+}
+.final.epic-in .final-copy h2 .w>span{
+  visibility:visible;
+  display:inline-block;
+  animation:epicWord 1.2s cubic-bezier(.16,1,.3,1) calc(.32s + var(--d,0ms)) both;
+}
+.final.epic-in .final-description{
+  visibility:visible;
+  animation:epicRise 1.05s cubic-bezier(.16,1,.3,1) .95s both;
+}
+.final.epic-in .showroom{
+  visibility:visible;
+  animation:epicCard 1.15s cubic-bezier(.16,1,.3,1) calc(.72s + var(--i) * .13s) both;
+}
+.final.epic-in .showroom::after{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.14) 48%,transparent 66%);
+  transform:translateX(-130%);
+  animation:epicSheen 1.1s cubic-bezier(.16,1,.3,1) calc(1.05s + var(--i) * .13s) both;
+}
+.final.epic-in .final-footer{
+  visibility:visible;
+  animation:epicRise 1s cubic-bezier(.16,1,.3,1) 1.35s both;
+}
+
+@keyframes epicBeam{
+  0%{opacity:0;clip-path:inset(0 49.2% 100% 49.2%);filter:blur(8px)}
+  28%{opacity:.95;clip-path:inset(0 49% 8% 49%);filter:blur(0)}
+  58%{opacity:.7;clip-path:inset(0 18% 0 18%)}
+  100%{opacity:0;clip-path:inset(0 0 0 0);filter:blur(2px)}
+}
+@keyframes epicEyebrow{
+  0%{opacity:0;letter-spacing:.55em;transform:translate3d(0,-18px,0);filter:blur(6px)}
+  100%{opacity:1;letter-spacing:3px;transform:none;filter:none}
+}
+@keyframes epicWord{
+  0%{opacity:0;transform:translate3d(0,118%,0) scale(.96);filter:blur(10px);clip-path:inset(100% 0 0 0)}
+  55%{filter:blur(0)}
+  100%{opacity:1;transform:none;filter:none;clip-path:inset(0 0 0 0)}
+}
+@keyframes epicRise{
+  0%{opacity:0;transform:translate3d(0,28px,0);filter:blur(8px)}
+  100%{opacity:1;transform:none;filter:none}
+}
+@keyframes epicCard{
+  0%{
+    opacity:0;
+    transform:translate3d(72px,18px,0) scale(.92);
+    filter:blur(12px) brightness(1.35);
+    clip-path:inset(0 0 0 100%);
+  }
+  55%{filter:blur(0) brightness(1.08)}
+  100%{
+    opacity:1;
+    transform:none;
+    filter:none;
+    clip-path:inset(0 0 0 0);
+  }
+}
+@keyframes epicSheen{to{transform:translateX(125%)}}
+
+@media(max-width:760px){
+  @keyframes epicCard{
+    0%{
+      opacity:0;
+      transform:translate3d(0,40px,0) scale(.94);
+      filter:blur(10px) brightness(1.25);
+      clip-path:inset(100% 0 0 0);
+    }
+    100%{
+      opacity:1;
+      transform:none;
+      filter:none;
+      clip-path:inset(0 0 0 0);
+    }
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .final-beam{display:none}
+  .final.from-story .final-eyebrow,
+  .final.from-story .final-description,
+  .final.from-story .final-copy h2 .w>span,
+  .final.from-story .showroom,
+  .final.from-story .final-footer{
+    opacity:1!important;visibility:visible!important;filter:none!important;transform:none!important;animation:none!important;clip-path:none!important
+  }
 }
 @keyframes riseBlur{from{opacity:0;transform:translateY(22px);filter:blur(8px)}}
 @keyframes eyebrowIn{from{opacity:0;letter-spacing:10px;filter:blur(4px)}}

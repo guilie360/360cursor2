@@ -155,7 +155,7 @@
     stage.classList.remove('is-landing', 'is-loading');
     var fin = document.getElementById('demo');
     if (fin) {
-      fin.classList.remove('is-landing', 'is-settled', 'from-story');
+      fin.classList.remove('is-landing', 'is-settled', 'from-story', 'epic-in');
       fin.style.removeProperty('--land');
     }
     var dots = $('scrollDots');
@@ -434,7 +434,9 @@
     var fin = document.getElementById('demo');
     if (fin) {
       paintDemoBgFromLastFrame(fin);
+      /* Contenido oculto aquí: la entrada épica corre en commitToDemo */
       fin.classList.add('in', 'from-story', 'is-landing');
+      fin.classList.remove('epic-in', 'is-settled');
       fin.setAttribute('aria-hidden', 'false');
     }
     var dots = $('scrollDots'), hint = $('scrollHintStory');
@@ -443,7 +445,15 @@
     applyLand(landP);
   }
 
-  /* Un solo commit atómico a #demo: evita stage sticky + franja negra + reinicio */
+  function playEpicIn(fin) {
+    if (!fin) return;
+    fin.classList.remove('epic-in');
+    /* reflow para reiniciar keyframes */
+    void fin.offsetWidth;
+    fin.classList.add('epic-in');
+  }
+
+  /* Un solo commit atómico a #demo + entrada épica desde el haz de luz */
   function commitToDemo() {
     ignoreScrollEnter = true;
     goToken++;
@@ -481,12 +491,12 @@
     document.body.scrollTop = top;
     try { history.replaceState(null, '', '#demo'); } catch (e) {}
 
-    /* Re-afirma 2 frames: layout post-unlock a veces mueve el scroll */
     requestAnimationFrame(function () {
       scrollTo({ top: top, left: 0, behavior: 'instant' });
-      document.documentElement.scrollTop = top;
-      document.body.scrollTop = top;
-      if (fin) paintDemoBgFromLastFrame(fin);
+      if (fin) {
+        paintDemoBgFromLastFrame(fin);
+        playEpicIn(fin);
+      }
       requestAnimationFrame(function () {
         scrollTo({ top: stableDemoTop(), left: 0, behavior: 'instant' });
         clampToDemoEnd();
@@ -502,29 +512,25 @@
 
   function animateLandToEnd() {
     if (mode === 'free') {
+      var fin0 = document.getElementById('demo');
+      if (fin0 && !fin0.classList.contains('epic-in')) playEpicIn(fin0);
       commitToDemo();
       return;
     }
     if (busy && mode === 'land') return;
-    if (mode !== 'land') beginLand(Math.max(0.05, landP));
+    if (mode !== 'land') beginLand(0);
 
     var token = ++goToken;
     busy = true;
     gestureArmed = false;
     ignoreScrollEnter = true;
-    var from = landP;
-    var t0 = performance.now();
-    var dur = reduce ? 160 : 720;
-    (function step(now) {
+    /* Beat corto sobre el último frame; luego sale el copy desde la luz */
+    var hold = reduce ? 60 : 220;
+    setTimeout(function () {
       if (token !== goToken) return;
-      var u = Math.min(1, (now - t0) / dur);
-      applyLand(from + (1 - from) * ease(u));
-      if (u < 1) requestAnimationFrame(step);
-      else {
-        busy = false;
-        commitToDemo();
-      }
-    })(t0);
+      busy = false;
+      commitToDemo();
+    }, hold);
   }
 
   function finishLand() {
@@ -671,7 +677,7 @@
     document.documentElement.classList.remove('landing-ended');
     document.body.classList.remove('landing-ended');
     var fin = document.getElementById('demo');
-    if (fin) fin.classList.remove('is-settled', 'is-landing');
+    if (fin) fin.classList.remove('is-settled', 'is-landing', 'epic-in');
     mode = 'exp';
     freeEntered = false;
     cur = stops.length - 1;
