@@ -339,12 +339,63 @@ body.scroll-story-reveal .scroll-stage-inner{
 .final.in .showroom{animation:showroomIn 1.2s var(--ease) calc(.55s + var(--i)*.15s) backwards,showroomFloat 6s ease-in-out calc(2s + var(--i)*.35s) infinite}
 .final.in .showroom::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.1) 50%,transparent 65%);transform:translateX(-120%);animation:sheen 1.5s var(--ease) calc(1.05s + var(--i)*.15s) 1 forwards}
 
-/* Fin de landing en #demo: sin overscroll que dispare bucles */
+/* Fin de landing en #demo: sin overscroll / sin stage sticky fantasma */
 html.landing-ended,body.landing-ended{
   overscroll-behavior:none;
-}
-html.landing-ended{
   overscroll-behavior-y:none;
+}
+html.landing-ended .scroll-stage-inner,
+body.landing-ended .scroll-stage-inner{
+  visibility:hidden!important;
+  pointer-events:none!important;
+  opacity:0!important;
+}
+html.landing-ended .final,
+body.landing-ended .final,
+.final.from-story.is-settled{
+  height:100svh!important;
+  height:100dvh!important;
+  min-height:100svh!important;
+  max-height:100dvh;
+  padding:clamp(72px,10vh,120px) 0 calc(var(--float-safe) + 28px)!important;
+  background:#0a0a0a!important;
+  overflow:hidden;
+}
+html.landing-ended .final-bg,
+.final.from-story .final-bg,
+.final.is-settled .final-bg{
+  opacity:1!important;
+  transform:none!important;
+  transition:none!important;
+  z-index:0;
+  inset:0;
+}
+html.landing-ended .final-content,
+html.landing-ended .final-footer,
+.final.is-settled .final-content,
+.final.is-settled .final-footer{
+  position:relative;
+  z-index:2;
+  opacity:1!important;
+  visibility:visible!important;
+}
+html.landing-ended .final-eyebrow,
+html.landing-ended .final-description,
+html.landing-ended .final-copy h2,
+html.landing-ended .final-copy h2 .w>span,
+html.landing-ended .showroom,
+html.landing-ended .final-footer,
+.final.is-settled .final-eyebrow,
+.final.is-settled .final-description,
+.final.is-settled .final-copy h2 .w>span,
+.final.is-settled .showroom,
+.final.is-settled .final-footer{
+  opacity:1!important;
+  transform:none!important;
+  filter:none!important;
+  animation:none!important;
+  transition:none!important;
+  visibility:visible!important;
 }
 
 /* Aterrizaje story→demo: último frame queda fijo; el copy/botones nacen con --land */
@@ -361,7 +412,8 @@ body.scroll-story-landing .scroll-stage-inner{
   pointer-events:none;
 }
 .final.is-landing .final-bg{
-  opacity:0!important; /* el canvas del story es el fondo match */
+  /* Durante el land el canvas es el fondo; al commitToDemo el bg ya está pintado */
+  opacity:0!important;
   transition:none!important;
 }
 .final.is-landing .final-content,
@@ -399,7 +451,7 @@ body.scroll-story-landing .scroll-stage-inner{
 .final.is-landing .showroom:nth-child(2){opacity:calc(var(--land) * 1.15 - .15)}
 .final.is-landing .showroom:nth-child(3){opacity:calc(var(--land) * 1.25 - .25)}
 /* Tras aterrizar desde story: fondo ya match, sin zoom de entrada */
-.final.from-story .final-bg{
+.final.from-story:not(.is-landing) .final-bg{
   opacity:1;
   transform:none;
   transition:none;

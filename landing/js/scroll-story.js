@@ -155,7 +155,7 @@
     stage.classList.remove('is-landing', 'is-loading');
     var fin = document.getElementById('demo');
     if (fin) {
-      fin.classList.remove('is-landing');
+      fin.classList.remove('is-landing', 'is-settled', 'from-story');
       fin.style.removeProperty('--land');
     }
     var dots = $('scrollDots');
@@ -170,14 +170,19 @@
 
   function clampToDemoEnd() {
     var fin = document.getElementById('demo');
-    if (!fin) return;
-    var top = demoDocTop();
-    var maxY = Math.max(0, top + fin.offsetHeight - innerHeight);
+    if (!fin || mode !== 'free') return;
+    var top = stableDemoTop();
+    var maxY = Math.max(top, top + fin.offsetHeight - innerHeight);
     var y = scrollY || window.pageYOffset || 0;
     if (y > maxY + 1) {
       scrollTo({ top: maxY, left: 0, behavior: 'instant' });
       document.documentElement.scrollTop = maxY;
       document.body.scrollTop = maxY;
+    } else if (y < top - 1 && document.documentElement.classList.contains('landing-ended')) {
+      /* No dejar que la inercia suba al stage sticky (franja negra / reinicio) */
+      scrollTo({ top: top, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = top;
+      document.body.scrollTop = top;
     }
   }
 
@@ -374,28 +379,6 @@
     }
   }
 
-  function animateLandToEnd() {
-    if (mode === 'free') return;
-    if (mode !== 'land') beginLand(Math.max(0.04, landP));
-    if (busy && mode === 'land') return;
-    var token = ++goToken;
-    busy = true;
-    gestureArmed = false;
-    var from = landP;
-    var t0 = performance.now();
-    var dur = reduce ? 180 : 850;
-    (function step(now) {
-      if (token !== goToken) return;
-      var u = Math.min(1, (now - t0) / dur);
-      applyLand(from + (1 - from) * ease(u));
-      if (u < 1) requestAnimationFrame(step);
-      else {
-        busy = false;
-        finishLand();
-      }
-    })(t0);
-  }
-
   function lastFrameName() {
     return 'f_' + String(TOTAL).padStart(4, '0') + '.webp';
   }
@@ -406,9 +389,12 @@
     if (!bg) return;
     var url = frameUrl(lastFrameName());
     bg.style.backgroundImage =
-      'linear-gradient(rgba(8,8,8,.28),rgba(8,8,8,.55)), url("' + url + '")';
+      'linear-gradient(rgba(8,8,8,.22),rgba(8,8,8,.48)), url("' + url + '")';
     bg.style.backgroundSize = 'cover';
     bg.style.backgroundPosition = 'center';
+    bg.style.backgroundRepeat = 'no-repeat';
+    bg.style.opacity = '1';
+    bg.style.transform = 'none';
   }
 
   function applyLand(p) {
@@ -417,16 +403,21 @@
     document.body.style.setProperty('--land', String(landP));
     var fin = document.getElementById('demo');
     if (fin) fin.style.setProperty('--land', String(landP));
-    /* Mantener último frame detrás; el contenido demo entra con --land */
     cur = stops.length - 1;
     curT = stops[cur].t;
     stillA = 0; stillIdx = -1; lastKey = '';
     render();
   }
 
+  function stableDemoTop() {
+    var introEl = document.getElementById('inicio');
+    var a = introEl ? introEl.offsetHeight : innerHeight;
+    var b = section ? section.offsetHeight : innerHeight;
+    return Math.max(0, Math.round(a + b));
+  }
+
   function beginLand(seed) {
     if (mode === 'land' || mode === 'free') return;
-    goToken++;
     busy = false;
     scrubbing = false;
     mode = 'land';
@@ -452,53 +443,92 @@
     applyLand(landP);
   }
 
-  function finishLand() {
-    if (mode === 'free') return;
+  /* Un solo commit atómico a #demo: evita stage sticky + franja negra + reinicio */
+  function commitToDemo() {
     ignoreScrollEnter = true;
     goToken++;
     busy = false;
     scrubbing = false;
+    gestureArmed = false;
+    gestureAcc = 0;
     mode = 'free';
     freeEntered = true;
     landP = 1;
-    applyLand(1);
-    hideTexts();
-    setRevealUi(false);
 
     var fin = document.getElementById('demo');
-    /* Top del demo ANTES de quitar el pin */
-    var top = 0;
-    if (fin) {
-      top = Math.round(fin.getBoundingClientRect().top + (scrollY || 0));
-      if (!isFinite(top) || top < innerHeight) {
-        top = (section.offsetTop || 0) + (section.offsetHeight || innerHeight);
-      }
-    }
-
-    unlockPage();
+    hideTexts();
+    setRevealUi(false);
     setStoryUi(false);
+
     document.documentElement.classList.remove('scroll-story-landing');
     document.body.classList.remove('scroll-story-landing');
+    stage.classList.remove('is-landing', 'is-loading');
     document.documentElement.classList.add('landing-ended');
     document.body.classList.add('landing-ended');
-    stage.classList.remove('is-landing', 'is-loading');
-
-    scrollTo({ top: Math.max(0, top), left: 0, behavior: 'instant' });
-    document.documentElement.scrollTop = Math.max(0, top);
-    document.body.scrollTop = Math.max(0, top);
 
     if (fin) {
-      fin.classList.add('in', 'from-story');
-      fin.classList.remove('is-landing');
       paintDemoBgFromLastFrame(fin);
-      try { history.replaceState(null, '', '#demo'); } catch (e) {}
+      fin.classList.add('in', 'from-story', 'is-settled');
+      fin.classList.remove('is-landing');
+      fin.style.setProperty('--land', '1');
+      fin.setAttribute('aria-hidden', 'false');
     }
-    /* Mantener ignore más tiempo para matar inercia del trackpad que reabría el story */
+
+    var top = stableDemoTop();
+    unlockPage();
+    scrollTo({ top: top, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = top;
+    document.body.scrollTop = top;
+    try { history.replaceState(null, '', '#demo'); } catch (e) {}
+
+    /* Re-afirma 2 frames: layout post-unlock a veces mueve el scroll */
+    requestAnimationFrame(function () {
+      scrollTo({ top: top, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = top;
+      document.body.scrollTop = top;
+      if (fin) paintDemoBgFromLastFrame(fin);
+      requestAnimationFrame(function () {
+        scrollTo({ top: stableDemoTop(), left: 0, behavior: 'instant' });
+        clampToDemoEnd();
+      });
+    });
+
     setTimeout(function () {
       clampToDemoEnd();
       ignoreScrollEnter = false;
-      resize();
-    }, 420);
+      gestureArmed = true;
+    }, 500);
+  }
+
+  function animateLandToEnd() {
+    if (mode === 'free') {
+      commitToDemo();
+      return;
+    }
+    if (busy && mode === 'land') return;
+    if (mode !== 'land') beginLand(Math.max(0.05, landP));
+
+    var token = ++goToken;
+    busy = true;
+    gestureArmed = false;
+    ignoreScrollEnter = true;
+    var from = landP;
+    var t0 = performance.now();
+    var dur = reduce ? 160 : 720;
+    (function step(now) {
+      if (token !== goToken) return;
+      var u = Math.min(1, (now - t0) / dur);
+      applyLand(from + (1 - from) * ease(u));
+      if (u < 1) requestAnimationFrame(step);
+      else {
+        busy = false;
+        commitToDemo();
+      }
+    })(t0);
+  }
+
+  function finishLand() {
+    commitToDemo();
   }
 
   function parkAtSection() {
@@ -640,6 +670,8 @@
     ignoreScrollEnter = true;
     document.documentElement.classList.remove('landing-ended');
     document.body.classList.remove('landing-ended');
+    var fin = document.getElementById('demo');
+    if (fin) fin.classList.remove('is-settled', 'is-landing');
     mode = 'exp';
     freeEntered = false;
     cur = stops.length - 1;
@@ -680,8 +712,10 @@
       var fin = document.getElementById('demo');
       if (!fin) return;
       var y = scrollY || window.pageYOffset || 0;
-      var top = demoDocTop();
-      var maxY = Math.max(0, top + fin.offsetHeight - innerHeight);
+      var top = document.documentElement.classList.contains('landing-ended')
+        ? stableDemoTop()
+        : demoDocTop();
+      var maxY = Math.max(top, top + fin.offsetHeight - innerHeight);
       /* Fin de landing: no hay más scroll hacia abajo */
       if (e.deltaY > 0 && y >= maxY - 2) {
         e.preventDefault();
