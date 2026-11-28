@@ -1,17 +1,18 @@
 /**
- * Scroll-story entre portada y demo: un gesto = un tramo con texto.
- * Frames desde Bunny CDN. No toca #inicio ni #demo.
+ * Scroll-story entre portada y demo.
+ * Reveal continuo portada→stage, luego holds. Frames: Bunny (VIDEO FINAL).
  */
 (function () {
   'use strict';
 
   var stage = document.getElementById('scrollStage');
   var section = document.getElementById('servicio') || stage;
+  var introSec = document.getElementById('inicio');
   var cv = document.getElementById('scrollCv');
   if (!stage || !cv) return;
 
   var FPS = 30;
-  var TOTAL = 615;
+  var TOTAL = 546; /* VIDEO FINAL ~18.2s @ 30fps */
   var SPEED = 0.85;
   var MIN_DUR = 1.6;
   var MAX_DUR = 6.5;
@@ -19,6 +20,7 @@
   var EASE = 0.6;
   var COOLDOWN = 700;
   var GAP = 140;
+  var REVEAL_GAIN = 0.00155; /* sensibilidad del scrub portada→story */
   var CDN = 'https://boxies.b-cdn.net/landing/scroll';
 
   var HOLDS = [
@@ -27,8 +29,8 @@
     { t: 3.8, title: 'Pero ya puedes venderlo.', sub: 'Con sus acabados y materiales' },
     { t: 5.97, title: 'Cada espacio, para recorrerlo.', sub: 'Recorrido 360° interactivo' },
     { t: 8.2, title: 'Amoblado, para que se imaginen viviendo ahí.', sub: 'Con el estilo que elijas' },
-    { t: 15.2, title: 'Todo en un showroom interactivo.', sub: 'Para mostrarlo desde cualquier dispositivo' },
-    { t: 20.4, final: true }
+    { t: 13.8, title: 'Todo en un showroom interactivo.', sub: 'Para mostrarlo desde cualquier dispositivo' },
+    { t: 18.0, final: true }
   ];
 
   var MOTION = [0.06,0.14,0.24,0.38,0.55,0.75,1,1,1,1,1,1,1,1,1,1,1,1,1,0.99,0.78,0.59,0.43,0.27,0.15,0.07,0.04,0.08,0.08,0.07,0.07,0.06,0.06,0.06,0.06,0.06,0.03,0.03,0.04,0.05,0.06,0.07,0.08,0.08,0.09,0.1,0.11,0.11,0.12,0.14,0.17,0.19,0.22,0.24,0.25,0.28,0.34,0.38,0.46,0.51,0.58,0.65,0.77,0.81,0.86,0.86,0.85,0.82,0.75,0.66,0.57,0.44,0.38,0.32,0.28,0.26,0.22,0.24,0.25,0.29,0.29,0.3,0.27,0.25,0.24,0.21,0.19,0.16,0.13,0.12,0.12,0.12,0.12,0.11,0.11,0.1,0.11,0.1,0.1,0.08,0.07,0.07,0.06,0.06,0.06,0.07,0.09,0.09,0.09,0.09,0.09,0.11,0.11,0.13,0.12,0.14,0.18,0.21,0.26,0.29,0.33,0.39,0.42,0.47,0.49,0.52,0.57,0.58,0.62,0.63,0.65,0.69,0.68,0.73,0.7,0.68,0.68,0.65,0.65,0.62,0.6,0.63,0.59,0.64,0.7,0.78,0.87,0.9,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0.9,0.8,0.75,0.63,0.58,0.47,0.39,0.34,0.28,0.26,0.22,0.19,0.2,0.22,0.25,0.28,0.33,0.37,0.45,0.51,0.58,0.65,0.69,0.83,0.88,0.92,0.96,0.96,1,1,1,0.96,0.84,0.82,0.77,0.68,0.6,0.49,0.46,0.44,0.42,0.42,0.37,0.4,0.41,0.43,0.43,0.4,0.42,0.4,0.38,0.37,0.34,0.34,0.32,0.31,0.3,0.26,0.26,0.24,0.22,0.2,0.17,0.17,0.15,0.14,0.12,0.1,0.09,0.08,0.08,0.07,0.04,0.04,0.06,0.05,0.05,0.05,0.05,0.05,0.05,0.06,0.07,0.06,0.08,0.07,0.09,0.11,0.13,0.16,0.15,0.19,0.22,0.27,0.33,0.31,0.36,0.4,0.44,0.51,0.47,0.49,0.51,0.53,0.62,0.55,0.58,0.63,0.71,0.87,0.8,0.9,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0.93,0.81,0.65,0.7,0.57,0.49,0.42,0.36,0.38,0.3,0.24,0.19,0.14,0.14,0.1,0.07,0.05,0.03,0.03,0.02,0.02,0.01,0.01,0.01,0.01,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.01,0.02,0.02,0.01,0.01,0.01,0.02,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.04,0.04,0.05,0.06,0.08,0.12,0.13,0.17,0.2,0.23,0.31,0.35,0.41,0.44,0.48,0.55,0.55,0.61,0.6,0.62,0.65,0.64,0.68,0.66,0.66,0.72,0.69,0.71,0.69,0.7,0.76,0.75,0.82,0.86,0.83,0.88,0.84,0.87,0.87,0.87,0.98,0.94,0.94,0.96,0.99,1,1,1,1,1,1,1,1,1,1,1,0.89,0.8,0.68,0.49,0.44,0.35,0.29,0.22,0.16,0.14,0.09,0.06,0.04,0.03,0.03,0.02,0.02,0.02,0.01,0.01,0.01,0.05,0.06,0.06,0.06,0.06,0.06,0.06,0.06,0.06,0.02,0.01,0.02,0.02,0.03,0.06,0.09,0.1,0.14,0.15,0.18,0.21,0.21,0.22,0.22,0.21,0.24,0.22,0.24,0.22,0.22,0.24,0.24,0.24,0.23,0.23,0.25,0.23,0.25,0.23,0.23,0.24,0.23,0.23,0.2,0.18,0.19,0.17,0.17,0.16,0.15,0.15,0.14,0.15,0.13,0.12,0.13,0.12,0.12,0.11,0.1,0.11,0.1,0.1,0.09,0.08,0.07,0.06,0.08,0.07,0.06,0.05,0.06,0.06,0.08,0.09,0.1,0.1,0.11,0.13,0.15,0.17,0.2,0.21,0.22,0.25,0.25,0.27,0.3,0.3,0.31,0.32,0.32,0.36,0.32,0.33,0.35,0.31,0.31,0.33,0.3,0.29,0.27,0.27,0.26,0.25,0.24,0.26,0.22,0.22,0.22,0.19,0.19,0.2,0.18,0.16,0.14,0.13,0.19,0.27,0.43,0.96,1,1,1,1,1,1,1,1,1,1,1,0.77,0.49,0.3,0.13,0.09,0.08,0.07,0.07,0.06,0.06,0.06,0.05,0.05,0.05,0.05,0.04,0.04,0.03,0.03,0.02,0.02,0.02,0.02,0.01,0.01];
@@ -83,11 +85,16 @@
   var mode = 'page', freeEntered = false, curT = 0, hintTimer = 0;
   var framesReady = false, entryReady = false, loading = false, loadPromise = null;
   var ignoreScrollEnter = false;
+  var revealP = 0, revealRaf = 0, revealTarget = 0;
 
   function frameUrl(name) { return CDN + '/' + dirName + '/' + name; }
   function setStoryUi(on) {
     document.documentElement.classList.toggle('scroll-story-active', !!on);
     document.body.classList.toggle('scroll-story-active', !!on);
+  }
+  function setRevealUi(on) {
+    document.documentElement.classList.toggle('scroll-story-reveal', !!on);
+    document.body.classList.toggle('scroll-story-reveal', !!on);
   }
   /* Ancla = #servicio (section). Nunca usar offsetTop del sticky inner (~0). */
   function sectionTop() {
@@ -99,6 +106,23 @@
       w: Math.max(1, Math.round((vv && vv.width) || innerWidth || document.documentElement.clientWidth || 1)),
       h: Math.max(1, Math.round((vv && vv.height) || innerHeight || document.documentElement.clientHeight || 1))
     };
+  }
+  function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+  function applyReveal(p) {
+    revealP = clamp01(p);
+    var e = smooth(revealP);
+    document.documentElement.style.setProperty('--reveal', String(revealP));
+    document.documentElement.style.setProperty('--reveal-e', String(e));
+    if (introSec) {
+      introSec.style.setProperty('--reveal', String(revealP));
+      introSec.style.setProperty('--reveal-e', String(e));
+    }
+    /* Primeros frames acompañan el reveal para que no sea un corte. */
+    if (entryReady) {
+      var tReveal = stops[0].t + (stops[1] ? (stops[1].t - stops[0].t) * 0.22 * e : 0);
+      curT = tReveal;
+      render();
+    }
   }
 
   function resize() {
@@ -196,7 +220,7 @@
 
   function go(dir) {
     if (!framesReady) { ensureFrames(); return; }
-    if (dir < 0 && cur === 0) { leaveToIntro(); return; }
+    if (dir < 0 && cur === 0) { startRevealOut(); return; }
     var next = cur + dir;
     if (next < 0) return;
     if (next >= stops.length) { exitToDemo(); return; }
@@ -225,32 +249,37 @@
     document.body.scrollTop = top;
   }
 
-  function enterExp() {
+  function finishRevealToExp() {
     if (mode === 'exp') return;
-    if (!entryReady) {
-      stage.classList.add('is-loading');
-      ensureFrames().then(function () { enterExp(); });
-      return;
-    }
     mode = 'exp';
     freeEntered = false;
+    setRevealUi(false);
     setStoryUi(true);
+    applyReveal(1);
     parkAtSection();
     lockPage();
     requestAnimationFrame(function () {
       resize();
+      cur = 0; curT = stops[0].t;
       arrivedAt = performance.now();
-      showStop(cur);
+      showStop(0);
       if (!framesReady) stage.classList.add('is-loading');
       else stage.classList.remove('is-loading');
     });
   }
 
-  function leaveToIntro() {
+  function finishRevealToPage() {
     ignoreScrollEnter = true;
-    mode = 'page'; freeEntered = false; busy = false; hideTexts();
+    mode = 'page';
+    freeEntered = false;
+    busy = false;
+    hideTexts();
     cur = 0; curT = stops[0].t; stillA = 0; stillIdx = -1; lastKey = '';
-    setStoryUi(false); unlockPage(); stage.classList.remove('is-loading');
+    setStoryUi(false);
+    setRevealUi(false);
+    applyReveal(0);
+    unlockPage();
+    stage.classList.remove('is-loading');
     scrollTo({ top: 0, left: 0, behavior: 'instant' });
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
@@ -262,8 +291,85 @@
     render();
   }
 
+  function scrubReveal(delta) {
+    if (mode !== 'reveal') return;
+    revealTarget = clamp01(revealTarget + delta * REVEAL_GAIN);
+    if (!revealRaf) {
+      revealRaf = requestAnimationFrame(function tickReveal() {
+        var d = revealTarget - revealP;
+        if (Math.abs(d) < 0.0015) {
+          applyReveal(revealTarget);
+          revealRaf = 0;
+        } else {
+          applyReveal(revealP + d * (reduce ? 1 : 0.22));
+          revealRaf = requestAnimationFrame(tickReveal);
+        }
+        if (revealP >= 0.995) {
+          revealRaf = 0;
+          applyReveal(1);
+          finishRevealToExp();
+        } else if (revealP <= 0.004 && revealTarget <= 0) {
+          revealRaf = 0;
+          applyReveal(0);
+          finishRevealToPage();
+        }
+      });
+    }
+  }
+
+  function startRevealIn() {
+    if (mode === 'reveal' || mode === 'exp') return;
+    if (!entryReady) {
+      stage.classList.add('is-loading');
+      ensureFrames().then(function () {
+        if (mode === 'page') startRevealIn();
+      });
+      return;
+    }
+    mode = 'reveal';
+    revealTarget = Math.max(revealP, 0.04);
+    setStoryUi(false);
+    setRevealUi(true);
+    lockPage();
+    parkAtSection();
+    requestAnimationFrame(function () {
+      resize();
+      applyReveal(revealP);
+      scrubReveal(80);
+    });
+  }
+
+  function startRevealOut() {
+    if (mode === 'page') return;
+    hideTexts();
+    setStoryUi(false);
+    mode = 'reveal';
+    revealTarget = Math.min(revealP || 1, 0.96);
+    revealP = Math.max(revealP, 0.92);
+    setRevealUi(true);
+    lockPage();
+    applyReveal(revealP);
+    scrubReveal(-120);
+  }
+
+  function enterExp() {
+    if (mode === 'exp') return;
+    if (!entryReady) {
+      stage.classList.add('is-loading');
+      ensureFrames().then(function () { enterExp(); });
+      return;
+    }
+    applyReveal(1);
+    finishRevealToExp();
+  }
+
+  function leaveToIntro() {
+    startRevealOut();
+  }
+
   function exitToDemo() {
-    mode = 'free'; freeEntered = false; hideTexts(); setStoryUi(false); unlockPage();
+    mode = 'free'; freeEntered = false; hideTexts();
+    setStoryUi(false); setRevealUi(false); applyReveal(0); unlockPage();
     stage.classList.remove('is-loading');
     var fin = document.getElementById('demo');
     if (fin) {
@@ -275,25 +381,19 @@
     requestAnimationFrame(resize);
   }
 
-  /* Desde portada: un gesto abajo = lock al stage (igual que un hold). */
-  function requestEnterFromPage() {
-    if (mode !== 'page') return;
-    if (!entryReady) {
-      stage.classList.add('is-loading');
-      ensureFrames().then(function () { if (mode === 'page') enterExp(); });
-      return;
-    }
-    enterExp();
-  }
-
   function onWheel(e) {
     var now = performance.now(), gap = now - lastWheel; lastWheel = now;
     if (mode === 'free') return;
     if (mode === 'page') {
       if (e.deltaY > 0) {
         e.preventDefault();
-        requestEnterFromPage();
+        startRevealIn();
       }
+      return;
+    }
+    if (mode === 'reveal') {
+      e.preventDefault();
+      scrubReveal(e.deltaY);
       return;
     }
     e.preventDefault();
@@ -301,22 +401,28 @@
     go(e.deltaY > 0 ? 1 : -1);
   }
 
-  var ty0 = null, tDone = false;
-  function onTouchStart(e) { ty0 = e.touches[0].clientY; tDone = false; }
+  var ty0 = null, tDone = false, tAcc = 0;
+  function onTouchStart(e) { ty0 = e.touches[0].clientY; tDone = false; tAcc = 0; }
   function onTouchMove(e) {
     if (mode === 'free') return;
+    if (ty0 == null) return;
+    var dy = ty0 - e.touches[0].clientY;
     if (mode === 'page') {
-      if (ty0 == null) return;
-      var dy0 = ty0 - e.touches[0].clientY;
-      if (dy0 > 36) {
+      if (dy > 28) {
         e.preventDefault();
-        if (!tDone) { tDone = true; requestEnterFromPage(); }
+        if (!tDone) { tDone = true; startRevealIn(); }
       }
       return;
     }
+    if (mode === 'reveal') {
+      e.preventDefault();
+      var step = dy - tAcc;
+      tAcc = dy;
+      scrubReveal(step * 1.8);
+      return;
+    }
     e.preventDefault();
-    if (tDone || busy || ty0 == null || performance.now() - arrivedAt < COOLDOWN) return;
-    var dy = ty0 - e.touches[0].clientY;
+    if (tDone || busy || performance.now() - arrivedAt < COOLDOWN) return;
     if (Math.abs(dy) > 45) { tDone = true; go(dy > 0 ? 1 : -1); }
   }
 
@@ -325,8 +431,13 @@
     if (mode === 'page') {
       if (['ArrowDown', 'PageDown', ' '].indexOf(e.key) !== -1) {
         e.preventDefault();
-        requestEnterFromPage();
+        startRevealIn();
       }
+      return;
+    }
+    if (mode === 'reveal') {
+      if (['ArrowDown', 'PageDown', ' '].indexOf(e.key) !== -1) { e.preventDefault(); scrubReveal(140); }
+      else if (['ArrowUp', 'PageUp'].indexOf(e.key) !== -1) { e.preventDefault(); scrubReveal(-140); }
       return;
     }
     if (mode !== 'exp') return;
@@ -338,8 +449,7 @@
   function onScroll() {
     if (ignoreScrollEnter) return;
     if (mode === 'page') {
-      /* Barra de scroll: cualquier bajada desde portada entra al lock. */
-      if ((scrollY || 0) > 8) requestEnterFromPage();
+      if ((scrollY || 0) > 8) startRevealIn();
       return;
     }
     if (mode !== 'free') return;
@@ -347,7 +457,7 @@
     if (scrollY > st + innerHeight * 0.35) freeEntered = true;
     if (freeEntered && scrollY <= st + 4) {
       mode = 'page';
-      requestEnterFromPage();
+      startRevealIn();
     }
   }
 
@@ -406,7 +516,7 @@
     enterExp: enterExp,
     leaveToIntro: leaveToIntro,
     exitToDemo: exitToDemo,
-    isLocked: function () { return mode === 'exp'; },
+    isLocked: function () { return mode === 'exp' || mode === 'reveal'; },
     mode: function () { return mode; }
   };
 

@@ -15,7 +15,9 @@ button{font:inherit}
 :focus-visible{outline:1px solid var(--bronze);outline-offset:4px}
 
 /* HEADER — geometría en shared/css/site-chrome.css */
-.header-logo{appearance:none;-webkit-appearance:none;border:0;background:transparent;padding:0;cursor:pointer;pointer-events:none;opacity:0;will-change:opacity,transform}
+/* Portada: sin logo arriba-izquierda (solo el del centro). Aparece al entrar al story. */
+.header-logo{appearance:none;-webkit-appearance:none;border:0;background:transparent;padding:0;cursor:pointer;pointer-events:none;opacity:0;visibility:hidden;will-change:opacity,transform}
+body.scroll-story-active .header-logo{opacity:1;visibility:visible;pointer-events:auto}
 .mag{transition:transform .35s var(--ease)}
 /* Fullscreen: arriba-izquierda (espejo del menú; posición en shared/safe-area.css) */
 .fullscreen-toggle{
@@ -31,7 +33,14 @@ body:has(.page-transit.on) .fullscreen-toggle{
   opacity:0!important;visibility:hidden;pointer-events:none;
 }
 /* INTRO */
-.intro{height:100svh;min-height:650px;display:flex;align-items:center;justify-content:center;text-align:center;position:relative;padding:100px 24px var(--float-safe)}
+.intro{
+  --reveal:0;--reveal-e:0;
+  height:100svh;height:100dvh;min-height:100svh;
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  position:relative;padding:100px 24px var(--float-safe);
+  z-index:5;isolation:isolate;
+  will-change:transform,opacity,filter;
+}
 .intro-content{max-width:850px;will-change:opacity,transform}
 .intro-content>*{animation:appear 1.1s var(--ease) backwards}
 .intro-logo{display:block;width:clamp(100px,10vw,132px);height:clamp(100px,10vw,132px);object-fit:contain;margin:0 auto 30px}
@@ -40,7 +49,26 @@ body:has(.page-transit.on) .fullscreen-toggle{
 .scroll-hint{position:absolute;bottom:calc(var(--float-safe) + 8px);left:50%;transform:translateX(-50%);color:rgba(238,234,228,.45);font-size:9px;letter-spacing:3px;text-transform:uppercase;white-space:nowrap}
 .scroll-hint::after{content:"";display:block;height:34px;width:1px;margin:13px auto 0;background:linear-gradient(var(--bronze),transparent);animation:lineMove 1.8s infinite}
 
-/* SCROLL STORY — solo #servicio (portada y demo intactos) */
+/* Reveal: la portada sube y se disuelve; el stage se abre desde una franja */
+html.scroll-story-reveal .intro,
+body.scroll-story-reveal .intro{
+  position:fixed;inset:0;z-index:26;pointer-events:none;
+  transform:
+    translate3d(0, calc(var(--reveal-e) * -42vh), 0)
+    scale(calc(1 - var(--reveal-e) * .14));
+  opacity:calc(1 - var(--reveal-e) * 1.05);
+  filter:blur(calc(var(--reveal-e) * 16px)) brightness(calc(1 - var(--reveal-e) * .35));
+}
+html.scroll-story-reveal .intro .scroll-hint{opacity:calc(1 - var(--reveal) * 3)}
+html.scroll-story-reveal .intro::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:
+    radial-gradient(ellipse at 50% 62%, rgba(141,125,105,.18), transparent 55%),
+    linear-gradient(to top, rgba(10,10,10,.55), transparent 40%);
+  opacity:var(--reveal-e);
+}
+
+/* SCROLL STORY — solo #servicio (demo intacto; portada participa en reveal) */
 html.scroll-story-lock,body.scroll-story-lock{
   overflow:hidden!important;
   overscroll-behavior:none;
@@ -51,15 +79,32 @@ html.scroll-story-lock,body.scroll-story-lock{
 .scroll-stage-inner{position:sticky;top:0;height:100svh;height:100dvh;overflow:hidden;touch-action:none}
 /* Pin fullscreen: el section sigue en flujo como spacer; el inner cubre el viewport */
 html.scroll-story-lock .scroll-stage-inner,
-body.scroll-story-lock .scroll-stage-inner{
+body.scroll-story-lock .scroll-stage-inner,
+html.scroll-story-reveal .scroll-stage-inner,
+body.scroll-story-reveal .scroll-stage-inner{
   position:fixed;
   inset:0;
-  z-index:20; /* debajo del chrome (logo/menú ~40+) */
+  z-index:20; /* debajo del chrome (logo/menú ~40+) y del intro en reveal */
   width:100%;
   height:100%;
   height:100dvh;
   min-height:100svh;
   max-height:100%;
+}
+html.scroll-story-reveal .scroll-stage-inner,
+body.scroll-story-reveal .scroll-stage-inner{
+  z-index:22;
+  transform:scale(calc(1.1 - var(--reveal-e) * .1));
+  transform-origin:50% 60%;
+  clip-path: inset(
+    calc((1 - var(--reveal-e)) * 46%)
+    calc((1 - var(--reveal-e)) * 8%)
+    calc((1 - var(--reveal-e)) * 18%)
+    calc((1 - var(--reveal-e)) * 8%)
+    round calc((1 - var(--reveal-e)) * 28px)
+  );
+  filter:saturate(calc(.7 + var(--reveal-e) * .3)) brightness(calc(.82 + var(--reveal-e) * .18));
+  opacity:calc(.25 + var(--reveal-e) * .75);
 }
 .scroll-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
 .scroll-shade,.scroll-scrim{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:2}

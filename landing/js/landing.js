@@ -19,38 +19,27 @@ if('scrollRestoration' in history) history.scrollRestoration='manual';
 const intro=$('.intro-content'),hint=$('.scroll-hint'),hl=$('.header-logo');
 const storyActive=()=>!!document.body.classList.contains('scroll-story-active')||!!window.BoxiesScrollStory?.isLocked?.();
 
-/* Portada: fade del intro (la animación de servicio vive en scroll-story.js) */
-const tgt={intro:0},cur={intro:0};let raf=0;
-function read(){
-  if(storyActive()){
-    if(hl){hl.style.opacity='1';hl.style.pointerEvents='auto';hl.style.transform='none'}
-    return;
+/* Portada: el reveal lo maneja scroll-story.js (sin logo top-left en intro). */
+function syncHeaderLogo(){
+  if(!hl) return;
+  if(storyActive() && document.body.classList.contains('scroll-story-active')){
+    hl.style.opacity='1';
+    hl.style.visibility='visible';
+    hl.style.pointerEvents='auto';
+    hl.style.transform='none';
+  }else{
+    hl.style.opacity='0';
+    hl.style.visibility='hidden';
+    hl.style.pointerEvents='none';
   }
-  const vh=innerHeight;
-  tgt.intro=clamp(scrollY/(vh*.7));
-  if(!raf)raf=requestAnimationFrame(tick);
 }
-function tick(){
-  let busy=false;const k=reduce?1:.14;
-  for(const key in tgt){const d=tgt[key]-cur[key];if(Math.abs(d)>.0004){cur[key]+=d*k;busy=true}else cur[key]=tgt[key]}
-  render();raf=busy?requestAnimationFrame(tick):0;
-}
-function render(){
-  if(!intro||!hint||!hl) return;
-  const pi=cur.intro,hv=ss(.55,1,pi);
-  intro.style.opacity=1-ss(0,.8,pi);
-  intro.style.transform=`translateY(${-90*pi}px) scale(${1-.06*pi})`;
-  hint.style.opacity=1-ss(0,.25,pi);
-  hl.style.opacity=hv;hl.style.transform=`translateY(${-12*(1-hv)}px)`;hl.style.pointerEvents=hv>.5?'auto':'none';
-}
+function read(){ syncHeaderLogo(); }
+function snapScrollState(){ syncHeaderLogo(); }
 addEventListener('scroll',read,{passive:true});addEventListener('resize',read);read();
-
-function snapScrollState(){
-  read();
-  cur.intro=tgt.intro;
-  if(raf){cancelAnimationFrame(raf);raf=0;}
-  render();
-}
+/* Observa clases del story para mostrar/ocultar logo header */
+const mo=new MutationObserver(syncHeaderLogo);
+mo.observe(document.body,{attributes:true,attributeFilter:['class']});
+mo.observe(document.documentElement,{attributes:true,attributeFilter:['class']});
 function sectionTop(el){
   if(!el) return 0;
   const y=el.getBoundingClientRect().top+scrollY;
