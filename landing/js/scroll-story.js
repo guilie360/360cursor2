@@ -19,9 +19,10 @@
   var SLOW = 3;
   var EASE = 0.55;
   var REVEAL_GAIN = 0.0028; /* portada→story */
-  var COOLDOWN = 300; /* ms en el imán B antes de aceptar otro gesto */
-  var GESTURE_THRESH = 26; /* delta acumulado para disparar A→B (trackpad-friendly) */
-  var GESTURE_RESET = 110; /* silencio = fin del gesto */
+  var READ_DWELL = 1050; /* ms mínimos en un hold CON texto (imán de lectura) */
+  var READ_DWELL_EMPTY = 220; /* hold sin copy (puerta) */
+  var GESTURE_THRESH = 34; /* un flick suave basta; no hay que “hacerle duro” */
+  var GESTURE_RESET = 160; /* silencio = fin del gesto / limpia inercia */
   /* v2 = frames de VIDEO FINAL PARA LANGIND (ruta nueva para evitar cache del CapCut viejo) */
   var CDN = 'https://boxies.b-cdn.net/landing/scroll/v2';
 
@@ -91,6 +92,7 @@
   var goToken = 0, scrubbing = false;
   var landP = 0;
   var gestureAcc = 0, gestureTimer = 0, gestureArmed = true;
+  var inertiaIgnoreUntil = 0;
 
   function frameUrl(name) { return CDN + '/' + dirName + '/' + name; }
   function setStoryUi(on) {
@@ -262,6 +264,16 @@
     dotEls.forEach(function (d, i) { if (d) d.classList.toggle('on', i === k); });
   }
 
+  function armMagnet(k) {
+    var st = stops[k] || {};
+    var dwell = (st.title || st.final) ? READ_DWELL : READ_DWELL_EMPTY;
+    if (reduce) dwell = Math.min(dwell, 180);
+    arrivedAt = performance.now();
+    inertiaIgnoreUntil = arrivedAt + dwell;
+    gestureArmed = false;
+    gestureAcc = 0;
+  }
+
   function showStop(k) {
     var st = stops[k];
     msgEls.forEach(function (el, i) { if (el) el.classList.toggle('on', i === k); });
@@ -271,9 +283,12 @@
     updateDots(k);
     clearTimeout(hintTimer);
     if (hint) {
+      hint.classList.remove('on');
+      /* El hint aparece cuando ya se puede soltar el imán */
+      var dwell = (st.title || st.final) ? READ_DWELL : READ_DWELL_EMPTY;
       hintTimer = setTimeout(function () {
         if (!busy && mode === 'exp') hint.classList.add('on');
-      }, k === 0 ? 400 : 900);
+      }, Math.max(200, dwell - 80));
     }
     try { history.replaceState(null, '', '#servicio'); } catch (e) {}
     render();
@@ -328,8 +343,8 @@
       render();
       if (u < 1) requestAnimationFrame(step);
       else {
-        cur = to; busy = false; arrivedAt = performance.now(); curT = targetT;
-        gestureArmed = true; gestureAcc = 0;
+        cur = to; busy = false; curT = targetT;
+        armMagnet(to);
         showStop(to); if (to > 0) fadeStill(to);
       }
     })(t0);
@@ -347,13 +362,12 @@
     goToHold(next, false);
   }
 
-  /* Un gesto (rueda/trackpad/swipe) = un tramo A→B con imán en B */
+  /* Un gesto = un tramo A→B. En B: imán de lectura (traga inercia), luego flick suave. */
   function noteGesture(delta) {
     if (mode === 'land') {
       if (busy) return;
       if (delta > 4) animateLandToEnd();
       else if (delta < -4 && landP < 0.35) {
-        /* volver al último hold */
         document.documentElement.classList.remove('scroll-story-landing');
         document.body.classList.remove('scroll-story-landing');
         stage.classList.remove('is-landing');
@@ -363,15 +377,26 @@
         landP = 0;
         cur = stops.length - 1;
         curT = stops[cur].t;
-        gestureArmed = true;
+        armMagnet(cur);
         showStop(cur);
       }
       return;
     }
     if (mode !== 'exp') return;
     if (busy) return;
+
     var now = performance.now();
-    if (!gestureArmed || now - arrivedAt < COOLDOWN) return;
+    /* Fase imán: se come la inercia del trackpad para que no se salte el texto */
+    if (now < inertiaIgnoreUntil) {
+      gestureAcc = 0;
+      gestureArmed = false;
+      return;
+    }
+
+    if (!gestureArmed) {
+      gestureArmed = true;
+      gestureAcc = 0;
+    }
 
     gestureAcc += delta;
     clearTimeout(gestureTimer);
@@ -380,6 +405,7 @@
     if (Math.abs(gestureAcc) >= GESTURE_THRESH) {
       var dir = gestureAcc > 0 ? 1 : -1;
       gestureAcc = 0;
+      gestureArmed = false;
       go(dir);
     }
   }
@@ -568,7 +594,7 @@
     requestAnimationFrame(function () {
       resize();
       render();
-      arrivedAt = performance.now();
+      armMagnet(0);
       showStop(0);
       if (!framesReady) stage.classList.add('is-loading');
       else stage.classList.remove('is-loading');
@@ -837,7 +863,7 @@
       return;
     }
     if (mode !== 'exp') return;
-    if (busy || performance.now() - arrivedAt < COOLDOWN) return;
+    if (busy || performance.now() < inertiaIgnoreUntil) return;
     if (['ArrowDown', 'PageDown', ' ', 'ArrowRight'].indexOf(e.key) !== -1) { e.preventDefault(); go(1); }
     else if (['ArrowUp', 'PageUp', 'ArrowLeft'].indexOf(e.key) !== -1) { e.preventDefault(); go(-1); }
   }
