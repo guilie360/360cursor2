@@ -309,6 +309,16 @@ a.portal-card,button.portal-card{appearance:none}
 }
 .login-password-toggle:hover{color:rgba(238,238,238,.9);background:rgba(255,255,255,.05)}
 .login-password-toggle svg{width:18px;height:18px;display:block}
+/* Volver a /login (Cliente ↔ Equipo) */
+.login-back-arrow{
+  display:flex;align-items:center;justify-content:center;
+  width:44px;height:44px;margin:28px auto 0;padding:0;
+  border:0;border-radius:50%;background:transparent;color:rgba(238,238,238,.38);
+  text-decoration:none;cursor:pointer;
+  transition:color .2s ease,background .2s ease,transform .2s ease
+}
+.login-back-arrow:hover{color:rgba(238,238,238,.88);background:rgba(255,255,255,.05);transform:translateY(2px)}
+.login-back-arrow svg{width:22px;height:22px;display:block}
 .login-field input:-webkit-autofill,
 .login-field input:-webkit-autofill:hover,
 .login-field input:-webkit-autofill:focus,
