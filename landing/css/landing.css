@@ -40,6 +40,12 @@ body:has(.page-transit.on) .fullscreen-toggle{
   position:relative;padding:100px 24px var(--float-safe);
   z-index:5;isolation:isolate;
   will-change:transform,opacity,filter;
+  /* El reveal lo maneja JS: evita que el scroll nativo deje la portada desfasada */
+  touch-action:none;
+}
+html.landing-ended .intro,
+body.landing-ended .intro{
+  touch-action:auto;
 }
 .intro-content{max-width:850px;will-change:opacity,transform}
 .intro-content>*{animation:appear 1.1s var(--ease) backwards}

@@ -18,7 +18,10 @@
   var MAX_DUR = 2.35;
   var SLOW = 3;
   var EASE = 0.55;
-  var REVEAL_GAIN = 0.0028; /* portada→story */
+  var REVEAL_GAIN = 0.0028; /* portada→story (wheel) */
+  var REVEAL_GAIN_TOUCH = 0.0052; /* touch: más directo, menos “pegado” */
+  var REVEAL_LERP = reduce ? 1 : 0.34; /* follow más vivo en móvil */
+  var REVEAL_SNAP = 0.4; /* al soltar el dedo: completa o vuelve */
   var READ_DWELL = 1050; /* ms mínimos en un hold CON texto (imán de lectura) */
   var READ_DWELL_EMPTY = 220; /* hold sin copy */
   var READ_DWELL_DOOR = 1100; /* imán en puerta cerrada (póster nítido) */
@@ -652,6 +655,13 @@
   function finishRevealToPage() {
     ignoreScrollEnter = true;
     goToken++;
+    cancelAnimationFrame(revealRaf);
+    revealRaf = 0;
+    /* Primero anclar scroll en 0 CON la portada aún fixed (reveal on) → sin desfase */
+    applyReveal(0);
+    scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
     mode = 'page';
     freeEntered = false;
     busy = false;
@@ -662,83 +672,104 @@
     cur = 0; curT = stops[0].t; stillA = 0; stillIdx = -1; lastKey = '';
     clearPortadaChrome();
     unlockPage();
-    scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
     try { history.replaceState(null, '', '#inicio'); } catch (e) {}
     requestAnimationFrame(function () {
+      scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
       resize();
       render();
+      syncPoster();
     });
-    setTimeout(function () { ignoreScrollEnter = false; }, 350);
+    setTimeout(function () { ignoreScrollEnter = false; }, 220);
   }
 
-  function scrubReveal(delta) {
+  function kickRevealTick() {
+    if (revealRaf) return;
+    revealRaf = requestAnimationFrame(function tickReveal() {
+      if (mode !== 'reveal') { revealRaf = 0; return; }
+      var d = revealTarget - revealP;
+      if (Math.abs(d) < 0.0015) {
+        applyReveal(revealTarget);
+        revealRaf = 0;
+      } else {
+        applyReveal(revealP + d * REVEAL_LERP);
+        revealRaf = requestAnimationFrame(tickReveal);
+      }
+      if (revealP >= 0.995) {
+        revealRaf = 0;
+        applyReveal(1);
+        finishRevealToExp();
+      } else if (revealP <= 0.004 && revealTarget <= 0.001) {
+        revealRaf = 0;
+        applyReveal(0);
+        finishRevealToPage();
+      }
+    });
+  }
+
+  function scrubReveal(delta, gain) {
     if (mode !== 'reveal') return;
-    revealTarget = clamp01(revealTarget + delta * REVEAL_GAIN);
-    if (!revealRaf) {
-      revealRaf = requestAnimationFrame(function tickReveal() {
-        var d = revealTarget - revealP;
-        if (Math.abs(d) < 0.0015) {
-          applyReveal(revealTarget);
-          revealRaf = 0;
-        } else {
-          applyReveal(revealP + d * (reduce ? 1 : 0.22));
-          revealRaf = requestAnimationFrame(tickReveal);
-        }
-        if (revealP >= 0.995) {
-          revealRaf = 0;
-          applyReveal(1);
-          finishRevealToExp();
-        } else if (revealP <= 0.004 && revealTarget <= 0) {
-          revealRaf = 0;
-          applyReveal(0);
-          finishRevealToPage();
-        }
-      });
+    var g = typeof gain === 'number' ? gain : REVEAL_GAIN;
+    revealTarget = clamp01(revealTarget + delta * g);
+    kickRevealTick();
+  }
+
+  function snapReveal() {
+    if (mode !== 'reveal') return;
+    if (revealP >= REVEAL_SNAP || revealTarget >= REVEAL_SNAP) {
+      revealTarget = 1;
+    } else {
+      revealTarget = 0;
     }
+    kickRevealTick();
   }
 
   function startRevealIn() {
     if (ignoreScrollEnter) return;
     if (mode === 'reveal' || mode === 'exp' || mode === 'land') return;
-    if (!entryReady) {
-      stage.classList.add('is-loading');
-      ensureFrames().then(function () {
-        if (mode === 'page' && !ignoreScrollEnter) startRevealIn();
-      });
-      return;
-    }
+    /* No esperar frames: el póster basta; carga en background */
+    ensureFrames();
     buryDemo();
     mode = 'reveal';
-    revealTarget = Math.max(revealP, 0.04);
+    revealP = clamp01(revealP);
+    revealTarget = Math.max(revealP, 0.06);
     setStoryUi(false);
     setRevealUi(true);
     lockPage();
     parkAtSection();
+    applyReveal(revealP);
+    syncPoster();
     requestAnimationFrame(function () {
       resize();
       applyReveal(revealP);
-      scrubReveal(80);
+      syncPoster();
+      kickRevealTick();
     });
   }
 
   function startRevealOut() {
     if (mode === 'page') return;
+    if (mode === 'reveal') {
+      revealTarget = Math.max(0, revealTarget - 0.08);
+      kickRevealTick();
+      return;
+    }
     /* Cerrar puerta → portada: el demo no debe asomar translúcido en el camino */
     buryDemo();
     hideTexts();
-    setStoryUi(true);
+    setStoryUi(false);
     document.documentElement.classList.remove('landing-ended');
     document.body.classList.remove('landing-ended');
     mode = 'reveal';
-    revealTarget = Math.min(revealP || 1, 0.96);
-    revealP = Math.max(revealP, 0.92);
+    revealP = 1;
+    revealTarget = 0.9;
     setRevealUi(true);
     lockPage();
     parkAtSection();
     applyReveal(revealP);
-    scrubReveal(-120);
+    syncPoster();
+    scrubReveal(-40, REVEAL_GAIN);
   }
 
   function enterExp() {
@@ -916,7 +947,12 @@
   }
 
   var ty0 = null, tDone = false, tAcc = 0, touchFired = false;
-  function onTouchStart(e) { ty0 = e.touches[0].clientY; tDone = false; tAcc = 0; touchFired = false; }
+  function onTouchStart(e) {
+    ty0 = e.touches[0].clientY;
+    tDone = false;
+    tAcc = 0;
+    touchFired = false;
+  }
   function onTouchMove(e) {
     if (mode === 'free') {
       if (ty0 == null) return;
@@ -944,9 +980,17 @@
     if (ty0 == null) return;
     var dy = ty0 - e.touches[0].clientY;
     if (mode === 'page') {
-      if (dy > 22) {
+      /* Evitar scroll nativo que desfasa la portada; entrar al reveal enseguida */
+      if (dy > 6) {
         e.preventDefault();
-        if (!tDone) { tDone = true; startRevealIn(); }
+        if (!tDone) {
+          tDone = true;
+          startRevealIn();
+          tAcc = dy;
+          scrubReveal(dy * 0.55, REVEAL_GAIN_TOUCH);
+        }
+      } else if (dy < -8 && (scrollY || 0) <= 2) {
+        e.preventDefault(); /* no goma elástica hacia arriba en portada */
       }
       return;
     }
@@ -954,7 +998,7 @@
       e.preventDefault();
       var stepR = dy - tAcc;
       tAcc = dy;
-      scrubReveal(stepR * 2.2);
+      scrubReveal(stepR, REVEAL_GAIN_TOUCH);
       return;
     }
     e.preventDefault();
@@ -965,9 +1009,16 @@
     }
   }
   function onTouchEnd() {
+    if (mode === 'reveal') {
+      snapReveal();
+      ty0 = null;
+      tAcc = 0;
+      return;
+    }
     if ((mode === 'exp' || mode === 'land') && !touchFired && Math.abs(tAcc) > 28) {
       noteGesture(tAcc);
     }
+    ty0 = null;
   }
 
   function onKey(e) {
