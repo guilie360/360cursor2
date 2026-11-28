@@ -8317,13 +8317,22 @@ body[data-button-glass="solid"] #mainMenuListPersonalizarV2 .custom-theme-pick-b
   position:absolute;
   right:10px;
   bottom:10px;
+  width:34px;
+  height:34px;
+  padding:0;
   border:0;
+  border-radius:8px;
   background:transparent;
   color:var(--text-primary);
   opacity:0.55;
-  font-size:0.72rem;
+  font-size:0;
   cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
 }
+.auth-toggle-password:hover{opacity:.92}
+.auth-toggle-password svg{width:18px;height:18px;display:block}
 
 .auth-remember-row,
 .auth-terms-row {

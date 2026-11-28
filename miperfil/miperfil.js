@@ -270,10 +270,7 @@
       e.preventDefault();
       if (errEl) errEl.textContent = '';
       var email = ($('loginEmail').value || '').trim().toLowerCase();
-      var phone = ($('loginPassword').value || '').trim();
-      var password = (window.ClientAccount && ClientAccount.phonePassword)
-        ? ClientAccount.phonePassword(phone)
-        : phone.replace(/\D/g, '');
+      var password = ($('loginPassword').value || '');
       try {
         var sb = client();
         var result = await sb.auth.signInWithPassword({ email: email, password: password });
@@ -282,7 +279,7 @@
         var prof = await sb.from('profiles').select('rol,nombre_visible,nombre,telefono,etapa_nombre,etapa_pct').eq('id', user.id).maybeSingle();
         await loadHome(user, prof.data || null);
       } catch (err) {
-        if (errEl) errEl.textContent = (err && err.message) || 'No se pudo entrar. Revisa correo y celular.';
+        if (errEl) errEl.textContent = (err && err.message) || 'No se pudo entrar. Revisa correo y contraseña.';
       }
     });
   }

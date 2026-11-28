@@ -767,13 +767,13 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
           <div class="auth-view-actions">
             <form id="authLoginForm" class="auth-modal-form" novalidate>
               <label class="auth-field">
-                <span>Correo o usuario</span>
-                <input id="authLoginInput" type="text" autocomplete="username" placeholder="correo@ejemplo.com o usuario" required>
+                <span>Correo</span>
+                <input id="authLoginInput" type="email" autocomplete="username" required>
               </label>
               <label class="auth-field">
                 <span>Contraseña</span>
-                <input id="authLoginPassword" type="password" autocomplete="current-password" placeholder="••••••••" required>
-                <button type="button" class="auth-toggle-password" id="authToggleLoginPassword">Mostrar</button>
+                <input id="authLoginPassword" type="password" autocomplete="current-password" required>
+                <button type="button" class="auth-toggle-password" id="authToggleLoginPassword" aria-label="Mostrar contraseña"></button>
               </label>
               <label class="auth-remember-row">
                 <input id="authRememberMe" type="checkbox" checked>
@@ -1239,7 +1239,8 @@ if (typeof BootDebug !== 'undefined') {
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-personalize-panel.js?v=nav19');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-auth-modal.js?v=auth-lock1');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/visitor-auth-modal.js?v=auth-lock1");</script>
-<script src="js/visitor-auth-modal.js?v=auth-lock1"></script>
+<script src="shared/js/password-toggle.js?v=1"></script>
+<script src="js/visitor-auth-modal.js?v=auth-lock2"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/visitor-auth-modal.js?v=auth-lock1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-auth-modal.js?v=auth-lock1');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-email-verification.js');</script>

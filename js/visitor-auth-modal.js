@@ -53,6 +53,11 @@ var VisitorAuthModal = (function () {
 
   function bindPasswordToggle(toggleBtn, input) {
     if (!toggleBtn || !input) return;
+    if (window.BoxiesPasswordToggle && input.id) {
+      toggleBtn.setAttribute('data-password-toggle', input.id);
+      window.BoxiesPasswordToggle.bind(toggleBtn);
+      return;
+    }
     toggleBtn.addEventListener('click', function () {
       var isHidden = input.type === 'password';
       input.type = isHidden ? 'text' : 'password';

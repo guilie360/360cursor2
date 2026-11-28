@@ -123,15 +123,30 @@ html, body {
 .toggle-password,
 .auth-toggle-password {
   position: absolute;
-  right: 16px;
+  right: 12px;
   top: 41px;
-  height: 32px;
-  padding: 0 10px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 0;
+  border-radius: 8px;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 0;
   cursor: pointer;
+}
+.toggle-password svg,
+.auth-toggle-password svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+.toggle-password:hover,
+.auth-toggle-password:hover {
+  color: var(--text-primary);
 }
 
 @keyframes hall-spin {

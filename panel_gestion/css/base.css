@@ -298,6 +298,17 @@ a.portal-card,button.portal-card{appearance:none}
 .login-google{margin-bottom:24px}.login-submit{background:#000;color:#f0f0f0;border-color:rgba(255,255,255,.10);margin-top:12px}
 .login-divider{display:flex;align-items:center;gap:14px;color:#6e6e6e;font-size:11px;margin:8px 0 22px}.login-divider:before,.login-divider:after{content:"";height:1px;background:rgba(255,255,255,.1);flex:1}
 .login-field{text-align:left;margin:13px 0}.login-field label{display:block;color:#8f8f8f;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}.login-field input{width:100%;padding:15px;background:#080808;border:1px solid rgba(255,255,255,.14);color:#eee;outline:none;color-scheme:dark;caret-color:#eee}.login-field input:focus{border-color:rgba(255,255,255,.42);background:#080808}
+.login-password-wrap{position:relative}
+.login-password-wrap input{padding-right:48px}
+.login-password-toggle{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  width:34px;height:34px;padding:0;border:0;border-radius:8px;
+  background:transparent;color:rgba(238,238,238,.45);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:color .2s ease,background .2s ease
+}
+.login-password-toggle:hover{color:rgba(238,238,238,.9);background:rgba(255,255,255,.05)}
+.login-password-toggle svg{width:18px;height:18px;display:block}
 .login-field input:-webkit-autofill,
 .login-field input:-webkit-autofill:hover,
 .login-field input:-webkit-autofill:focus,

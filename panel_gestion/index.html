@@ -18,8 +18,8 @@
   <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
   <link rel="stylesheet" href="/shared/css/site-chrome.css?v=9">
   <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
-  <link rel="stylesheet" href="css/base.css?v=panel73">
-  <link rel="stylesheet" href="css/patches.css?v=panel73">
+  <link rel="stylesheet" href="css/base.css?v=panel74">
+  <link rel="stylesheet" href="css/patches.css?v=panel74">
 </head>
 <body class="portal-mode">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat del equipo">
@@ -43,13 +43,21 @@
   <button class="login-google mag" id="googleLogin" type="button" data-cursor="GOOGLE">Continuar con Google</button>
   <div class="login-divider">o</div>
   <form id="loginForm">
-   <div class="login-field"><label for="loginEmail">Correo electrónico</label><input id="loginEmail" type="email" autocomplete="username" placeholder="correo@empresa.com"></div>
-   <div class="login-field"><label for="loginPassword">Contraseña</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Contraseña"></div>
+   <div class="login-field">
+    <label for="loginEmail">Correo</label>
+    <input id="loginEmail" type="email" autocomplete="username" required>
+   </div>
+   <div class="login-field">
+    <label for="loginPassword">Contraseña</label>
+    <div class="login-password-wrap">
+     <input id="loginPassword" type="password" autocomplete="current-password" required>
+     <button type="button" class="login-password-toggle" data-password-toggle="loginPassword" aria-label="Mostrar contraseña"></button>
+    </div>
+   </div>
    <label style="display:flex;align-items:center;gap:9px;color:var(--muted);font-size:12px;text-align:left;margin:17px 0"><input type="checkbox" id="rememberLogin"> Recordarme</label>
    <button class="login-submit mag" type="submit" data-cursor="ENTRAR">Iniciar sesión</button>
    <div class="login-error" id="loginError"></div>
   </form>
-  <div class="login-foot">Acceso privado para el equipo 360Preventa</div>
  </div>
 </section>
 
@@ -611,6 +619,7 @@
 <script src="js/panel-database.js?v=5"></script>
 <script src="js/paddle-countries.js?v=2"></script>
 <script src="js/app.js?v=fs39"></script>
+<script src="/shared/js/password-toggle.js?v=1"></script>
 <script src="js/panel-auth.js?v=8"></script>
 <script src="js/team-chat.js?v=13"></script>
 <script src="js/admin-push.js?v=1"></script>

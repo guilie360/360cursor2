@@ -12,9 +12,9 @@
 <link rel="stylesheet" href="/shared/css/safe-area.css?v=9">
 <link rel="stylesheet" href="/shared/css/site-chrome.css?v=9">
 <link rel="stylesheet" href="/shared/css/global-nav.css?v=8">
-<link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel73">
-<link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel73">
-<link rel="stylesheet" href="/miperfil/miperfil.css?v=13">
+<link rel="stylesheet" href="/panel_gestion/css/base.css?v=panel74">
+<link rel="stylesheet" href="/panel_gestion/css/patches.css?v=panel74">
+<link rel="stylesheet" href="/miperfil/miperfil.css?v=14">
 </head>
 <body class="portal-mode miperfil-mode miperfil-login-open">
 <div id="teamChatPopup" class="portal-hidden" role="dialog" aria-modal="false" aria-label="Chat con admin">
@@ -32,17 +32,19 @@
   <p class="login-subtitle"><strong>360PREVENTA</strong> · MI PERFIL</p>
   <form id="loginForm">
    <div class="login-field">
-    <label for="loginEmail">Correo electrónico</label>
-    <input id="loginEmail" type="email" autocomplete="username" required placeholder="correo@empresa.com">
+    <label for="loginEmail">Correo</label>
+    <input id="loginEmail" type="email" autocomplete="username" required>
    </div>
    <div class="login-field">
-    <label for="loginPassword">Celular</label>
-    <input id="loginPassword" type="password" inputmode="numeric" autocomplete="current-password" required placeholder="3001234567">
+    <label for="loginPassword">Contraseña</label>
+    <div class="login-password-wrap">
+     <input id="loginPassword" type="password" autocomplete="current-password" required>
+     <button type="button" class="login-password-toggle" data-password-toggle="loginPassword" aria-label="Mostrar contraseña"></button>
+    </div>
    </div>
    <button class="login-submit mag" type="submit" data-cursor="ENTRAR">Iniciar sesión</button>
    <div class="login-error" id="loginError" aria-live="polite"></div>
   </form>
-  <div class="login-foot">Acceso privado para clientes 360Preventa</div>
  </div>
 </section>
 
@@ -140,6 +142,7 @@
 <script src="/miperfil/docs.js?v=2"></script>
 <script src="/miperfil/payments.js?v=3"></script>
 <script src="/miperfil/showrooms.js?v=1"></script>
-<script src="/miperfil/miperfil.js?v=13"></script>
+<script src="/shared/js/password-toggle.js?v=1"></script>
+<script src="/miperfil/miperfil.js?v=14"></script>
 </body>
 </html>
