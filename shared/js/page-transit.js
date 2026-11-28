@@ -1,21 +1,34 @@
 /**
- * Logo loader a pantalla completa hasta que el destino esté listo.
- * Base al 20% + líquido que sube (abajo→arriba) hasta 100% justo antes de salir.
- * API: BoxiesPageTransit.show() / hide() / run(workPromise, { minMs })
+ * Logo charger real: base 20% + líquido que sube con la carga.
+ * Nunca llega a 100% hasta que el destino está listo; al tocar 100% sale de inmediato.
+ * API: BoxiesPageTransit.show() / hide() / complete() / run(work, { minMs })
  */
 (function () {
   'use strict';
 
   var LOGO = '/landing/assets/logo.png';
-  /** Debe coincidir con --logo-liquid-ms en global-nav.css */
-  var FILL_MS = 1000;
-  var MIN_MS = FILL_MS;
-  var MAX_MS = 4000;
+  /** Piso visual mínimo mientras el trabajo es instantáneo (sigue cargando hacia CAP) */
+  var MIN_MS = 480;
+  var MAX_MS = 5000;
+  /** Tope mientras espera el destino — solo complete() llega a 1 */
+  var CAP = 0.9;
+  /** Constante de tiempo del llenado asintótico (ms) */
+  var TAU = 900;
+  /** Rampa final CAP→100% (ms) — luego hide inmediato */
+  var FINISH_MS = 200;
+
   var el = null;
   var busy = false;
   var hideTimer = 0;
   var shownAt = 0;
   var landingOwns = false;
+  var progress = 0;
+  var mode = 'idle'; /* idle | charge | finish */
+  var raf = 0;
+  var reduce = false;
+  try {
+    reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  } catch (e) {}
 
   function logoMarkup() {
     return (
@@ -41,38 +54,102 @@
     return el;
   }
 
-  function restartLiquid() {
-    var fill = el && el.querySelector('.page-transit-logo--fill');
+  function fillEl() {
+    return el && el.querySelector('.page-transit-logo--fill');
+  }
+
+  function applyProgress(p) {
+    progress = Math.max(0, Math.min(1, p));
+    var fill = fillEl();
     if (!fill) return;
-    /* Reinicia el fill vacío → sube una sola vez (forwards) */
-    fill.style.animation = 'none';
-    fill.style.clipPath = 'inset(100% 0 0 0)';
-    fill.style.webkitClipPath = 'inset(100% 0 0 0)';
-    void fill.offsetWidth;
-    fill.style.animation = '';
-    fill.style.clipPath = '';
-    fill.style.webkitClipPath = '';
+    var top = ((1 - progress) * 100).toFixed(3) + '%';
+    var clip = 'inset(' + top + ' 0 0 0)';
+    fill.style.clipPath = clip;
+    fill.style.webkitClipPath = clip;
+  }
+
+  function stopRaf() {
+    if (raf) {
+      cancelAnimationFrame(raf);
+      raf = 0;
+    }
+  }
+
+  function chargeTick(now) {
+    if (mode !== 'charge') return;
+    var elapsed = Math.max(0, now - shownAt);
+    /* Asintótico hacia CAP: se desacelera y nunca toca 100% solo */
+    var target = CAP * (1 - Math.exp(-elapsed / TAU));
+    if (target > progress) progress = target;
+    applyProgress(progress);
+    raf = requestAnimationFrame(chargeTick);
+  }
+
+  function startCharge() {
+    stopRaf();
+    progress = 0;
+    applyProgress(0);
+    mode = 'charge';
+    shownAt = performance.now();
+    if (reduce) {
+      applyProgress(CAP * 0.5);
+      return;
+    }
+    raf = requestAnimationFrame(chargeTick);
+  }
+
+  function finishToFull() {
+    if (reduce) {
+      applyProgress(1);
+      mode = 'idle';
+      return Promise.resolve();
+    }
+    stopRaf();
+    mode = 'finish';
+    var from = progress;
+    if (from >= 0.995) {
+      applyProgress(1);
+      mode = 'idle';
+      return Promise.resolve();
+    }
+    var t0 = performance.now();
+    return new Promise(function (resolve) {
+      function step(now) {
+        var u = Math.min(1, (now - t0) / FINISH_MS);
+        var eased = 1 - Math.pow(1 - u, 3);
+        applyProgress(from + (1 - from) * eased);
+        if (u < 1) {
+          raf = requestAnimationFrame(step);
+        } else {
+          applyProgress(1);
+          mode = 'idle';
+          raf = 0;
+          resolve();
+        }
+      }
+      raf = requestAnimationFrame(step);
+    });
   }
 
   function show() {
     ensure();
     clearTimeout(hideTimer);
     busy = true;
-    shownAt = performance.now();
     document.documentElement.classList.add('page-transit-on');
     if (document.body) document.body.classList.add('page-transit-on');
     el.classList.add('on');
     el.setAttribute('aria-hidden', 'false');
-    restartLiquid();
-    /* Failsafe: nunca dejar el logo pegado */
+    startCharge();
     hideTimer = setTimeout(function () {
-      if (busy) hide();
+      if (busy) complete();
     }, MAX_MS);
   }
 
-  function hide() {
+  function hideImmediate() {
     clearTimeout(hideTimer);
     hideTimer = 0;
+    stopRaf();
+    mode = 'idle';
     if (!el) el = document.getElementById('pageTransit') || document.getElementById('boxiesPageTransit');
     if (el) {
       el.classList.remove('on');
@@ -81,6 +158,17 @@
     document.documentElement.classList.remove('page-transit-on');
     if (document.body) document.body.classList.remove('page-transit-on');
     busy = false;
+    progress = 0;
+  }
+
+  /** Llena a 100% y recién ahí cierra — 100% = pasar de etapa */
+  function complete() {
+    if (!busy && mode === 'idle') return Promise.resolve();
+    clearTimeout(hideTimer);
+    hideTimer = 0;
+    return finishToFull().then(function () {
+      hideImmediate();
+    });
   }
 
   function wait(ms) {
@@ -90,8 +178,7 @@
   function run(work, opts) {
     opts = opts || {};
     var minMs = typeof opts.minMs === 'number' ? opts.minMs : MIN_MS;
-    /* Nunca cortar el líquido antes de llenar (salvo reduced-motion en caller con 0) */
-    if (minMs > 0 && minMs < FILL_MS) minMs = FILL_MS;
+    if (reduce) minMs = 0;
     var t0 = performance.now();
     show();
     var job = typeof work === 'function' ? Promise.resolve().then(work) : Promise.resolve(work);
@@ -99,11 +186,11 @@
       .catch(function () { /* destino igual se revela */ })
       .then(function (result) {
         var left = Math.max(0, minMs - (performance.now() - t0));
+        /* Mientras espera el piso visual, el líquido sigue subiendo hacia CAP */
         return wait(left).then(function () { return result; });
       })
       .then(function (result) {
-        hide();
-        return result;
+        return complete().then(function () { return result; });
       });
   }
 
@@ -148,18 +235,16 @@
     var finish = function () {
       var elapsed = shownAt ? performance.now() - shownAt : 0;
       var left = Math.max(0, MIN_MS - elapsed);
-      setTimeout(hide, left);
+      setTimeout(function () { complete(); }, left);
     };
     if (document.readyState === 'complete') finish();
     else window.addEventListener('load', finish, { once: true });
   }
 
-  /* Si venimos de otra página con menú → mostrar logo de inmediato */
   try {
     if (sessionStorage.getItem('boxiesTransitPending') === '1') {
       var boot = function () {
         show();
-        /* Landing con #demo/#inicio lo cierra goToSection; el resto, al load */
         if (landingWillHandle()) {
           landingOwns = true;
         } else {
@@ -173,10 +258,11 @@
 
   window.BoxiesPageTransit = {
     show: show,
-    hide: hide,
+    hide: hideImmediate,
+    complete: complete,
     run: run,
     isBusy: function () { return busy; },
-    fillMs: FILL_MS,
+    fillMs: MIN_MS,
     markPending: markPending,
     consumePending: consumePending,
     claimLanding: function () { landingOwns = true; }

@@ -62,7 +62,8 @@ function showTransit(){
   }
 }
 function hideTransit(){
-  if(window.BoxiesPageTransit) window.BoxiesPageTransit.hide();
+  if(window.BoxiesPageTransit?.complete) window.BoxiesPageTransit.complete();
+  else if(window.BoxiesPageTransit) window.BoxiesPageTransit.hide();
   else{
     const t=$('#pageTransit');
     if(t){
@@ -73,16 +74,15 @@ function hideTransit(){
     document.body.classList.remove('page-transit-on');
   }
 }
-function withTransit(work,{minMs=1000,fromLoad=false}={}){
+function withTransit(work,{minMs=480,fromLoad=false}={}){
   if(transitBusy && !fromLoad) return Promise.resolve();
   transitBusy=true;
-  const fillMs=window.BoxiesPageTransit?.fillMs||1000;
-  const hold=Math.max(minMs,fillMs);
+  const hold=reduce?0:minMs;
   const run=()=>{
     const job=typeof work==='function'?Promise.resolve().then(work):Promise.resolve(work);
     const wrap=window.BoxiesPageTransit?.run
-      ? window.BoxiesPageTransit.run(job,{minMs:reduce?0:hold})
-      : (showTransit(), job.finally(()=>new Promise(r=>setTimeout(()=>{hideTransit();r()},reduce?0:hold))));
+      ? window.BoxiesPageTransit.run(job,{minMs:hold})
+      : (showTransit(), job.finally(()=>new Promise(r=>setTimeout(()=>{hideTransit();r()},hold))));
     return Promise.resolve(wrap).finally(()=>{transitBusy=false;snapScrollState()});
   };
   return run();
@@ -93,7 +93,7 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
       if(window.BoxiesScrollStory?.leaveToIntro) window.BoxiesScrollStory.leaveToIntro();
       else scrollTo({top:0,left:0,behavior:'instant'});
       if(updateHash){try{history.replaceState(null,'','#inicio')}catch(e){}}
-    },{minMs:1000,fromLoad});
+    },{minMs:480,fromLoad});
   }
   if(id==='servicio'){
     return withTransit(()=>{
@@ -103,7 +103,7 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
         if(el) scrollTo({top:sectionTop(el),left:0,behavior:'instant'});
       }
       if(updateHash){try{history.replaceState(null,'','#servicio')}catch(e){}}
-    },{minMs:1000,fromLoad});
+    },{minMs:480,fromLoad});
   }
   if(id==='demo'){
     return withTransit(()=>{
@@ -132,7 +132,7 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
         document.body.scrollTop=top;
       }
       settle();
-    },{minMs:1000,fromLoad});
+    },{minMs:520,fromLoad});
   }
   const el=document.getElementById(id);
   if(!el) return Promise.resolve();
@@ -146,7 +146,7 @@ function goToSection(id,{updateHash=true,fromLoad=false}={}){
       const next='#'+id;
       if(location.hash!==next) history.replaceState(null,'',next);
     }
-  },{minMs:1000,fromLoad});
+  },{minMs:480,fromLoad});
 }
 window.BoxiesGoToSection=goToSection;
 window.BoxiesSnapLandingScroll=snapScrollState;
@@ -230,7 +230,7 @@ function bootHashJump(){
   if(id==='inicio'){
     withTransit(()=>{
       pinInicio();
-    },{minMs:1000,fromLoad:true});
+    },{minMs:480,fromLoad:true});
     return;
   }
   // Evitar el scroll nativo del ancla antes de nuestro salto.
