@@ -25,6 +25,8 @@
   var GESTURE_RESET = 160; /* silencio = fin del gesto / limpia inercia */
   /* v2 = frames de VIDEO FINAL PARA LANGIND (ruta nueva para evitar cache del CapCut viejo) */
   var CDN = 'https://boxies.b-cdn.net/landing/scroll/v2';
+  /* Frame 0 hi-res: puerta cerrada (evita el webp pixelado del CDN) */
+  var ENTRY_POSTER = '/landing/assets/magnific_pasted-image-2026-11-21-22.27_LwIgaLmswO.png';
 
   var HOLDS = [
     { t: 0.0 },
@@ -962,7 +964,10 @@
       var im = new Image();
       im.decoding = 'async';
       im.onload = im.onerror = function () { res(im); };
-      im.src = frameUrl('f_' + String(i + 1).padStart(4, '0') + '.webp');
+      /* Primer frame = póster local nítido; el video sigue desde f_0002 */
+      im.src = i === 0
+        ? ENTRY_POSTER
+        : frameUrl('f_' + String(i + 1).padStart(4, '0') + '.webp');
       imgs[i] = im;
     });
   }
