@@ -338,6 +338,77 @@ body.scroll-story-reveal .scroll-stage-inner{
 .showroom:nth-child(1){--i:0}.showroom:nth-child(2){--i:1}.showroom:nth-child(3){--i:2}
 .final.in .showroom{animation:showroomIn 1.2s var(--ease) calc(.55s + var(--i)*.15s) backwards,showroomFloat 6s ease-in-out calc(2s + var(--i)*.35s) infinite}
 .final.in .showroom::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.1) 50%,transparent 65%);transform:translateX(-120%);animation:sheen 1.5s var(--ease) calc(1.05s + var(--i)*.15s) 1 forwards}
+
+/* Aterrizaje story→demo: último frame queda fijo; el copy/botones nacen con --land */
+html.scroll-story-landing .scroll-stage-inner,
+body.scroll-story-landing .scroll-stage-inner{
+  z-index:22;
+}
+.final.is-landing{
+  --land:0;
+  position:fixed;inset:0;z-index:28;
+  min-height:100%;height:100%;height:100dvh;
+  padding:clamp(72px,10vh,120px) 0 calc(var(--float-safe) + 28px);
+  background:transparent;
+  pointer-events:none;
+}
+.final.is-landing .final-bg{
+  opacity:0!important; /* el canvas del story es el fondo match */
+  transition:none!important;
+}
+.final.is-landing .final-content,
+.final.is-landing .final-footer{
+  pointer-events:auto;
+}
+.final.is-landing .final-eyebrow,
+.final.is-landing .final-description,
+.final.is-landing .final-copy h2,
+.final.is-landing .final-copy h2 .w>span,
+.final.is-landing .showroom-heading,
+.final.is-landing .final-footer,
+.final.is-landing .showroom{
+  animation:none!important;
+  transition:none!important;
+}
+.final.is-landing .final-eyebrow,
+.final.is-landing .final-description,
+.final.is-landing .showroom-heading,
+.final.is-landing .final-footer{
+  opacity:var(--land);
+  transform:translate3d(0, calc((1 - var(--land)) * 22px), 0);
+  filter:blur(calc((1 - var(--land)) * 6px));
+}
+.final.is-landing .final-copy h2 .w>span{
+  transform:translate3d(0, calc((1 - var(--land)) * 110%), 0);
+}
+.final.is-landing .showroom{
+  opacity:calc(var(--land) * var(--land));
+  transform:translate3d(calc((1 - var(--land)) * 36px), 0, 0) scale(calc(.97 + var(--land) * .03));
+  filter:blur(calc((1 - var(--land)) * 8px));
+  pointer-events:auto;
+}
+.final.is-landing .showroom:nth-child(1){opacity:calc(var(--land) * 1.05 - .05)}
+.final.is-landing .showroom:nth-child(2){opacity:calc(var(--land) * 1.15 - .15)}
+.final.is-landing .showroom:nth-child(3){opacity:calc(var(--land) * 1.25 - .25)}
+/* Tras aterrizar desde story: fondo ya match, sin zoom de entrada */
+.final.from-story .final-bg{
+  opacity:1;
+  transform:none;
+  transition:none;
+}
+.final.from-story:not(.is-landing) .final-eyebrow,
+.final.from-story:not(.is-landing) .final-description,
+.final.from-story:not(.is-landing) .showroom,
+.final.from-story:not(.is-landing) .final-footer{
+  opacity:1;
+  animation:none;
+  filter:none;
+  transform:none;
+}
+.final.from-story:not(.is-landing) .final-copy h2 .w>span{
+  transform:none;
+  transition:none;
+}
 @keyframes riseBlur{from{opacity:0;transform:translateY(22px);filter:blur(8px)}}
 @keyframes eyebrowIn{from{opacity:0;letter-spacing:10px;filter:blur(4px)}}
 @keyframes showroomIn{from{opacity:0;transform:translate3d(64px,0,0) scale(.96);filter:blur(10px)}}

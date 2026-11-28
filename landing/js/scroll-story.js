@@ -20,6 +20,7 @@
   var EASE = 0.55;
   var REVEAL_GAIN = 0.0024; /* portada→story (trackpad/touch) */
   var SCRUB_GAIN = 0.0072; /* story timeline: deltaY → unidades TW */
+  var LAND_GAIN = 0.0021; /* último frame → demo content */
   var SNAP_IDLE = 150; /* ms sin input → imán al hold más cercano */
   /* v2 = frames de VIDEO FINAL PARA LANGIND (ruta nueva para evitar cache del CapCut viejo) */
   var CDN = 'https://boxies.b-cdn.net/landing/scroll/v2';
@@ -88,6 +89,7 @@
   var ignoreScrollEnter = false;
   var revealP = 0, revealRaf = 0, revealTarget = 0;
   var goToken = 0, snapTimer = 0, scrubbing = false, lastScrubDir = 1;
+  var landP = 0;
 
   function frameUrl(name) { return CDN + '/' + dirName + '/' + name; }
   function setStoryUi(on) {
@@ -246,22 +248,23 @@
   function softSnap() {
     if (mode !== 'exp') return;
     scrubbing = false;
+    var last = stops.length - 1;
     var k = nearestHold(curT);
     /* Si veníamos hacia adelante y pasamos el punto medio, imán al siguiente */
-    if (lastScrubDir > 0 && k < stops.length - 1) {
+    if (lastScrubDir > 0 && k < last) {
       var mid = (stops[k].t + stops[k + 1].t) * 0.5;
       if (curT >= mid) k = k + 1;
     } else if (lastScrubDir < 0 && k > 0) {
       var midB = (stops[k - 1].t + stops[k].t) * 0.5;
       if (curT <= midB) k = k - 1;
     }
-    goToHold(k, true);
+    goToHold(Math.min(k, last), true);
   }
 
   function goToHold(to, fromSnap) {
     if (!framesReady && !entryReady) { ensureFrames(); return; }
     if (to < 0) { startRevealOut(); return; }
-    if (to >= stops.length) { exitToDemo(); return; }
+    if (to >= stops.length) { beginLand(0.12); return; }
     var token = ++goToken;
     busy = true;
     scrubbing = false;
@@ -295,8 +298,138 @@
     goToHold(next, false);
   }
 
+  function lastFrameName() {
+    return 'f_' + String(TOTAL).padStart(4, '0') + '.webp';
+  }
+
+  function paintDemoBgFromLastFrame(fin) {
+    if (!fin) return;
+    var bg = fin.querySelector('.final-bg');
+    if (!bg) return;
+    var url = frameUrl(lastFrameName());
+    bg.style.backgroundImage =
+      'linear-gradient(rgba(8,8,8,.28),rgba(8,8,8,.55)), url("' + url + '")';
+    bg.style.backgroundSize = 'cover';
+    bg.style.backgroundPosition = 'center';
+  }
+
+  function applyLand(p) {
+    landP = clamp01(p);
+    document.documentElement.style.setProperty('--land', String(landP));
+    document.body.style.setProperty('--land', String(landP));
+    var fin = document.getElementById('demo');
+    if (fin) fin.style.setProperty('--land', String(landP));
+    /* Mantener último frame detrás; el contenido demo entra con --land */
+    cur = stops.length - 1;
+    curT = stops[cur].t;
+    stillA = 0; stillIdx = -1; lastKey = '';
+    render();
+  }
+
+  function beginLand(seed) {
+    if (mode === 'land') {
+      scrubLand((seed || 0) / LAND_GAIN);
+      return;
+    }
+    if (mode === 'free') return;
+    goToken++;
+    busy = false;
+    scrubbing = false;
+    clearTimeout(snapTimer);
+    mode = 'land';
+    landP = clamp01(seed || 0);
+    cur = stops.length - 1;
+    curT = stops[cur].t;
+    hideTexts();
+    setRevealUi(false);
+    setStoryUi(true);
+    lockPage();
+    stage.classList.add('is-landing');
+    document.documentElement.classList.add('scroll-story-landing');
+    document.body.classList.add('scroll-story-landing');
+    var fin = document.getElementById('demo');
+    if (fin) {
+      paintDemoBgFromLastFrame(fin);
+      fin.classList.add('in', 'from-story', 'is-landing');
+      fin.setAttribute('aria-hidden', 'false');
+    }
+    var dots = $('scrollDots'), hint = $('scrollHintStory');
+    if (dots) dots.style.opacity = '0';
+    if (hint) hint.classList.remove('on');
+    applyLand(landP);
+  }
+
+  function scrubLand(delta) {
+    if (mode !== 'land') return;
+    var next = landP + delta * LAND_GAIN;
+    if (next <= 0.001 && delta < 0) {
+      /* Volver al último hold del story */
+      document.documentElement.classList.remove('scroll-story-landing');
+      document.body.classList.remove('scroll-story-landing');
+      stage.classList.remove('is-landing');
+      var fin = document.getElementById('demo');
+      if (fin) fin.classList.remove('is-landing');
+      mode = 'exp';
+      landP = 0;
+      cur = stops.length - 1;
+      curT = stops[cur].t;
+      showStop(cur);
+      return;
+    }
+    applyLand(next);
+    if (landP >= 0.995) finishLand();
+  }
+
+  function finishLand() {
+    if (mode === 'free') return;
+    ignoreScrollEnter = true;
+    goToken++;
+    busy = false;
+    scrubbing = false;
+    clearTimeout(snapTimer);
+    mode = 'free';
+    freeEntered = true;
+    landP = 1;
+    applyLand(1);
+    hideTexts();
+    setRevealUi(false);
+
+    var fin = document.getElementById('demo');
+    /* Calcular top del demo ANTES de quitar el pin (el spacer #servicio sigue en flujo) */
+    var top = 0;
+    if (fin) {
+      top = Math.round(fin.getBoundingClientRect().top + (scrollY || 0));
+      if (!isFinite(top) || top < 0) top = section.offsetTop + section.offsetHeight;
+    }
+
+    unlockPage();
+    setStoryUi(false);
+    document.documentElement.classList.remove('scroll-story-landing');
+    document.body.classList.remove('scroll-story-landing');
+    stage.classList.remove('is-landing', 'is-loading');
+
+    scrollTo({ top: Math.max(0, top), left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = Math.max(0, top);
+    document.body.scrollTop = Math.max(0, top);
+
+    if (fin) {
+      fin.classList.add('in', 'from-story');
+      fin.classList.remove('is-landing');
+      paintDemoBgFromLastFrame(fin);
+      try { history.replaceState(null, '', '#demo'); } catch (e) {}
+    }
+    requestAnimationFrame(function () {
+      resize();
+      ignoreScrollEnter = false;
+    });
+  }
+
   /* Scrub continuo: trackpad/touch fluye; al soltar, imán suave al hold */
   function scrubStory(delta) {
+    if (mode === 'land') {
+      scrubLand(delta);
+      return;
+    }
     if (mode !== 'exp') return;
     if (!entryReady) { ensureFrames(); return; }
     goToken++; /* cancela animaciones go en curso */
@@ -317,9 +450,11 @@
       startRevealOut();
       return;
     }
-    if (wPos > wMax + 3.5) {
+    /* Pasado el último frame → aterrizaje suave a demo (no salto a portada) */
+    if (wPos > wMax + 0.35) {
       scrubbing = false;
-      exitToDemo();
+      beginLand(Math.min(0.35, (wPos - wMax) * 0.08));
+      scrubLand(Math.max(0, delta));
       return;
     }
 
@@ -475,17 +610,19 @@
   }
 
   function exitToDemo() {
-    mode = 'free'; freeEntered = false; hideTexts();
-    setStoryUi(false); setRevealUi(false); applyReveal(0); unlockPage();
-    stage.classList.remove('is-loading');
-    var fin = document.getElementById('demo');
-    if (fin) {
-      var top = Math.round(fin.getBoundingClientRect().top + scrollY);
-      scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
-      try { history.replaceState(null, '', '#demo'); } catch (e) {}
-      fin.classList.add('in');
+    /* Nav / API: aterrizaje completo sin flash a portada */
+    if (mode === 'free') {
+      var fin0 = document.getElementById('demo');
+      if (fin0) {
+        paintDemoBgFromLastFrame(fin0);
+        fin0.classList.add('in', 'from-story');
+        var top0 = Math.round(fin0.getBoundingClientRect().top + (scrollY || 0));
+        scrollTo({ top: Math.max(0, top0), behavior: 'smooth' });
+      }
+      return;
     }
-    requestAnimationFrame(resize);
+    beginLand(Math.max(landP, 0.2));
+    finishLand();
   }
 
   function onWheel(e) {
@@ -501,6 +638,12 @@
     if (mode === 'reveal') {
       e.preventDefault();
       scrubReveal(e.deltaY);
+      return;
+    }
+    if (mode === 'land') {
+      e.preventDefault();
+      if (Math.abs(e.deltaY) < 0.5) return;
+      scrubLand(e.deltaY);
       return;
     }
     e.preventDefault();
@@ -529,6 +672,13 @@
       scrubReveal(stepR * 2.2);
       return;
     }
+    if (mode === 'land') {
+      e.preventDefault();
+      var stepL = dy - tAcc;
+      tAcc = dy;
+      scrubLand(stepL * 1.65);
+      return;
+    }
     e.preventDefault();
     var step = dy - tAcc;
     tAcc = dy;
@@ -554,6 +704,11 @@
     if (mode === 'reveal') {
       if (['ArrowDown', 'PageDown', ' '].indexOf(e.key) !== -1) { e.preventDefault(); scrubReveal(160); }
       else if (['ArrowUp', 'PageUp'].indexOf(e.key) !== -1) { e.preventDefault(); scrubReveal(-160); }
+      return;
+    }
+    if (mode === 'land') {
+      if (['ArrowDown', 'PageDown', ' '].indexOf(e.key) !== -1) { e.preventDefault(); scrubLand(160); }
+      else if (['ArrowUp', 'PageUp'].indexOf(e.key) !== -1) { e.preventDefault(); scrubLand(-160); }
       return;
     }
     if (mode !== 'exp') return;
@@ -631,7 +786,7 @@
     enterExp: enterExp,
     leaveToIntro: leaveToIntro,
     exitToDemo: exitToDemo,
-    isLocked: function () { return mode === 'exp' || mode === 'reveal'; },
+    isLocked: function () { return mode === 'exp' || mode === 'reveal' || mode === 'land'; },
     mode: function () { return mode; }
   };
 
