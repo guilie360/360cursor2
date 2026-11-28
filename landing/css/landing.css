@@ -6,8 +6,26 @@
 html.boxies-fs-shell-on,html.boxies-fs-shell-on body{overflow:hidden!important;height:100%!important;overscroll-behavior:none}
 html.boxies-fs-shell-on body>*:not(#boxies-fs-shell){visibility:hidden!important;pointer-events:none!important}
 *{box-sizing:border-box;margin:0;padding:0}
-html{background:var(--bg);scroll-behavior:smooth}
-body{background:var(--bg);color:var(--white);font:300 16px/1.5 var(--sans);overflow-x:hidden;-webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none;caret-color:transparent}
+/*
+ * Landing = mismo “scroll” que el story desde la portada:
+ * sin barra nativa que aparece/desaparece (evita el salto horizontal del menú).
+ * Wheel/touch los maneja scroll-story.js.
+ */
+html{
+  background:var(--bg);
+  scroll-behavior:smooth;
+  height:100%;
+  overflow:hidden!important;
+  overscroll-behavior:none;
+  scrollbar-gutter:stable;
+}
+body{
+  background:var(--bg);color:var(--white);font:300 16px/1.5 var(--sans);
+  height:100%;height:100dvh;
+  overflow:hidden!important;
+  overscroll-behavior:none;
+  -webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none;caret-color:transparent
+}
 input,textarea,select,[contenteditable="true"]{-webkit-user-select:text;user-select:text;caret-color:auto}
 a,button,[role="button"],summary,label,.btn,.mag,.showroom,.menu-toggle,.fullscreen-toggle,.flip-front,.flip-back,.clickable{-webkit-user-select:none!important;user-select:none!important;caret-color:transparent!important}
 a{color:inherit;text-decoration:none}
@@ -80,6 +98,7 @@ html.scroll-story-lock,body.scroll-story-lock{
   overscroll-behavior:none;
   touch-action:none;
   height:100%;
+  /* Ya venía hidden desde portada: no cambia el ancho del viewport ni el menú */
 }
 .scroll-stage{position:relative;height:100vh;height:100svh;height:100dvh;background:#0a0a0a}
 .scroll-stage-inner{position:sticky;top:0;height:100svh;height:100dvh;overflow:hidden;touch-action:none}
